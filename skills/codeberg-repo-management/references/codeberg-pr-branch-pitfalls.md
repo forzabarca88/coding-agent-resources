@@ -24,17 +24,9 @@ git push origin <branch> --force
 # now merge via UI or API
 ```
 
-## 2. "Already included / 0 commits" PRs have no merge button
+## 2. "Already included / 0 commits" PRs
 
-When Forgejo says "This branch is already included in the target branch. There is nothing to merge", the web UI shows NO Merge button and the API merge endpoint returns `405 Method Not Allowed`.
-
-**Workaround — add a commit so Forgejo has something to merge:**
-```bash
-git checkout <branch>
-git commit --allow-empty -m "Merge PR #<index> via API"
-git push origin <branch> --force
-```
-Forgejo detects the new commit and auto-merges the PR (status → `Merged: True`).
+See `codeberg-merge-verification.md` §3 for the empty commit workaround.
 
 ## 3. Divergent local `main` after remote merges
 
@@ -53,7 +45,7 @@ Or set once: `git config pull.rebase true`.
 After any merge attempt (API or auto-merge), confirm before deleting branches:
 ```python
 r = cb('GET', f'/repos/{owner}/{repo}/pulls/{index}')
-print(f"State: {r['state']}, Merged: {r['merged']}")
+print(f"State: {r.get('state')}, Merged: {r.get('merged')}")
 # Success = closed True. open/merged=False means NOT merged yet.
 ```
 

@@ -48,14 +48,4 @@ When the user asks you to follow up on issues without specifying which ones:
 
 ## Merge Verification
 
-The Codeberg/Forgejo merge endpoint may return an empty response on success. Always verify:
-
-```python
-# After merge, check PR state
-r = cb('GET', f'/repos/{owner}/{repo}/pulls/{index}')
-print(f"State: {r['state']}, Merged: {r['merged']}")
-```
-
-Successful merge: `State: closed, Merged: True`
-
-Some Codeberg instances require `"merge_style": "merge"` in the merge body alongside `"do": "merge"`.
+See `codeberg-merge-verification.md` for detailed merge verification steps.

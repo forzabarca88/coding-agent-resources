@@ -44,12 +44,12 @@ Replace `SCRIPTS_DIR` with the absolute path to the `scripts/` directory of this
 | Update repo | `PATCH` | `/repos/{owner}/{repo}` |
 | Delete repo | `DELETE` | `/repos/{owner}/{repo}` |
 | Fork repo | `POST` | `/repos/{owner}/{repo}/forks` |
-| List files | `GET` | `/repos/{owner}/{repo}/contents/` |
-| Get file | `GET` | `/repos/{owner}/{repo}/contents/{path}` |
-| Get raw file | `GET` | `/repos/{owner}/{repo}/raw/{path}` |
-| Create file | `POST` | `/repos/{owner}/{repo}/contents/{path}` |
-| Update file | `PUT` | `/repos/{owner}/{repo}/contents/{path}` |
-| Delete file | `DELETE` | `/repos/{owner}/{repo}/contents/{path}` |
+| List files | `GET` | `/repos/{owner}/{repo}/contents` |
+| Get file | `GET` | `/repos/{owner}/{repo}/contents/{filepath}` |
+| Get raw file | `GET` | `/repos/{owner}/{repo}/raw/{filepath}` |
+| Create file | `POST` | `/repos/{owner}/{repo}/contents/{filepath}` |
+| Update file | `PUT` | `/repos/{owner}/{repo}/contents/{filepath}` |
+| Delete file | `DELETE` | `/repos/{owner}/{repo}/contents/{filepath}` |
 | Batch files | `POST` | `/repos/{owner}/{repo}/contents` |
 | List branches | `GET` | `/repos/{owner}/{repo}/branches` |
 | Create branch | `POST` | `/repos/{owner}/{repo}/branches` |
@@ -68,7 +68,7 @@ Replace `SCRIPTS_DIR` with the absolute path to the `scripts/` directory of this
 | List tags | `GET` | `/repos/{owner}/{repo}/tags` |
 | List commits | `GET` | `/repos/{owner}/{repo}/commits` |
 
-See `references/REFERENCE.md` for detailed examples of every endpoint.
+See `references/swagger.v1.json` for the full API schema.
 
 ## Critical Rules
 
@@ -78,15 +78,15 @@ See `references/REFERENCE.md` for detailed examples of every endpoint.
 
 3. **`auto_init: true` creates README.md**: Creating a repo with `auto_init: true` pre-creates `README.md`. POSTing a new README will fail. Use a different filename or UPDATE the existing one.
 
-4. **Empty responses on DELETE/MERGE**: DELETE endpoints and PR merge return `{}` (HTTP 204) on success. This is normal, not an error.
+4. **Empty responses on DELETE/MERGE**: Most DELETE endpoints return HTTP 204 (empty body), but file DELETE returns HTTP 200 with a response body. PR merge returns HTTP 200 with empty body. This is normal, not an error.
 
-5. **Raw endpoints**: `/repos/{owner}/{repo}/raw/{path}` returns plain text, not JSON. Use `raw=True` parameter: `cb('GET', '/repos/owner/repo/raw/file.txt', raw=True)`.
+5. **Raw endpoints**: `/repos/{owner}/{repo}/raw/{filepath}` returns plain text, not JSON. Use `raw=True` parameter: `cb('GET', '/repos/owner/repo/raw/file.txt', raw=True)`.
 
 6. **Issue labels use integer IDs**: Create-issue `labels` field expects numeric IDs, not string names. Fetch IDs via `GET /repos/{owner}/{repo}/labels` first. Workaround: omit labels on create, then add via `POST /repos/{owner}/{repo}/issues/{index}/labels` which accepts string names.
 
-7. **PR merge requires `head` and `base`**: Both are required when creating a PR. Omitting either returns 422.
+7. **PR create requires `head`**: The `head` (source branch) is required when creating a PR. `base` is optional — omitting it defaults to the repo's default branch.
 
-8. **Rate limiting**: ~7 issues in 10 minutes triggers rate limiting. Add `time.sleep(30)` between issue creates.
+8. **Rate limiting**: ~7 issues in 10 minutes triggers rate limiting. Add `time.sleep(60)` between issue creates.
 
 9. **Token format**: `Authorization: token $CODEBERG_TOKEN` (not Bearer).
 
@@ -132,7 +132,7 @@ cb('POST', f'/repos/{owner}/{repo}/issues/{index}/labels', {"name": "bug"})
 
 ### Create branch, PR, merge
 ```python
-cb('POST', '/repos/{owner}/{repo}/branches', {"repository_branch": "feature"})
+cb('POST', '/repos/{owner}/{repo}/branches', {"new_branch_name": "feature"})
 r = cb('POST', '/repos/{owner}/{repo}/pulls', {
     "title": "Add feature",
     "head": "feature",
@@ -140,12 +140,44 @@ r = cb('POST', '/repos/{owner}/{repo}/pulls', {
 })
 index = r['index']
 cb('POST', f'/repos/{owner}/{repo}/pulls/{index}/merge', {
-    "do": "merge",
-    "merge_style": "merge"
+    "Do": "merge"
 })
-# Verify
+# Merge strategies: "merge", "rebase", "rebase-merge", "squash", "fast-forward-only", "manually-merged"
+# Verify (check both state and merged — closed alone is insufficient)
 r = cb('GET', f'/repos/{owner}/{repo}/pulls/{index}')
-assert r['merged'] == True
+assert r['state'] == 'closed' and r['merged'] == True
+```
+
+### Batch file operations
+```python
+# Fetch existing file SHAs for update/delete
+target = cb('GET', f'/repos/{owner}/{repo}/contents/existing.txt')
+old_sha = cb('GET', f'/repos/{owner}/{repo}/contents/old.txt')['sha']
+
+# Batch: create new file + update existing + delete old
+# Note: message is on the parent object, not per-operation
+cb('POST', f'/repos/{owner}/{repo}/contents', {
+    "branch": "main",
+    "message": "Batch: add, update, delete",
+    "files": [
+        {
+            "operation": "create",
+            "path": "new_file.txt",
+            "content": base64.b64encode(b"New content\n").decode()
+        },
+        {
+            "operation": "update",
+            "path": "existing.txt",
+            "content": base64.b64encode(b"Updated\n").decode(),
+            "sha": target['sha']
+        },
+        {
+            "operation": "delete",
+            "path": "old.txt",
+            "sha": old_sha
+        }
+    ]
+})
 ```
 
 ## Reference Files
@@ -153,5 +185,6 @@ assert r['merged'] == True
 - `references/codeberg-api-quirks.md` — API gotchas, error messages, workarounds
 - `references/codeberg-merge-verification.md` — Verifying PR merge success
 - `references/codeberg-pr-branch-pitfalls.md` — PR merge and branch lifecycle pitfalls
+- `references/pr-merge-sync.md` — PR merge timing and state synchronization
 - `references/agent-workflow-rules.md` — PR workflow conventions (no auto-merge, testing proof, issue tracking)
 - `references/swagger.v1.json` — Full Forgejo API schema

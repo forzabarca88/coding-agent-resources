@@ -18,8 +18,7 @@ import time
 
 # Merge attempt
 cb('POST', f'/repos/{owner}/{repo}/pulls/{index}/merge', {
-    "do": "merge",
-    "merge_style": "merge"
+    "Do": "merge"
 })
 
 # Wait and verify
@@ -28,7 +27,7 @@ r = cb('GET', f'/repos/{owner}/{repo}/pulls/{index}')
 
 # If still "open", wait and retry
 for _ in range(5):
-    if r['state'] == 'closed':
+    if r.get('state') == 'closed' and r.get('merged') == True:
         print("Merge confirmed")
         break
     time.sleep(3)
@@ -44,19 +43,7 @@ git push origin --delete {branch_name}
 ```
 
 ## Divergence Warning
-If local `main` diverges from remote after PR merges, resolve before pushing:
 
-```bash
-# Check divergence
-git log --oneline HEAD..origin/main
+See `codeberg-pr-branch-pitfalls.md` §3.
 
-# Reconcile
-git pull origin main --no-rebase  # or rebase if preferred
-git push origin main
-```
 
-## API Endpoint Gotchas
-- Method: `POST` (not PUT or PATCH)
-- Body fields: `do` and `merge_style` both required
-- Some instances accept: `do="merge"` alone
-- Return: Often empty JSON on success

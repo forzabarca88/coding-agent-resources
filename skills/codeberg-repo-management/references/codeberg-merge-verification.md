@@ -15,15 +15,16 @@ print(f"State: {r.get('state')}, Merged: {r.get('merged')}")
 
 ### Common Scenarios & Solutions
 
-1. **Empty API Response with 204 Status**
-   - *What to see*: HTTP 204 No Content with empty body
+1. **Empty API Response with 200 Status**
+   - *What to see*: HTTP 200 with empty body
    - *Reality*: This indicates successful merge
+   - *Note*: PR state (`state="closed", merged=True`) may take several seconds to update due to Forgejo's async internal sync. See `pr-merge-sync.md` for retry pattern.
    - *Verification*: Check PR state as shown above
 
 2. **API 405 Method Not Allowed**
    - *What to see*: `HTTP 405 Method Not Allowed` response
-   - *Common cause*: Missing `merge_style` parameter in request body
-   - *Fix*: Add `"merge_style": "merge"` to JSON body
+   - *Common cause*: Missing `Do` field or wrong case (`Do` not `do`) in request body
+   - *Fix*: Add `"Do": "merge"` to JSON body
 
 3. **Merge Button Not Visible**
    - *What to see*: "This branch is already included in the target branch" message
@@ -58,8 +59,7 @@ print(f"State: {r.get('state')}, Merged: {r.get('merged')}")
 3. **Attempt Merge with Proper Body**
    ```python
    cb('POST', f'/repos/{owner}/{repo}/pulls/{index}/merge', {
-       "do": "merge",
-       "merge_style": "merge"
+       "Do": "merge"
    })
    ```
 
@@ -71,6 +71,6 @@ print(f"State: {r.get('state')}, Merged: {r.get('merged')}")
 
 ### Key Takeaways
 
-- **Empty response ≠ failure**: An empty response body with HTTP 204 means merge succeeded
+- **Empty response ≠ failure**: An empty response body with HTTP 200 means merge succeeded
 - **Always verify PR state**: Never assume based on API response alone
 - **Verify via PR endpoint**: Use `/pulls/{index}` to check final state
