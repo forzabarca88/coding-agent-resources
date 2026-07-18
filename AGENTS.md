@@ -13,3 +13,48 @@
 ## Important Notes
 
 ### Project Structure
+
+```
+coding-agent-resources/
+├── AGENTS.md                 # Core principles and project guidelines
+├── LICENSE                   # MIT License
+├── README.md                 # Repository overview and usage instructions
+├── install_for_pi.sh         # Installation script for symlinking resources to pi
+├── agents/
+│   ├── README.md             # Agent definitions overview
+│   ├── planner.md            # Creates implementation plans from context and requirements
+│   ├── reviewer.md           # Reviews code changes for quality, security, and maintainability
+│   ├── scout.md              # Performs fast codebase reconnaissance and returns compressed context
+│   └── worker.md             # Executes implementation tasks with full tool access
+├── extensions/
+│   ├── README.md             # Extensions overview
+│   ├── auto-recover.ts       # Detects unexecuted tool calls and prompts model to continue
+│   ├── followup.ts           # Registers /followup command for queuing messages after current turn
+│   ├── provider-health-check.ts # Monitors LLM provider health
+│   ├── success-tone.ts       # Adjusts model tone for successful completions
+│   └── subagent/
+│       ├── README.md         # Subagent extension documentation
+│       ├── index.ts          # Subagent extension entry point
+│       └── agents.ts         # Subagent management utilities
+├── prompts/
+│   ├── README.md             # Prompts overview
+│   └── ralph-loop.md         # Iterative development loop prompt template
+├── references/
+│   └── README.md             # References overview
+└── skills/
+    ├── README.md             # Skills overview
+    └── codeberg-repo-management/
+        ├── README.md         # Codeberg repo management skill documentation
+        ├── SKILL.md          # Skill definition and configuration
+        ├── references/
+        │   ├── README.md     # Reference documentation overview
+        │   ├── agent-workflow-rules.md # Workflow rules for the agent
+        │   ├── codeberg-api-quirks.md # Codeberg API specific behaviors
+        │   ├── codeberg-merge-verification.md # Merge verification procedures
+        │   ├── codeberg-pr-branch-pitfalls.md # PR branch common issues
+        │   ├── pr-merge-sync.md # PR merge synchronization guide
+        │   └── swagger.v1.json # Forgejo API specification
+        └── scripts/
+            ├── README.md     # Scripts documentation
+            └── cb.py         # Codeberg API helper script
+```
