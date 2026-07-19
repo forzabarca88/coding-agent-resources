@@ -51,6 +51,10 @@ function formatUsageStats(
                 cost: number;
                 contextTokens?: number;
                 turns?: number;
+                lastInput?: number;
+                lastOutput?: number;
+                lastCacheRead?: number;
+                lastCacheWrite?: number;
         },
         model?: string,
 ): string {
@@ -61,6 +65,15 @@ function formatUsageStats(
         if (usage.cacheRead) parts.push(`R${formatTokens(usage.cacheRead)}`);
         if (usage.cacheWrite) parts.push(`W${formatTokens(usage.cacheWrite)}`);
         if (usage.cost) parts.push(`$${usage.cost.toFixed(4)}`);
+        const hasLast = (usage.lastInput ?? 0) > 0 || (usage.lastOutput ?? 0) > 0 || (usage.lastCacheRead ?? 0) > 0 || (usage.lastCacheWrite ?? 0) > 0;
+        if (hasLast) {
+                const lastParts: string[] = [];
+                if (usage.lastInput) lastParts.push(`↑${formatTokens(usage.lastInput)}`);
+                if (usage.lastOutput) lastParts.push(`↓${formatTokens(usage.lastOutput)}`);
+                if (usage.lastCacheRead) lastParts.push(`R${formatTokens(usage.lastCacheRead)}`);
+                if (usage.lastCacheWrite) lastParts.push(`W${formatTokens(usage.lastCacheWrite)}`);
+                parts.push(`[${lastParts.join(" ")}]`);
+        }
         if (usage.contextTokens && usage.contextTokens > 0) {
                 parts.push(`ctx:${formatTokens(usage.contextTokens)}`);
         }
@@ -144,6 +157,10 @@ interface UsageStats {
         cost: number;
         contextTokens: number;
         turns: number;
+        lastInput: number;
+        lastOutput: number;
+        lastCacheRead: number;
+        lastCacheWrite: number;
 }
 
 interface SingleResult {
@@ -287,7 +304,7 @@ async function runSingleAgent(
                         exitCode: 1,
                         messages: [],
                         stderr: `Unknown agent: "${agentName}". Available agents: ${available}.`,
-                        usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0, contextTokens: 0, turns: 0 },
+                        usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0, contextTokens: 0, turns: 0, lastInput: 0, lastOutput: 0, lastCacheRead: 0, lastCacheWrite: 0 },
                         step,
                 };
         }
@@ -307,7 +324,7 @@ async function runSingleAgent(
                 exitCode: 0,
                 messages: [],
                 stderr: "",
-                usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0, contextTokens: 0, turns: 0 },
+                usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0, contextTokens: 0, turns: 0, lastInput: 0, lastOutput: 0, lastCacheRead: 0, lastCacheWrite: 0 },
                 model: agent.model && agent.model !== "Default" ? agent.model : currentModel,
                 step,
         };
@@ -364,6 +381,10 @@ async function runSingleAgent(
                                                         currentResult.usage.cacheWrite += usage.cacheWrite || 0;
                                                         currentResult.usage.cost += usage.cost?.total || 0;
                                                         currentResult.usage.contextTokens = usage.totalTokens || 0;
+                                                        currentResult.usage.lastInput = usage.input || 0;
+                                                        currentResult.usage.lastOutput = usage.output || 0;
+                                                        currentResult.usage.lastCacheRead = usage.cacheRead || 0;
+                                                        currentResult.usage.lastCacheWrite = usage.cacheWrite || 0;
                                                 }
                                                 if (!currentResult.model && msg.model) currentResult.model = msg.model;
                                                 if (msg.stopReason) currentResult.stopReason = msg.stopReason;
@@ -607,7 +628,7 @@ export default function (pi: ExtensionAPI) {
                                                 exitCode: -1, // -1 = still running
                                                 messages: [],
                                                 stderr: "",
-                                                usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0, contextTokens: 0, turns: 0 },
+                                                usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0, contextTokens: 0, turns: 0, lastInput: 0, lastOutput: 0, lastCacheRead: 0, lastCacheWrite: 0 },
                                         };
                                 }
 
@@ -917,6 +938,8 @@ export default function (pi: ExtensionAPI) {
                                         text += `\n\n${theme.fg("muted", `─── Step ${r.step}: `)}${theme.fg("accent", r.agent)} ${rIcon}`;
                                         if (displayItems.length === 0) text += `\n${theme.fg("muted", "(no output)")}`;
                                         else text += `\n${renderDisplayItems(displayItems, 5)}`;
+                                        const stepUsage = formatUsageStats(r.usage, r.model);
+                                        if (stepUsage) text += `\n${theme.fg("dim", stepUsage)}`;
                                 }
                                 const usageStr = formatUsageStats(aggregateUsage(details.results));
                                 if (usageStr) text += `\n\n${theme.fg("dim", `Total: ${usageStr}`)}`;
@@ -1004,6 +1027,10 @@ export default function (pi: ExtensionAPI) {
                                         if (displayItems.length === 0)
                                                 text += `\n${theme.fg("muted", r.exitCode === -1 ? "(running...)" : "(no output)")}`;
                                         else text += `\n${renderDisplayItems(displayItems, 5)}`;
+                                        if (r.exitCode !== -1) {
+                                                const taskUsage = formatUsageStats(r.usage, r.model);
+                                                if (taskUsage) text += `\n${theme.fg("dim", taskUsage)}`;
+                                        }
                                 }
                                 if (!isRunning) {
                                         const usageStr = formatUsageStats(aggregateUsage(details.results));
