@@ -824,14 +824,6 @@ export default function (pi: ExtensionAPI) {
                                         text += `\n${renderDisplayItems(displayItems, COLLAPSED_ITEM_COUNT)}`;
                                         if (displayItems.length > COLLAPSED_ITEM_COUNT) text += `\n${theme.fg("muted", "(Ctrl+O to expand)")}`;
                                 }
-                                // Always show the final response at the bottom
-                                if (finalOutput) {
-                                        text += `\n${theme.fg("muted", "─── Response ───")}`;
-                                        // Show last few lines to keep it compact
-                                        const lines = finalOutput.trim().split("\n");
-                                        const preview = lines.slice(-3).join("\n");
-                                        text += `\n${theme.fg("toolOutput", preview)}`;
-                                }
                                 const usageStr = formatUsageStats(r.usage, r.model);
                                 if (usageStr) text += `\n${theme.fg("dim", usageStr)}`;
                                 return new Text(text, 0, 0);
@@ -922,16 +914,9 @@ export default function (pi: ExtensionAPI) {
                                 for (const r of details.results) {
                                         const rIcon = r.exitCode === 0 ? theme.fg("success", "✓") : theme.fg("error", "✗");
                                         const displayItems = getDisplayItems(r.messages);
-                                        const finalOutput = getFinalOutput(r.messages);
                                         text += `\n\n${theme.fg("muted", `─── Step ${r.step}: `)}${theme.fg("accent", r.agent)} ${rIcon}`;
-                                        if (displayItems.length === 0 && !finalOutput) text += `\n${theme.fg("muted", "(no output)")}`;
+                                        if (displayItems.length === 0) text += `\n${theme.fg("muted", "(no output)")}`;
                                         else text += `\n${renderDisplayItems(displayItems, 5)}`;
-                                        // Show final response for this step
-                                        if (finalOutput) {
-                                                const lines = finalOutput.trim().split("\n");
-                                                const preview = lines.slice(-2).join("\n");
-                                                text += `\n${theme.fg("toolOutput", preview)}`;
-                                        }
                                 }
                                 const usageStr = formatUsageStats(aggregateUsage(details.results));
                                 if (usageStr) text += `\n\n${theme.fg("dim", `Total: ${usageStr}`)}`;
@@ -1015,17 +1000,10 @@ export default function (pi: ExtensionAPI) {
                                                                 ? theme.fg("error", "✗")
                                                                 : theme.fg("success", "✓");
                                         const displayItems = getDisplayItems(r.messages);
-                                        const finalOutput = getFinalOutput(r.messages);
                                         text += `\n\n${theme.fg("muted", "─── ")}${theme.fg("accent", r.agent)} ${rIcon}`;
-                                        if (displayItems.length === 0 && !finalOutput)
+                                        if (displayItems.length === 0)
                                                 text += `\n${theme.fg("muted", r.exitCode === -1 ? "(running...)" : "(no output)")}`;
                                         else text += `\n${renderDisplayItems(displayItems, 5)}`;
-                                        // Show final response for this task
-                                        if (finalOutput) {
-                                                const lines = finalOutput.trim().split("\n");
-                                                const preview = lines.slice(-2).join("\n");
-                                                text += `\n${theme.fg("toolOutput", preview)}`;
-                                        }
                                 }
                                 if (!isRunning) {
                                         const usageStr = formatUsageStats(aggregateUsage(details.results));
