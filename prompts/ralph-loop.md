@@ -95,7 +95,7 @@ Capture the reviewer's output (Critical, Warnings, Suggestions, Summary).
 
 Repeat Phase 3 (worker dispatch) and Phase 4 (review) until the reviewer is satisfied (no Critical or Warnings) OR you have chosen to stop the loop.
 
-If you have stopped the loop, do **not** attempt to do the remaining work yourself - provide a detailed summary of the status to the user so that they may decide on next steps.
+If you have stopped the loop and there is work outstanding, do **not** attempt to do the remaining work yourself - provide a detailed summary of the status to the user so that they may decide on next steps.
 
 
 ## Phase 6 — Home (Final Summary)
