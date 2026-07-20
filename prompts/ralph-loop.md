@@ -87,13 +87,16 @@ Capture the reviewer's output (Critical, Warnings, Suggestions, Summary).
 
 ## Phase 5 — Iterative Loop
 
-**Loop counter**: Track review cycles. Stop after a maximum of **3 review cycles** to prevent infinite loops.
+**Loop counter**: Track review cycles. Beyond **3 review cycles**, it is up to your discretion when to stop the cycle in order to prevent infinite loops.
 
 - **If reviewer reports only Suggestions** (no Critical or Warnings): implementation is complete — exit the loop.
 - **If reviewer reports Warnings only** (no Critical): spawn a `worker` with the reviewer's feedback to apply fixes, then re-review.
 - **If reviewer reports Critical findings** (architectural problems, fundamental flaws): use your discretion to re-run `scout` and/or `planner` before dispatching new workers.
 
-Repeat Phase 3 (worker dispatch) and Phase 4 (review) until the reviewer is satisfied (no Critical or Warnings) or the loop limit is reached.
+Repeat Phase 3 (worker dispatch) and Phase 4 (review) until the reviewer is satisfied (no Critical or Warnings) OR you have chosen to stop the loop.
+
+If you have stopped the loop, do **not** attempt to do the remaining work yourself - provide a detailed summary of the status to the user so that they may decide on next steps.
+
 
 ## Phase 6 — Home (Final Summary)
 
