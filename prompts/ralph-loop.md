@@ -95,6 +95,8 @@ Capture the reviewer's output (Critical, Warnings, Suggestions, Summary).
 
 Repeat Phase 3 (worker dispatch) and Phase 4 (review) until the reviewer is satisfied (no Critical or Warnings) OR you have chosen to stop the loop.
 
+When dispatching workers to fix issues, it is **imperative** that you provide detailed context around the review findings and clear guidance on what is required to be fixed. Not providing this will result in additional review cycles and wasted time, as the worker may fail to address all review findings.
+
 If you have stopped the loop and there is work outstanding, do **not** attempt to do the remaining work yourself - provide a detailed summary of the status to the user so that they may decide on next steps.
 
 
