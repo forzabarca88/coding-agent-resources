@@ -42,6 +42,14 @@ function formatTokens(count: number): string {
         return `${(count / 1000000).toFixed(1)}M`;
 }
 
+function formatDuration(ms: number): string {
+        if (ms < 1000) return `${ms}ms`;
+        if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
+        const mins = Math.floor(ms / 60000);
+        const secs = Math.round((ms % 60000) / 1000);
+        return `${mins}m ${secs}s`;
+}
+
 function formatUsageStats(
         usage: {
                 input: number;
@@ -175,6 +183,7 @@ interface SingleResult {
         stopReason?: string;
         errorMessage?: string;
         step?: number;
+        durationMs?: number;
 }
 
 interface SubagentDetails {
@@ -338,6 +347,8 @@ async function runSingleAgent(
                 }
         };
 
+        const startTime = Date.now();
+
         try {
                 if (agent.systemPrompt.trim()) {
                         const tmp = await writePromptToTempFile(agent.name, agent.systemPrompt);
@@ -433,6 +444,7 @@ async function runSingleAgent(
                 });
 
                 currentResult.exitCode = exitCode;
+                currentResult.durationMs = Date.now() - startTime;
                 if (wasAborted) throw new Error("Subagent was aborted");
                 return currentResult;
         } finally {
@@ -830,9 +842,11 @@ export default function (pi: ExtensionAPI) {
                                                 }
                                         }
                                         const usageStr = formatUsageStats(r.usage, r.model);
-                                        if (usageStr) {
+                                        const durStr = r.durationMs ? formatDuration(r.durationMs) : undefined;
+                                        const metaStr = [usageStr, durStr].filter(Boolean).join(" · ");
+                                        if (metaStr) {
                                                 container.addChild(new Spacer(1));
-                                                container.addChild(new Text(theme.fg("dim", usageStr), 0, 0));
+                                                container.addChild(new Text(theme.fg("dim", metaStr), 0, 0));
                                         }
                                         return container;
                                 }
@@ -846,7 +860,9 @@ export default function (pi: ExtensionAPI) {
                                         if (displayItems.length > COLLAPSED_ITEM_COUNT) text += `\n${theme.fg("muted", "(Ctrl+O to expand)")}`;
                                 }
                                 const usageStr = formatUsageStats(r.usage, r.model);
-                                if (usageStr) text += `\n${theme.fg("dim", usageStr)}`;
+                                const durStr = r.durationMs ? formatDuration(r.durationMs) : undefined;
+                                const metaStr = [usageStr, durStr].filter(Boolean).join(" · ");
+                                if (metaStr) text += `\n${theme.fg("dim", metaStr)}`;
                                 return new Text(text, 0, 0);
                         }
 
@@ -915,7 +931,9 @@ export default function (pi: ExtensionAPI) {
                                                 }
 
                                                 const stepUsage = formatUsageStats(r.usage, r.model);
-                                                if (stepUsage) container.addChild(new Text(theme.fg("dim", stepUsage), 0, 0));
+                                                const stepDur = r.durationMs ? formatDuration(r.durationMs) : undefined;
+                                                const stepMeta = [stepUsage, stepDur].filter(Boolean).join(" · ");
+                                                if (stepMeta) container.addChild(new Text(theme.fg("dim", stepMeta), 0, 0));
                                         }
 
                                         const usageStr = formatUsageStats(aggregateUsage(details.results));
@@ -939,7 +957,9 @@ export default function (pi: ExtensionAPI) {
                                         if (displayItems.length === 0) text += `\n${theme.fg("muted", "(no output)")}`;
                                         else text += `\n${renderDisplayItems(displayItems, 5)}`;
                                         const stepUsage = formatUsageStats(r.usage, r.model);
-                                        if (stepUsage) text += `\n${theme.fg("dim", stepUsage)}`;
+                                        const stepDur = r.durationMs ? formatDuration(r.durationMs) : undefined;
+                                        const stepMeta = [stepUsage, stepDur].filter(Boolean).join(" · ");
+                                        if (stepMeta) text += `\n${theme.fg("dim", stepMeta)}`;
                                 }
                                 const usageStr = formatUsageStats(aggregateUsage(details.results));
                                 if (usageStr) text += `\n\n${theme.fg("dim", `Total: ${usageStr}`)}`;
@@ -1002,7 +1022,9 @@ export default function (pi: ExtensionAPI) {
                                                 }
 
                                                 const taskUsage = formatUsageStats(r.usage, r.model);
-                                                if (taskUsage) container.addChild(new Text(theme.fg("dim", taskUsage), 0, 0));
+                                                const taskDur = r.durationMs ? formatDuration(r.durationMs) : undefined;
+                                                const taskMeta = [taskUsage, taskDur].filter(Boolean).join(" · ");
+                                                if (taskMeta) container.addChild(new Text(theme.fg("dim", taskMeta), 0, 0));
                                         }
 
                                         const usageStr = formatUsageStats(aggregateUsage(details.results));
@@ -1029,7 +1051,9 @@ export default function (pi: ExtensionAPI) {
                                         else text += `\n${renderDisplayItems(displayItems, 5)}`;
                                         if (r.exitCode !== -1) {
                                                 const taskUsage = formatUsageStats(r.usage, r.model);
-                                                if (taskUsage) text += `\n${theme.fg("dim", taskUsage)}`;
+                                                const taskDur = r.durationMs ? formatDuration(r.durationMs) : undefined;
+                                                const taskMeta = [taskUsage, taskDur].filter(Boolean).join(" · ");
+                                                if (taskMeta) text += `\n${theme.fg("dim", taskMeta)}`;
                                         }
                                 }
                                 if (!isRunning) {
