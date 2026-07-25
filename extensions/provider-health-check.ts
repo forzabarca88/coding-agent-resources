@@ -105,7 +105,7 @@ function registerCheckCommand(pi: ExtensionAPI) {
       const total = lines.length;
       cmdCtx.ui.notify(
         `Providers: ${up}/${total} up`,
-        up < total ? "warn" : "info",
+        up < total ? "warning" : "info",
       );
     },
   });
@@ -160,7 +160,7 @@ export default function (pi: ExtensionAPI) {
     const down = lines.length - up;
     ctx.ui.notify(
       `Providers: ${up} up, ${down} down`,
-      down > 0 ? "warn" : "info",
+      down > 0 ? "warning" : "info",
     );
 
     // Start periodic idle checks (every 30s) until the agent starts

@@ -411,10 +411,9 @@ async function runSingleAgent(
                                         emitUpdate();
                                 }
 
-                                if (event.type === "tool_result_end" && event.message) {
-                                        currentResult.messages.push(event.message as Message);
-                                        emitUpdate();
-                                }
+                                // Note: pi emits tool_execution_start/update/end and turn_end (toolResults)
+                                // for tool execution. There is no tool_result_end event, and tool result
+                                // messages aren't needed by getDisplayItems/getFinalOutput anyway.
                         };
 
                         proc.stdout.on("data", (data) => {

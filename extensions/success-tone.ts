@@ -114,7 +114,7 @@ async function playSuccessTone(ctx: ExtensionContext) {
 
   // Subtle success notification
   if (ctx?.hasUI && ctx?.ui?.notify) {
-    ctx.ui.notify("Ready!", "success");
+    ctx.ui.notify("Ready!", "info");
   }
 }
 
