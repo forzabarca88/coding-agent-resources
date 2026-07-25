@@ -26,6 +26,24 @@ This extension provides enhanced subagent capabilities, allowing for more sophis
   - Defaults to the parent's current model (resolved as a canonical `provider/id` reference so a mid-session model switch is honoured even when multiple providers share the same model id); an agent's `model` frontmatter overrides this
   - Per-invocation model overrides via the `model` (single mode) / `models` ({agentName: `provider/id`}) / per-item `model` parameters, so different agents can run on different models without editing agent markdown
 
+## Recursion Guard
+
+The extension enforces a **single level of nesting** to prevent runaway
+recursion. Each spawned subagent process inherits an environment variable
+`PI_SUBAGENT_DEPTH` incremented by one. A process whose depth is at or above
+`MAX_SUBAGENT_DEPTH` (currently `1`) does **not** register the `subagent` tool
+at all — so a subagent literally has no way to spawn further subagents, rather
+than failing at call time.
+
+Practical effect:
+
+- The top-level agent (depth 0) may spawn subagents (depth 1).
+- Those subagents have no `subagent` tool available and cannot recurse.
+
+Because the tool is absent rather than erroring, no model tokens are wasted on
+doomed recursive calls. To allow deeper trees, raise `MAX_SUBAGENT_DEPTH` in
+`index.ts` (the child depth is always `parentDepth + 1`).
+
 ## Usage
 
 The subagent extension is automatically loaded when placed in the extensions directory. It provides:

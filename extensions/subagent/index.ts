@@ -35,6 +35,19 @@ const MAX_CONCURRENCY = 4;
 const COLLAPSED_ITEM_COUNT = 10;
 const PER_TASK_OUTPUT_CAP = 50 * 1024;
 
+/**
+ * Recursion guard for nested subagents.
+ *
+ * Each spawned subagent process inherits `PI_SUBAGENT_DEPTH` incremented by
+ * one. A process whose depth is >= MAX_SUBAGENT_DEPTH does not register the
+ * `subagent` tool at all, so it is structurally impossible for a subagent to
+ * spawn its own subagents. With MAX_SUBAGENT_DEPTH = 1 the subagent tree is
+ * capped at exactly one level: the top-level agent (depth 0) may spawn
+ * subagents (depth 1), but those subagents have no `subagent` tool available.
+ */
+const MAX_SUBAGENT_DEPTH = 1;
+const SUBAGENT_DEPTH = Number.parseInt(process.env.PI_SUBAGENT_DEPTH ?? "0", 10) || 0;
+
 function formatTokens(count: number): string {
         if (count < 1000) return count.toString();
         if (count < 10000) return `${(count / 1000).toFixed(1)}k`;
@@ -373,6 +386,9 @@ async function runSingleAgent(
                                 cwd: cwd ?? defaultCwd,
                                 shell: false,
                                 stdio: ["ignore", "pipe", "pipe"],
+                                // Propagate the nesting depth so the child knows it is a
+                                // subagent and refuses to register the `subagent` tool.
+                                env: { ...process.env, PI_SUBAGENT_DEPTH: String(SUBAGENT_DEPTH + 1) },
                         });
                         let buffer = "";
 
@@ -523,6 +539,15 @@ const SubagentParams = Type.Object({
 });
 
 export default function (pi: ExtensionAPI) {
+        // Recursion guard: a process spawned by this tool runs at
+        // SUBAGENT_DEPTH >= 1. Such a process must not expose the `subagent`
+        // tool, otherwise a subagent could spawn its own subagents and recurse
+        // without bound. Skipping registration here means the child process
+        // never advertises the tool, so the model cannot invoke it.
+        if (SUBAGENT_DEPTH >= MAX_SUBAGENT_DEPTH) {
+                return;
+        }
+
         pi.registerTool({
                 name: "subagent",
                 label: "Subagent",
