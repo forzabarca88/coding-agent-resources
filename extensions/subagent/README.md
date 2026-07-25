@@ -22,6 +22,7 @@ This extension provides enhanced subagent capabilities, allowing for more sophis
   - Context isolation and sharing
   - Result aggregation
   - Error handling and recovery
+  - Defaults to the parent's current model (resolved as a canonical `provider/id` reference so a mid-session model switch is honoured even when multiple providers share the same model id); an agent's `model` frontmatter overrides this
 
 ## Usage
 

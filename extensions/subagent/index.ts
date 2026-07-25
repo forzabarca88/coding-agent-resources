@@ -510,6 +510,14 @@ export default function (pi: ExtensionAPI) {
                         const agents = discovery.agents;
                         const confirmProjectAgents = params.confirmProjectAgents ?? true;
 
+                        // Resolve the parent's current model as a canonical "provider/id"
+                        // reference so the spawned subagent targets the exact same
+                        // model+provider. A bare model id is ambiguous when multiple
+                        // providers serve the same id, and pi would resolve it to the
+                        // first matching provider (i.e. the first model used this
+                        // session) instead of the parent's current selection.
+                        const currentModel = ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : "";
+
                         const hasChain = (params.chain?.length ?? 0) > 0;
                         const hasTasks = (params.tasks?.length ?? 0) > 0;
                         const hasSingle = Boolean(params.agent && params.task);
@@ -595,7 +603,7 @@ export default function (pi: ExtensionAPI) {
                                                 signal,
                                                 chainUpdate,
                                                 makeDetails("chain"),
-                                                ctx.model.id,
+                                                currentModel,
                                         );
                                         results.push(result);
 
@@ -674,7 +682,7 @@ export default function (pi: ExtensionAPI) {
                                                         }
                                                 },
                                                 makeDetails("parallel"),
-                                                ctx.model.id,
+                                                currentModel,
                                         );
                                         allResults[index] = result;
                                         emitParallelUpdate();
@@ -711,7 +719,7 @@ export default function (pi: ExtensionAPI) {
                                         signal,
                                         onUpdate,
                                         makeDetails("single"),
-                                        ctx.model.id,
+                                        currentModel,
                                 );
                                 const isError = isFailedResult(result);
                                 if (isError) {
