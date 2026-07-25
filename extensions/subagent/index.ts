@@ -301,6 +301,7 @@ async function runSingleAgent(
         onUpdate: OnUpdateCallback | undefined,
         makeDetails: (results: SingleResult[]) => SubagentDetails,
         currentModel: string,
+        modelOverride?: string,
 ): Promise<SingleResult> {
         const agent = agents.find((a) => a.name === agentName);
 
@@ -318,8 +319,14 @@ async function runSingleAgent(
                 };
         }
 
+        // Model precedence: per-invocation override > agent frontmatter `model`
+        // (when not "Default") > parent's current model. The override is the
+        // runtime mechanism that lets callers pick a model per agent without
+        // editing the agent's markdown definition.
+        const frontmatterModel = agent.model && agent.model !== "Default" ? agent.model : undefined;
+        const modelToUse = modelOverride || frontmatterModel || currentModel;
+
         const args: string[] = ["--mode", "json", "-p", "--no-session"];
-        const modelToUse = agent.model && agent.model !== "Default" ? agent.model : currentModel;
         args.push("--model", modelToUse);
         if (agent.tools && agent.tools.length > 0) args.push("--tools", agent.tools.join(","));
 
@@ -334,7 +341,7 @@ async function runSingleAgent(
                 messages: [],
                 stderr: "",
                 usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0, contextTokens: 0, turns: 0, lastInput: 0, lastOutput: 0, lastCacheRead: 0, lastCacheWrite: 0 },
-                model: agent.model && agent.model !== "Default" ? agent.model : currentModel,
+                model: modelToUse,
                 step,
         };
 
@@ -467,12 +474,24 @@ const TaskItem = Type.Object({
         agent: Type.String({ description: "Name of the agent to invoke" }),
         task: Type.String({ description: "Task to delegate to the agent" }),
         cwd: Type.Optional(Type.String({ description: "Working directory for the agent process" })),
+        model: Type.Optional(
+                Type.String({
+                        description:
+                                "Model override for this task as a canonical `provider/id` reference (e.g. `openrouter/z-ai/glm-5.2`). Takes precedence over the top-level `models` map and the agent's frontmatter `model`.",
+                }),
+        ),
 });
 
 const ChainItem = Type.Object({
         agent: Type.String({ description: "Name of the agent to invoke" }),
         task: Type.String({ description: "Task with optional {previous} placeholder for prior output" }),
         cwd: Type.Optional(Type.String({ description: "Working directory for the agent process" })),
+        model: Type.Optional(
+                Type.String({
+                        description:
+                                "Model override for this chain step as a canonical `provider/id` reference (e.g. `openrouter/z-ai/glm-5.2`). Takes precedence over the top-level `models` map and the agent's frontmatter `model`.",
+                }),
+        ),
 });
 
 const AgentScopeSchema = StringEnum(["user", "project", "both"] as const, {
@@ -490,6 +509,18 @@ const SubagentParams = Type.Object({
                 Type.Boolean({ description: "Prompt before running project-local agents. Default: true.", default: true }),
         ),
         cwd: Type.Optional(Type.String({ description: "Working directory for the agent process (single mode)" })),
+        model: Type.Optional(
+                Type.String({
+                        description:
+                                "Model override for single mode as a canonical `provider/id` reference (e.g. `openrouter/z-ai/glm-5.2`). Used when `agent` is set. Takes precedence over the `models` map and the agent's frontmatter `model`.",
+                }),
+        ),
+        models: Type.Optional(
+                Type.Record(Type.String(), Type.String(), {
+                        description:
+                                "Per-agent model overrides mapping agent name to a canonical `provider/id` reference (e.g. `{ 'worker': 'lmstudio/qwen3.6-27b', 'reviewer': 'openrouter/z-ai/glm-5.2' }`). Applies to all modes. Lets you assign different models to different agents at invocation time without editing agent markdown.",
+                }),
+        ),
 });
 
 export default function (pi: ExtensionAPI) {
@@ -501,6 +532,7 @@ export default function (pi: ExtensionAPI) {
                         "Modes: single (agent + task), parallel (tasks array), chain (sequential with {previous} placeholder).",
                         `Default agent scope is "user" (from ${path.join(getAgentDir(), "agents")}).`,
                         `To enable project-local agents in ${CONFIG_DIR_NAME}/agents, set agentScope: "both" (or "project").`,
+                        "Per-agent models: pass `models` ({agentName: \"provider/id\"}) to assign different models per agent without editing agent markdown, or `model` (single mode) / per-item `model` for a single invocation. Overrides take precedence over the agent's frontmatter `model` and the parent's current model.",
                 ].join(" "),
                 parameters: SubagentParams,
 
@@ -604,6 +636,7 @@ export default function (pi: ExtensionAPI) {
                                                 chainUpdate,
                                                 makeDetails("chain"),
                                                 currentModel,
+                                                step.model ?? params.models?.[step.agent],
                                         );
                                         results.push(result);
 
@@ -683,6 +716,7 @@ export default function (pi: ExtensionAPI) {
                                                 },
                                                 makeDetails("parallel"),
                                                 currentModel,
+                                                t.model ?? params.models?.[t.agent],
                                         );
                                         allResults[index] = result;
                                         emitParallelUpdate();
@@ -720,6 +754,7 @@ export default function (pi: ExtensionAPI) {
                                         onUpdate,
                                         makeDetails("single"),
                                         currentModel,
+                                        params.model ?? params.models?.[params.agent],
                                 );
                                 const isError = isFailedResult(result);
                                 if (isError) {

@@ -14,6 +14,7 @@ This extension provides enhanced subagent capabilities, allowing for more sophis
   - Subagent role definitions
   - Context passing utilities
   - Agent capability specifications
+  - Reads an optional `model` field from each agent's frontmatter (canonical `provider/id` reference). When omitted or set to `Default`, the subagent inherits the parent's current model.
 
 ### [index.ts](./index.ts)
 - **Purpose**: Main subagent extension implementation
@@ -23,6 +24,7 @@ This extension provides enhanced subagent capabilities, allowing for more sophis
   - Result aggregation
   - Error handling and recovery
   - Defaults to the parent's current model (resolved as a canonical `provider/id` reference so a mid-session model switch is honoured even when multiple providers share the same model id); an agent's `model` frontmatter overrides this
+  - Per-invocation model overrides via the `model` (single mode) / `models` ({agentName: `provider/id`}) / per-item `model` parameters, so different agents can run on different models without editing agent markdown
 
 ## Usage
 
@@ -104,6 +106,65 @@ interface SubagentConfig {
 - **Error handling**: Always handle potential subagent failures
 - **Timeouts**: Set appropriate timeouts for long-running tasks
 - **Result validation**: Validate subagent results before proceeding
+
+## Per-Agent Models
+
+Each subagent invocation can target a specific model without editing the agent's
+markdown definition. Models are referenced as canonical `provider/id` strings
+(e.g. `lmstudio/qwen3.6-27b`, `openrouter/z-ai/glm-5.2`) — the same form used by
+`pi --model`.
+
+Resolution precedence (highest first):
+
+1. Per-item `model` on a `tasks`/`chain` entry
+2. Top-level `models` map value for the agent name
+3. Top-level `model` (single mode only)
+4. Agent frontmatter `model` (unless `Default`)
+5. Parent's current model
+
+### Assigning models for a whole call
+
+Pass a `models` map so every agent in the call uses its assigned model:
+
+```javascript
+subagent({
+  agent: "worker",
+  task: "Refactor the auth module",
+  models: {
+    worker: "lmstudio/qwen3.6-27b",
+    reviewer: "openrouter/z-ai/glm-5.2",
+    scout: "openrouter/z-ai/glm-5.2",
+    planner: "openrouter/z-ai/glm-5.2"
+  }
+})
+```
+
+### Single-mode shorthand
+
+```javascript
+subagent({
+  agent: "reviewer",
+  task: "Review the staged diff",
+  model: "openrouter/z-ai/glm-5.2"
+})
+```
+
+### Per-task override
+
+```javascript
+subagent({
+  tasks: [
+    { agent: "worker", task: "Implement A", model: "lmstudio/qwen3.6-27b" },
+    { agent: "worker", task: "Implement B", model: "openrouter/z-ai/glm-5.2" }
+  ]
+})
+```
+
+### Persistent defaults
+
+To set a persistent per-agent default without editing markdown every time you
+switch, set the `model` field in the agent's frontmatter once. Runtime overrides
+above always win, so the frontmatter value acts as a fallback.
 
 ## See Also
 

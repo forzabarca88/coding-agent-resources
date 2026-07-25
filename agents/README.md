@@ -72,13 +72,20 @@ Each agent definition follows this structure:
 name: agent-name
 description: Brief description of the agent's purpose
 tools: comma-separated-list
-template: optional template reference
+model: provider/id
 ---
 
 You are a [role]. [Instructions for the agent]
 
 [Detailed guidance on behavior, output format, etc.]
 ```
+
+### Fields
+
+- `name` (required): Identifier used when invoking the agent.
+- `description` (required): One-line summary shown in agent listings.
+- `tools` (optional): Comma-separated allow-list of tools the agent may use.
+- `model` (optional): Canonical `provider/id` reference (e.g. `lmstudio/qwen3.6-27b`). When omitted or set to `Default`, the agent inherits the parent's current model. This is a **persistent fallback**; runtime overrides passed via the `subagent` tool (`model` / `models` / per-item `model`) take precedence — see the [Subagent extension docs](../extensions/subagent/README.md#per-agent-models).
 
 ## See Also
 

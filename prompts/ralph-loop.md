@@ -11,6 +11,21 @@ If a subagent fails, you should continue to delegate to subagents and coordinate
 
 **Golden rule**: Always frame the task for each agent according to its role and tool constraints. Each agent has a specific job — never pass raw implementation instructions to a read-only agent.
 
+## Per-Agent Models
+
+If the user specifies which model each agent should use (e.g. "worker on `lmstudio/qwen3.6-27b`, reviewer on `openrouter/z-ai/glm-5.2`"), pass these as a `models` map on **every** `subagent` call so the assignments persist across phases:
+
+```
+models: {
+  scout:    "<provider/id>",
+  planner:  "<provider/id>",
+  worker:   "<provider/id>",
+  reviewer: "<provider/id>"
+}
+```
+
+Only include the agents the user named; unspecified agents inherit the parent's current model. Use canonical `provider/id` references. Do **not** edit agent markdown files to set models — the `models` map is the runtime override.
+
 ## Phase 1 — Reconnaissance (Scout)
 
 The scout is **read-only** (tools: `read`, `grep`, `find`, `ls`, `bash`). It cannot and must not make changes. Frame the requirement as context for investigation:
