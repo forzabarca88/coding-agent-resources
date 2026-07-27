@@ -34,6 +34,8 @@ const MAX_PARALLEL_TASKS = 8;
 const MAX_CONCURRENCY = 4;
 const COLLAPSED_ITEM_COUNT = 10;
 const PER_TASK_OUTPUT_CAP = 50 * 1024;
+const THINKING_TAIL_LINES = 15;
+const THINKING_THROTTLE_MS = 80;
 
 /**
  * Recursion guard for nested subagents.
@@ -197,6 +199,7 @@ interface SingleResult {
         errorMessage?: string;
         step?: number;
         durationMs?: number;
+        liveThinking?: string;
 }
 
 interface SubagentDetails {
@@ -253,6 +256,16 @@ function getDisplayItems(messages: Message[]): DisplayItem[] {
                 }
         }
         return items;
+}
+
+function renderThinkingTail(thinking: string, theme: { fg: (color: any, text: string) => string }): Text {
+        const lines = thinking.split("\n");
+        const tail = lines.slice(-THINKING_TAIL_LINES);
+        const skipped = lines.length - tail.length;
+        let text = theme.fg("muted", "─── Thinking (live) ───");
+        if (skipped > 0) text += `\n${theme.fg("dim", `... ${skipped} earlier lines`)}`;
+        text += `\n${theme.fg("toolOutput", tail.join("\n"))}`;
+        return new Text(text, 0, 0);
 }
 
 async function mapWithConcurrencyLimit<TIn, TOut>(
@@ -368,6 +381,7 @@ async function runSingleAgent(
         };
 
         const startTime = Date.now();
+        let lastThinkingEmit = 0;
 
         try {
                 if (agent.systemPrompt.trim()) {
@@ -401,9 +415,28 @@ async function runSingleAgent(
                                         return;
                                 }
 
+                                if (event.type === "message_update" && event.message) {
+                                        const msg = event.message as Message;
+                                        if (msg.role === "assistant") {
+                                                let thinking = "";
+                                                for (const part of msg.content) {
+                                                        if (part.type === "thinking" && part.thinking) thinking = part.thinking;
+                                                }
+                                                if (thinking) {
+                                                        currentResult.liveThinking = thinking;
+                                                        const now = Date.now();
+                                                        if (now - lastThinkingEmit >= THINKING_THROTTLE_MS) {
+                                                                lastThinkingEmit = now;
+                                                                emitUpdate();
+                                                        }
+                                                }
+                                        }
+                                }
+
                                 if (event.type === "message_end" && event.message) {
                                         const msg = event.message as Message;
                                         currentResult.messages.push(msg);
+                                        currentResult.liveThinking = undefined;
 
                                         if (msg.role === "assistant") {
                                                 currentResult.usage.turns++;
@@ -888,6 +921,10 @@ export default function (pi: ExtensionAPI) {
                                         container.addChild(new Spacer(1));
                                         container.addChild(new Text(theme.fg("muted", "─── Task ───"), 0, 0));
                                         container.addChild(new Text(theme.fg("dim", r.task), 0, 0));
+                                        if (r.liveThinking) {
+                                                container.addChild(new Spacer(1));
+                                                container.addChild(renderThinkingTail(r.liveThinking, theme));
+                                        }
                                         container.addChild(new Spacer(1));
                                         container.addChild(new Text(theme.fg("muted", "─── Output ───"), 0, 0));
                                         if (displayItems.length === 0 && !finalOutput) {
@@ -977,6 +1014,10 @@ export default function (pi: ExtensionAPI) {
                                                         ),
                                                 );
                                                 container.addChild(new Text(theme.fg("muted", "Task: ") + theme.fg("dim", r.task), 0, 0));
+                                                if (r.liveThinking) {
+                                                        container.addChild(new Spacer(1));
+                                                        container.addChild(renderThinkingTail(r.liveThinking, theme));
+                                                }
 
                                                 // Show tool calls
                                                 for (const item of displayItems) {
@@ -1068,6 +1109,10 @@ export default function (pi: ExtensionAPI) {
                                                         new Text(`${theme.fg("muted", "─── ") + theme.fg("accent", r.agent)} ${rIcon}`, 0, 0),
                                                 );
                                                 container.addChild(new Text(theme.fg("muted", "Task: ") + theme.fg("dim", r.task), 0, 0));
+                                                if (r.liveThinking) {
+                                                        container.addChild(new Spacer(1));
+                                                        container.addChild(renderThinkingTail(r.liveThinking, theme));
+                                                }
 
                                                 // Show tool calls
                                                 for (const item of displayItems) {
