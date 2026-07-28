@@ -944,27 +944,24 @@ export default function (pi: ExtensionAPI) {
                                                 container.addChild(new Spacer(1));
                                                 container.addChild(renderResponseTail(r.liveText, theme));
                                         }
-                                        const hasFinalContent = displayItems.length > 0 || Boolean(finalOutput);
-                                        if (hasFinalContent || !r.liveText) {
-                                                container.addChild(new Spacer(1));
-                                                container.addChild(new Text(theme.fg("muted", "─── Output ───"), 0, 0));
-                                                if (!hasFinalContent) {
-                                                        container.addChild(new Text(theme.fg("muted", "(no output)"), 0, 0));
-                                                } else {
-                                                        for (const item of displayItems) {
-                                                                if (item.type === "toolCall")
-                                                                        container.addChild(
-                                                                                new Text(
-                                                                                        theme.fg("muted", "→ ") + formatToolCall(item.name, item.args, theme.fg.bind(theme)),
-                                                                                        0,
-                                                                                        0,
-                                                                                ),
-                                                                        );
-                                                        }
-                                                        if (finalOutput) {
-                                                                container.addChild(new Spacer(1));
-                                                                container.addChild(new Markdown(finalOutput.trim(), 0, 0, mdTheme));
-                                                        }
+                                        container.addChild(new Spacer(1));
+                                        container.addChild(new Text(theme.fg("muted", "─── Output ───"), 0, 0));
+                                        if (displayItems.length === 0 && !finalOutput) {
+                                                container.addChild(new Text(theme.fg("muted", "(no output)"), 0, 0));
+                                        } else {
+                                                for (const item of displayItems) {
+                                                        if (item.type === "toolCall")
+                                                                container.addChild(
+                                                                        new Text(
+                                                                                theme.fg("muted", "→ ") + formatToolCall(item.name, item.args, theme.fg.bind(theme)),
+                                                                                0,
+                                                                                0,
+                                                                        ),
+                                                                );
+                                                }
+                                                if (finalOutput) {
+                                                        container.addChild(new Spacer(1));
+                                                        container.addChild(new Markdown(finalOutput.trim(), 0, 0, mdTheme));
                                                 }
                                         }
                                         const usageStr = formatUsageStats(r.usage, r.model);
