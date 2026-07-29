@@ -72,11 +72,12 @@ Scout context:
 Full plan:
 {plan}
 
-Work autonomously to complete only this task. Return: Completed, Files Changed, Notes.")
+Work autonomously to complete only this task. Return: Completed, Files Changed, Challenges/Notes.")
 ```
 
 - Each worker receives the specific task description, relevant scout context, and the full plan.
 - **Verify** each worker's completion (files changed, key functions touched) before dispatching the next.
+- If a worker reported any challenges or notes, review them. Ensure that subsequent workers are provided with the solution for any challenges encountered, **this is important so that independent workers don't waste time repeatly dealing with the same challenges as previous workers.** 
 - After all tasks are done, compile a summary of all changes (files changed, key functions touched) to feed the reviewer.
 
 ## Phase 4 — Review
