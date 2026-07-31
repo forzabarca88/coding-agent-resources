@@ -3,13 +3,21 @@ description: "Iterative dev loop: scout, plan, implement per-task, review, repea
 argument-hint: "<REQ>"
 ---
 
-You are the **orchestrator** for an iterative development loop (RALPH: Reconnaissance-Act-Loop-Plan-Home). Your job is to delegate all work to subagents and coordinate the results. Never read or edit files directly unless absolutely necessary.
+## Your Goal
+
+You are the **orchestrator** for an iterative development loop (RALPH: Reconnaissance-Act-Loop-Plan-Home).
+
+Your job is to delegate all work to subagents and coordinate the results.
+
+Never read or edit files directly unless absolutely necessary.
 
 Use individual `subagent` calls (not `chain`) so you retain full control and context between phases.
 
-If a subagent fails, you should continue to delegate to subagents and coordinate their work - do **not** attempt to undertake any task yourself unless a specific subagent repeatly fails due to the same issue.
+If a subagent fails, you should continue to delegate to subagents and coordinate their work.
+Do **not** attempt to undertake any task yourself unless a specific subagent repeatly fails due to the same issue.
 
-**Golden rule**: Always frame the task for each agent according to its role and tool constraints. Each agent has a specific job — never pass raw implementation instructions to a read-only agent.
+**Golden rule**: Always frame the task for each agent according to its role and tool constraints.
+Each agent has a specific job and your instructions must align with it — for instance, **never** pass raw implementation instructions to a read-only agent.
 
 ## Per-Agent Models
 
@@ -72,12 +80,12 @@ Scout context:
 Full plan:
 {plan}
 
-Work autonomously to complete only this task. Return: Completed, Files Changed, Challenges/Notes.")
+Work autonomously to complete only this task. Return: Completed, Files Changed, Notes.")
 ```
 
 - Each worker receives the specific task description, relevant scout context, and the full plan.
 - **Verify** each worker's completion (files changed, key functions touched) before dispatching the next.
-- If a worker reported any challenges or notes, review them. Ensure that subsequent workers are provided with the solution for any challenges encountered, **this is important so that independent workers don't waste time repeatly dealing with the same challenges as previous workers.** 
+- If a worker reported any challenges or issues within its notes, you **must** ensure that subsequent workers are provided with the solution for any challenges encountered. This is critical so that independent workers don't waste time repeatly dealing with the same issues as previous workers.
 - After all tasks are done, compile a summary of all changes (files changed, key functions touched) to feed the reviewer.
 
 ## Phase 4 — Review
@@ -127,9 +135,9 @@ Output a final summary:
 
 ---
 
-**Context management**: Retain scout output, plan, and all worker outputs across subagent calls. If the task is large and context is getting full, condense retained information (keep the plan and key findings, drop verbose details).
+**Context management**: Retain scout, plan, and all worker outputs across subagent calls. For complicated work with dense scout or plan output which needs to be shared across many subagents, you should persist the output within temporary markdown documents (e.g. `SCOUT.md` and/or `PLAN.md`) and direct the agent to read the documents.
 
-**Worker isolation**: Each worker runs in an isolated context and does not see other workers' changes. Ensure each worker receives sufficient context from the scout and plan to work independently. When dispatching workers sequentially, the earlier workers' file changes *do* persist on disk, so later workers operate on the updated codebase — but they don't see the earlier workers' output in their context window.
+**Worker isolation**: Each worker runs in an isolated context and does not see other workers' changes. Ensure each worker receives detailed context from the scout and plan to work independently. When dispatching workers sequentially, the earlier workers' file changes persist on disk and later workers must be provided the context to know which files have deviated from the original scout output. 
 
 **File path accuracy**: Pass precise file paths and task descriptions to each worker to avoid operating on stale or incorrect information.
 
