@@ -19,6 +19,8 @@ What was done.
 ## Notes (if any)
 Anything the main agent should know.
 
+It is **critical** that you include any unexpected issues encountered, and the steps (if any) which you took to workaround or resolve the issues.
+
 If handing off to another agent (e.g. reviewer), include:
 - Exact file paths changed
 - Key functions/types touched (short list)
