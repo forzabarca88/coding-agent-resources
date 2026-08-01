@@ -191,6 +191,41 @@ while true; do
 done
 
 # ---------------------------------------------------------------------------
+# Helper: display stream events from JSON lines
+# ---------------------------------------------------------------------------
+display_stream_events() {
+    local file="$1"
+    local start_line="$2"
+
+    while IFS= read -r LINE; do
+        # Show thinking/reasoning content (dimmed to distinguish from response)
+        THINKING=$(echo "$LINE" | jq -r 'select(.type == "message_update" and .assistantMessageEvent.type == "thinking_delta") | .assistantMessageEvent.delta' 2>/dev/null)
+        if [ -n "$THINKING" ] && [ "$THINKING" != "null" ]; then
+            echo -en "${DIM}${THINKING}${NC}"
+        fi
+
+        # Extract text from text_delta events (token-level streaming)
+        DELTA=$(echo "$LINE" | jq -r 'select(.type == "message_update" and .assistantMessageEvent.type == "text_delta") | .assistantMessageEvent.delta' 2>/dev/null)
+        if [ -n "$DELTA" ] && [ "$DELTA" != "null" ]; then
+            echo -n "$DELTA"
+        fi
+
+        # Add newline after assistant message ends
+        IS_END=$(echo "$LINE" | jq -r 'select(.type == "message_end" and .message.role == "assistant") | "yes"' 2>/dev/null)
+        if [ "$IS_END" = "yes" ]; then
+            echo ""
+        fi
+
+        # Show tool execution start
+        # Use tostring to safely handle both string and object args
+        TOOL_START=$(echo "$LINE" | jq -r 'select(.type == "tool_execution_start") | "\(.toolName)(\(( .args | tostring )[0:80]))"' 2>/dev/null)
+        if [ -n "$TOOL_START" ] && [ "$TOOL_START" != "null" ]; then
+            echo -e "\n${DIM}⚡ ${TOOL_START}${NC}"
+        fi
+    done < <(tail -n "+$((start_line + 1))" "$file" 2>/dev/null)
+}
+
+# ---------------------------------------------------------------------------
 # Monitor session file for token usage, and stream file for text output
 # ---------------------------------------------------------------------------
 LIMIT_EXCEEDED=0
@@ -206,41 +241,14 @@ if [ -n "$SESSION_FILE" ] && [ -f "$SESSION_FILE" ]; then
     LAST_STREAM_LINE_COUNT=$(wc -l < "$STREAM_FILE" 2>/dev/null || echo 0)
 
     # Monitor loop: polls while pi runs, or until limit exceeded
+    # Disable set -e for the monitoring loop because jq failures (e.g.
+    # tool_execution_start with object args) must not abort the script.
+    set +e
     while true; do
-        # Check if pi is still running
-        if ! kill -0 "$PI_PID" 2>/dev/null; then
-            break
-        fi
-
         # --- Read new JSON events from the stream file and display text ---
         CURRENT_STREAM_COUNT=$(wc -l < "$STREAM_FILE" 2>/dev/null || echo 0)
         if [ "$CURRENT_STREAM_COUNT" -gt "$LAST_STREAM_LINE_COUNT" ]; then
-            while IFS= read -r LINE; do
-                # Show thinking/reasoning content (dimmed to distinguish from response)
-                THINKING=$(echo "$LINE" | jq -r 'select(.type == "message_update" and .assistantMessageEvent.type == "thinking_delta") | .assistantMessageEvent.delta' 2>/dev/null)
-                if [ -n "$THINKING" ] && [ "$THINKING" != "null" ]; then
-                    echo -en "${DIM}${THINKING}${NC}"
-                fi
-
-                # Extract text from text_delta events (token-level streaming)
-                DELTA=$(echo "$LINE" | jq -r 'select(.type == "message_update" and .assistantMessageEvent.type == "text_delta") | .assistantMessageEvent.delta' 2>/dev/null)
-                if [ -n "$DELTA" ] && [ "$DELTA" != "null" ]; then
-                    echo -n "$DELTA"
-                fi
-
-                # Add newline after assistant message ends
-                IS_END=$(echo "$LINE" | jq -r 'select(.type == "message_end" and .message.role == "assistant") | "yes"' 2>/dev/null)
-                if [ "$IS_END" = "yes" ]; then
-                    echo ""
-                fi
-
-                # Show tool execution start
-                TOOL_START=$(echo "$LINE" | jq -r 'select(.type == "tool_execution_start") | "\(.toolName)(\(.args // "" | .[0:80]))"' 2>/dev/null)
-                if [ -n "$TOOL_START" ] && [ "$TOOL_START" != "null" ]; then
-                    echo -e "\n${DIM}⚡ ${TOOL_START}${NC}"
-                fi
-            done < <(tail -n "+$((LAST_STREAM_LINE_COUNT + 1))" "$STREAM_FILE" 2>/dev/null)
-
+            display_stream_events "$STREAM_FILE" "$LAST_STREAM_LINE_COUNT"
             LAST_STREAM_LINE_COUNT=$CURRENT_STREAM_COUNT
         fi
 
@@ -266,9 +274,23 @@ if [ -n "$SESSION_FILE" ] && [ -f "$SESSION_FILE" ]; then
             LAST_SESSION_LINE_COUNT=$CURRENT_SESSION_COUNT
         fi
 
+        # Check if pi is still running (after reading output)
+        if ! kill -0 "$PI_PID" 2>/dev/null; then
+            break
+        fi
+
         sleep 0.2
     done
 fi
+
+# ---------------------------------------------------------------------------
+# Final drain: capture any remaining stream events after pi exited
+# ---------------------------------------------------------------------------
+CURRENT_STREAM_COUNT=$(wc -l < "$STREAM_FILE" 2>/dev/null || echo 0)
+if [ "$CURRENT_STREAM_COUNT" -gt "${LAST_STREAM_LINE_COUNT:-0}" ]; then
+    display_stream_events "$STREAM_FILE" "${LAST_STREAM_LINE_COUNT:-0}"
+fi
+set -e
 
 # ---------------------------------------------------------------------------
 # Handle limit exceeded
