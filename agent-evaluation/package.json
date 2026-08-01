@@ -1,0 +1,39 @@
+{
+  "name": "web-agent",
+  "version": "1.0.0",
+  "description": "A secure CLI tool that fetches a web page, sanitizes it against malicious content, converts it to native markdown, and outputs to stdout or a file.",
+  "main": "dist/index.js",
+  "bin": {
+    "web-agent": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "lint": "prettier --check src/ test/",
+    "format": "prettier --write src/ test/"
+  },
+  "dependencies": {
+    "cheerio": "^1.2.0",
+    "commander": "^15.0.0",
+    "is-ip": "^5.0.1",
+    "jsdom": "^30.0.1",
+    "turndown": "^7.2.4",
+    "undici": "^8.9.0",
+    "whatwg-url": "^17.1.0"
+  },
+  "devDependencies": {
+    "@types/jsdom": "^28.0.3",
+    "@types/node": "^26.1.2",
+    "@types/turndown": "^5.0.6",
+    "@types/whatwg-url": "^13.0.0",
+    "@vitest/coverage-v8": "^4.1.10",
+    "execa": "^9.6.1",
+    "prettier": "^3.9.6",
+    "ts-node": "^10.9.2",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
+  }
+}
