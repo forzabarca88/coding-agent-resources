@@ -16,5 +16,9 @@ These files are provided as reference, and you may read, modify, or ignore them 
 
 You should not read git history or code from other branches.
 
+You should not read the following files as they won't help you with the task:
+- `run-eval.sh`
+- `eval-results.md`
+
 **Modification of any of the existing test files is not allowed, and will result in instant disqualification.**
 
