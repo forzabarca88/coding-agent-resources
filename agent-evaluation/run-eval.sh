@@ -3,7 +3,7 @@
 # Pi Eval Runner
 # Runs pi with @eval-prompt.md, monitors token usage in real-time, and
 # terminates the session if the limit is exceeded.
-# Usage: ./run-eval.sh [--max-context <tokens>]
+# Usage: ./run-eval.sh [--model <model>] [--max-context <tokens>]
 # =============================================================================
 set -uo pipefail
 
@@ -18,11 +18,20 @@ cd "$SCRIPT_DIR"
 # ---------------------------------------------------------------------------
 # Parse CLI arguments
 # ---------------------------------------------------------------------------
+MODEL=""
 MAX_CONTEXT=$DEFAULT_MAX_CONTEXT
 
 while [ $# -gt 0 ]; do
     case "$1" in
-        --max-context|-m)
+        --model|-m)
+            if [ $# -lt 2 ]; then
+                echo "Error: --model requires a model identifier." >&2
+                exit 1
+            fi
+            MODEL="$2"
+            shift 2
+            ;;
+        --max-context|-c)
             if [ $# -lt 2 ]; then
                 echo "Error: --max-context requires a token count." >&2
                 exit 1
@@ -31,10 +40,12 @@ while [ $# -gt 0 ]; do
             shift 2
             ;;
         --help|-h)
-            echo "Usage: $0 [--max-context <tokens>]"
+            echo "Usage: $0 [--model <model>] [--max-context <tokens>]"
             echo ""
             echo "Options:"
-            echo "  -m, --max-context <tokens>  Max context window in tokens (default: $DEFAULT_MAX_CONTEXT)"
+            echo "  -m, --model <model>        Model identifier (e.g. anthropic/claude-sonnet-4-20250514)"
+            echo "                              If not set, you will be prompted interactively."
+            echo "  -c, --max-context <tokens>  Max context window in tokens (default: $DEFAULT_MAX_CONTEXT)"
             echo "                               Set to 0 to disable the limit."
             echo "  -h, --help                  Show this help"
             exit 0
@@ -76,25 +87,27 @@ RED='\033[0;31m'
 NC='\033[0m' # No Colour
 
 # ---------------------------------------------------------------------------
-# Prompt for model
+# Prompt for model (if not already set via --model)
 # ---------------------------------------------------------------------------
-echo ""
-echo -e "${BOLD}╔══════════════════════════════════════════════╗${NC}"
-echo -e "${BOLD}║          Pi Eval Runner                      ║${NC}"
-echo -e "${BOLD}╚══════════════════════════════════════════════╝${NC}"
-echo ""
-
-read -r -p "$(echo -e "${CYAN}Enter model${NC} ${DIM}(e.g. anthropic/claude-sonnet-4-20250514)${NC}: ")" MODEL
-
-MODEL="${MODEL## }"
-MODEL="${MODEL%% }"
-
 if [ -z "$MODEL" ]; then
-    echo -e "${RED}Error: Model is required.${NC}" >&2
-    exit 1
-fi
+    echo ""
+    echo -e "${BOLD}╔══════════════════════════════════════════════╗${NC}"
+    echo -e "${BOLD}║          Pi Eval Runner                      ║${NC}"
+    echo -e "${BOLD}╚══════════════════════════════════════════════╝${NC}"
+    echo ""
 
-echo ""
+    read -r -p "$(echo -e "${CYAN}Enter model${NC} ${DIM}(e.g. anthropic/claude-sonnet-4-20250514)${NC}: ")" MODEL
+
+    MODEL="${MODEL## }"
+    MODEL="${MODEL%% }"
+
+    if [ -z "$MODEL" ]; then
+        echo -e "${RED}Error: Model is required.${NC}" >&2
+        exit 1
+    fi
+
+    echo ""
+fi
 
 # ---------------------------------------------------------------------------
 # Create temp directory for session isolation
@@ -140,11 +153,14 @@ PI_PID=$!
 set -e
 
 # ---------------------------------------------------------------------------
-# Wait for session file to appear
+# Wait for session file to appear (with adaptive timeout)
 # ---------------------------------------------------------------------------
 SESSION_FILE=""
 POLL=0
-while [ "$POLL" -lt 60 ]; do  # Wait up to 30s
+POLL_LIMIT=120  # Initial fast-poll phase: 120 * 0.5s = 60s
+CONNECTING_SHOWN=0
+
+while true; do
     SESSION_FILE=$(find "$TMPDIR" -name "*.jsonl" -type f 2>/dev/null | head -1)
     if [ -n "$SESSION_FILE" ]; then
         break
@@ -153,8 +169,18 @@ while [ "$POLL" -lt 60 ]; do  # Wait up to 30s
         # pi exited before creating session file
         break
     fi
-    sleep 0.5
-    POLL=$((POLL + 1))
+
+    if [ "$POLL" -ge "$POLL_LIMIT" ]; then
+        if [ "$CONNECTING_SHOWN" -eq 0 ]; then
+            echo -e "${DIM}Still waiting for initial connection (pi is still running)...${NC}"
+            CONNECTING_SHOWN=1
+        fi
+        # Slow down polling after the initial fast phase to avoid busy-waiting
+        sleep 2
+    else
+        sleep 0.5
+        POLL=$((POLL + 1))
+    fi
 done
 
 # ---------------------------------------------------------------------------
@@ -229,6 +255,13 @@ fi
 END_EPOCH=$(date +%s)
 WALL_CLOCK=$((END_EPOCH - START_EPOCH))
 
+# Capture pi exit code (if it has exited)
+PI_EXIT_CODE=""
+if ! kill -0 "$PI_PID" 2>/dev/null; then
+    wait "$PI_PID" 2>/dev/null
+    PI_EXIT_CODE=$?
+fi
+
 echo -e "${DIM}────────────────────────────────────────────────────${NC}"
 echo ""
 
@@ -242,7 +275,7 @@ fi
 if [ -z "$SESSION_FILE" ] || [ ! -f "$SESSION_FILE" ]; then
     echo -e "${YELLOW}No session file found. Usage data not available.${NC}"
     echo ""
-    echo -e "${BOLD}Exit code:${NC} $([[ -n "${PI_EXIT:-}" ]] && echo "$PI_EXIT" || echo "N/A")"
+    echo -e "${BOLD}Exit code:${NC} ${PI_EXIT_CODE:-N/A}"
     echo -e "${BOLD}Wall clock:${NC} ${WALL_CLOCK}s"
     exit 0
 fi
@@ -418,12 +451,10 @@ fi
 
 # Create file with header if it doesn't exist
 if [ ! -f "$RESULTS_FILE" ]; then
-    cat > "$RESULTS_FILE" << 'EOF'
-# Evaluation Results
-
-| Date | Model | Duration | Total Context Used | Turns | Limit | Exceeded | Exit | Notes |
-|---|---|---|---|---|---|---|---|---|
-EOF
+    printf '%s\n\n%s\n%s\n' \
+        '# Evaluation Results' \
+        '| Date | Model | Duration | Total Context Used | Turns | Limit | Exceeded | Exit | Notes |' \
+        '|---|---|---|---|---|---|---|---|---|' > "$RESULTS_FILE"
 fi
 
 # Append row
