@@ -6,6 +6,8 @@ This directory contains a set of tests within a `test` subdirectory, but it is m
 
 **You must write the most minimal code which passes EVERY test - stop as soon as you have run all the tests and they pass successfully.**
 
+The evaluation will check your work once you are done by running `npx vitest run test/`.
+
 # Resources
 
 This directory also contains a `README.md` and `package.json` file from a working implementation.
@@ -14,7 +16,9 @@ These files are provided as reference, and you may read, modify, or ignore them 
 
 # Constraints
 
-You should not read git history or code from other branches.
+Only read files within this directory and subdirectories.
+
+You should not read git history, code from other branches, or any existing hidden files.
 
 You should not read the following files as they won't help you with the task:
 - `run-eval.sh`
