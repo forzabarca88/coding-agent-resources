@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # =============================================================================
 # Pi Eval Runner
-# Runs pi with @eval-prompt.md, monitors token usage in real-time, and
-# terminates the session if the limit is exceeded.
+# Runs pi with @eval-prompt.md, monitors token usage in real-time,
+# streams the model's text output to the terminal, and terminates the
+# session if the context limit is exceeded.
 # Usage: ./run-eval.sh [--model <model>] [--max-context <tokens>]
 # =============================================================================
 set -uo pipefail
@@ -144,11 +145,17 @@ echo -e "${DIM}─────────────────────�
 # Record start time
 START_EPOCH=$(date +%s)
 
-# Start pi in the background
-# --session-dir isolates the session file to our temp dir
-# -p processes the prompt and exits
+# We use --mode json which emits every session event as a JSON line to stdout
+# in real-time. This allows us to parse and display the model's text output
+# as it streams, rather than only at the end (which is what -p / --print does).
+#
+# pi's stdout (JSON events) → pi-stream.jsonl (parsed for text display)
+# pi's stderr               → terminal (errors visible to user)
+# session file              → monitored for context limit enforcement
+STREAM_FILE="$TMPDIR/pi-stream.jsonl"
+
 set +e
-pi --session-dir "$TMPDIR" --model "$MODEL" -p @eval-prompt.md &
+pi --session-dir "$TMPDIR" --model "$MODEL" --mode json @eval-prompt.md > "$STREAM_FILE" &
 PI_PID=$!
 set -e
 
@@ -161,7 +168,7 @@ POLL_LIMIT=120  # Initial fast-poll phase: 120 * 0.5s = 60s
 CONNECTING_SHOWN=0
 
 while true; do
-    SESSION_FILE=$(find "$TMPDIR" -name "*.jsonl" -type f 2>/dev/null | head -1)
+    SESSION_FILE=$(find "$TMPDIR" -maxdepth 1 -name "*.jsonl" ! -name "pi-stream.jsonl" -type f 2>/dev/null | head -1)
     if [ -n "$SESSION_FILE" ]; then
         break
     fi
@@ -184,17 +191,19 @@ while true; do
 done
 
 # ---------------------------------------------------------------------------
-# Monitor session file for token usage
+# Monitor session file for token usage, and stream file for text output
 # ---------------------------------------------------------------------------
 LIMIT_EXCEEDED=0
-LAST_LINE_COUNT=0
+LAST_SESSION_LINE_COUNT=0
+LAST_STREAM_LINE_COUNT=0
 LATEST_TOTAL_TOKENS=0
 LATEST_USAGE_INPUT=0
 LATEST_USAGE_OUTPUT=0
 
 if [ -n "$SESSION_FILE" ] && [ -f "$SESSION_FILE" ]; then
-    # Get initial line count
-    LAST_LINE_COUNT=$(wc -l < "$SESSION_FILE" 2>/dev/null || echo 0)
+    # Get initial line counts
+    LAST_SESSION_LINE_COUNT=$(wc -l < "$SESSION_FILE" 2>/dev/null || echo 0)
+    LAST_STREAM_LINE_COUNT=$(wc -l < "$STREAM_FILE" 2>/dev/null || echo 0)
 
     # Monitor loop: polls while pi runs, or until limit exceeded
     while true; do
@@ -203,11 +212,41 @@ if [ -n "$SESSION_FILE" ] && [ -f "$SESSION_FILE" ]; then
             break
         fi
 
-        # Read any new lines from the session file
-        CURRENT_LINE_COUNT=$(wc -l < "$SESSION_FILE" 2>/dev/null || echo 0)
-        if [ "$CURRENT_LINE_COUNT" -gt "$LAST_LINE_COUNT" ]; then
-            # Process new lines (from the last unread line onward)
-            # Use tail to get only new lines
+        # --- Read new JSON events from the stream file and display text ---
+        CURRENT_STREAM_COUNT=$(wc -l < "$STREAM_FILE" 2>/dev/null || echo 0)
+        if [ "$CURRENT_STREAM_COUNT" -gt "$LAST_STREAM_LINE_COUNT" ]; then
+            while IFS= read -r LINE; do
+                # Show thinking/reasoning content (dimmed to distinguish from response)
+                THINKING=$(echo "$LINE" | jq -r 'select(.type == "message_update" and .assistantMessageEvent.type == "thinking_delta") | .assistantMessageEvent.delta' 2>/dev/null)
+                if [ -n "$THINKING" ] && [ "$THINKING" != "null" ]; then
+                    echo -en "${DIM}${THINKING}${NC}"
+                fi
+
+                # Extract text from text_delta events (token-level streaming)
+                DELTA=$(echo "$LINE" | jq -r 'select(.type == "message_update" and .assistantMessageEvent.type == "text_delta") | .assistantMessageEvent.delta' 2>/dev/null)
+                if [ -n "$DELTA" ] && [ "$DELTA" != "null" ]; then
+                    echo -n "$DELTA"
+                fi
+
+                # Add newline after assistant message ends
+                IS_END=$(echo "$LINE" | jq -r 'select(.type == "message_end" and .message.role == "assistant") | "yes"' 2>/dev/null)
+                if [ "$IS_END" = "yes" ]; then
+                    echo ""
+                fi
+
+                # Show tool execution start
+                TOOL_START=$(echo "$LINE" | jq -r 'select(.type == "tool_execution_start") | "\(.toolName)(\(.args // "" | .[0:80]))"' 2>/dev/null)
+                if [ -n "$TOOL_START" ] && [ "$TOOL_START" != "null" ]; then
+                    echo -e "\n${DIM}⚡ ${TOOL_START}${NC}"
+                fi
+            done < <(tail -n "+$((LAST_STREAM_LINE_COUNT + 1))" "$STREAM_FILE" 2>/dev/null)
+
+            LAST_STREAM_LINE_COUNT=$CURRENT_STREAM_COUNT
+        fi
+
+        # --- Read any new lines from the session file for usage monitoring ---
+        CURRENT_SESSION_COUNT=$(wc -l < "$SESSION_FILE" 2>/dev/null || echo 0)
+        if [ "$CURRENT_SESSION_COUNT" -gt "$LAST_SESSION_LINE_COUNT" ]; then
             while IFS= read -r LINE; do
                 # Check if this line has usage data (assistant message or compaction)
                 USAGE=$(echo "$LINE" | jq -r 'select(.message.usage != null) | .message.usage.totalTokens' 2>/dev/null)
@@ -222,9 +261,9 @@ if [ -n "$SESSION_FILE" ] && [ -f "$SESSION_FILE" ]; then
                         break 2  # break out of both loops
                     fi
                 fi
-            done < <(tail -n "+$((LAST_LINE_COUNT + 1))" "$SESSION_FILE" 2>/dev/null)
+            done < <(tail -n "+$((LAST_SESSION_LINE_COUNT + 1))" "$SESSION_FILE" 2>/dev/null)
 
-            LAST_LINE_COUNT=$CURRENT_LINE_COUNT
+            LAST_SESSION_LINE_COUNT=$CURRENT_SESSION_COUNT
         fi
 
         sleep 0.2
@@ -269,7 +308,7 @@ echo ""
 # Detect session file (re-check in case it appeared after pi exited)
 # ---------------------------------------------------------------------------
 if [ -z "$SESSION_FILE" ] || [ ! -f "$SESSION_FILE" ]; then
-    SESSION_FILE=$(find "$TMPDIR" -name "*.jsonl" -type f 2>/dev/null | head -1)
+    SESSION_FILE=$(find "$TMPDIR" -maxdepth 1 -name "*.jsonl" ! -name "pi-stream.jsonl" -type f 2>/dev/null | head -1)
 fi
 
 if [ -z "$SESSION_FILE" ] || [ ! -f "$SESSION_FILE" ]; then
