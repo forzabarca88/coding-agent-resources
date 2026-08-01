@@ -99,7 +99,7 @@ function buildResult(overrides?: Partial<WebPageResult>): WebPageResult {
  */
 function mockPathResolve(filePath: string): string {
   if (filePath.startsWith('/')) return filePath;
-  return '/home/forza/ai_gen/web-agent/' + filePath;
+  return process.cwd() + '/' + filePath;
 }
 
 function mockPathDirname(filePath: string): string {
