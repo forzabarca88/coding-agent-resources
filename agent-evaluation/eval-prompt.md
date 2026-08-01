@@ -16,13 +16,15 @@ These files are provided as reference, and you may read, modify, or ignore them 
 
 # Constraints
 
-Only read files within this directory and subdirectories.
+Only work with files within this directory and subdirectories.
 
 You should not read git history, code from other branches, or any existing hidden files.
+
+The `.gitignore` file must not be modified - **modification will result in disqualification.**
 
 You should not read the following files as they won't help you with the task:
 - `run-eval.sh`
 - `eval-results.md`
 
-**Modification of any of the existing test files is not allowed, and will result in instant disqualification.**
+**Modification  of any of the existing test files or creation of new test files is NOT ALLOWED, and will result in disqualification.**
 

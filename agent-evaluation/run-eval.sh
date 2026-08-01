@@ -516,6 +516,53 @@ else
     EXIT_CODE=0
 fi
 
+# ---------------------------------------------------------------------------
+# Post-checks: validate tests pass and test files were not modified
+# ---------------------------------------------------------------------------
+NOTES=""
+if [ "$EXIT_CODE" -eq 0 ]; then
+    echo ""
+    echo -e "${BOLD}${CYAN}Running post-checks...${NC}"
+
+    # Check 1: npx vitest run test/
+    echo -e "${DIM}  [1/2] Running npx vitest run test/...${NC}"
+    set +e
+    npx vitest run test/ > "$TMPDIR/vitest-output.log" 2>&1
+    VITEST_EXIT=$?
+    set -e
+    if [ "$VITEST_EXIT" -ne 0 ]; then
+        echo -e "  ${RED}✗ Tests failed (exit code: $VITEST_EXIT)${NC}"
+        NOTES="vitest failed"
+        EXIT_CODE=1
+    else
+        echo -e "  ${GREEN}✓ Tests passed${NC}"
+    fi
+
+    # Check 2: No changes to test/ or .gitignore
+    echo -e "${DIM}  [2/2] Checking for modifications to test/ and .gitignore...${NC}"
+    set +e
+    GIT_CHANGES=$(git status --porcelain -- "test/" ".gitignore" 2>/dev/null)
+    set -e
+    if [ -n "$GIT_CHANGES" ]; then
+        echo -e "  ${RED}✗ Unauthorized modifications detected:${NC}"
+        echo "$GIT_CHANGES" | sed 's/^/      /'
+        if [ -z "$NOTES" ]; then
+            NOTES="test files modified"
+        else
+            NOTES="${NOTES}, test files modified"
+        fi
+        EXIT_CODE=1
+    else
+        echo -e "  ${GREEN}✓ No unauthorized modifications${NC}"
+    fi
+
+    if [ "$EXIT_CODE" -eq 0 ]; then
+        echo -e "${GREEN}${BOLD}All checks passed.${NC}"
+    else
+        echo -e "${RED}${BOLD}Post-checks failed.${NC}"
+    fi
+fi
+
 # Create file with header if it doesn't exist
 if [ ! -f "$RESULTS_FILE" ]; then
     printf '%s\n\n%s\n%s\n' \
@@ -527,13 +574,10 @@ fi
 # Append row
 printf "| %s | %s | %s | %s | %s | %s | %s | %s | %s |\n" \
     "$RUN_DATE" "$MODEL" "$DURATION" "$TOTAL_CONTEXT" \
-    "$TURNS" "$LIMIT_STR" "$EXCEEDED_STR" "$EXIT_CODE" "" >> "$RESULTS_FILE"
+    "$TURNS" "$LIMIT_STR" "$EXCEEDED_STR" "$EXIT_CODE" "$NOTES" >> "$RESULTS_FILE"
 echo ""
 echo -e "${GREEN}Results appended to:${NC} $RESULTS_FILE"
 
 # Don't clean up so user can inspect the session file
 CLEANUP=0
-if [ "$LIMIT_EXCEEDED" -eq 1 ]; then
-    exit 2
-fi
-exit 0
+exit "$EXIT_CODE"
