@@ -372,6 +372,67 @@ echo -e "${DIM}─────────────────────�
 echo ""
 echo -e "${GREEN}Session file:${NC} $SESSION_FILE"
 
+# ---------------------------------------------------------------------------
+# Update eval-results.md
+# ---------------------------------------------------------------------------
+RESULTS_FILE="$SCRIPT_DIR/eval-results.md"
+
+# Format date from start epoch (GNU date first, then BSD, then fallback)
+if date -d "@$START_EPOCH" '+%Y-%m-%d %H:%M' >/dev/null 2>&1; then
+    RUN_DATE=$(date -d "@$START_EPOCH" '+%Y-%m-%d %H:%M')
+elif date -r "$START_EPOCH" '+%Y-%m-%d %H:%M' >/dev/null 2>&1; then
+    RUN_DATE=$(date -r "$START_EPOCH" '+%Y-%m-%d %H:%M')
+else
+    RUN_DATE=$(date '+%Y-%m-%d %H:%M')
+fi
+
+# Duration: prefer session duration, fall back to wall clock
+DURATION="${DURATION_STR:-${WALL_CLOCK}s}"
+
+# Total context used (final context total from last message)
+TOTAL_CONTEXT="${LAST_TOTAL:-N/A}"
+
+# Turns
+TURNS="${TURN_COUNT:-N/A}"
+
+# Limit string
+if [ "$MAX_CONTEXT" -gt 0 ]; then
+    LIMIT_STR="$MAX_CONTEXT"
+else
+    LIMIT_STR="unlimited"
+fi
+
+# Exceeded string
+if [ "$LIMIT_EXCEEDED" -eq 1 ]; then
+    EXCEEDED_STR="Yes"
+else
+    EXCEEDED_STR="No"
+fi
+
+# Exit code
+if [ "$LIMIT_EXCEEDED" -eq 1 ]; then
+    EXIT_CODE=2
+else
+    EXIT_CODE=0
+fi
+
+# Create file with header if it doesn't exist
+if [ ! -f "$RESULTS_FILE" ]; then
+    cat > "$RESULTS_FILE" << 'EOF'
+# Evaluation Results
+
+| Date | Model | Duration | Total Context Used | Turns | Limit | Exceeded | Exit | Notes |
+|---|---|---|---|---|---|---|---|---|
+EOF
+fi
+
+# Append row
+printf "| %s | %s | %s | %s | %s | %s | %s | %s | %s |\n" \
+    "$RUN_DATE" "$MODEL" "$DURATION" "$TOTAL_CONTEXT" \
+    "$TURNS" "$LIMIT_STR" "$EXCEEDED_STR" "$EXIT_CODE" "" >> "$RESULTS_FILE"
+echo ""
+echo -e "${GREEN}Results appended to:${NC} $RESULTS_FILE"
+
 # Don't clean up so user can inspect the session file
 CLEANUP=0
 if [ "$LIMIT_EXCEEDED" -eq 1 ]; then
