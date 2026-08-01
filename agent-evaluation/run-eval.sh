@@ -216,9 +216,15 @@ display_stream_events() {
             echo ""
         fi
 
+        # Warn when model output was truncated (hit output token limit)
+        STOP_REASON=$(echo "$LINE" | jq -r 'select(.type == "message_end" and .message.role == "assistant") | .message.stopReason // ""' 2>/dev/null)
+        if [ "$STOP_REASON" = "length" ]; then
+            echo -e "${YELLOW}⚠ Model output truncated (output token limit reached)${NC}" >&2
+        fi
+
         # Show tool execution start
         # Use tostring to safely handle both string and object args
-        TOOL_START=$(echo "$LINE" | jq -r 'select(.type == "tool_execution_start") | "\(.toolName)(\(( .args | tostring )[0:80]))"' 2>/dev/null)
+        TOOL_START=$(echo "$LINE" | jq -r 'select(.type == "tool_execution_start") | "\(.toolName)(\(( .args | tostring )[0:200]))"' 2>/dev/null)
         if [ -n "$TOOL_START" ] && [ "$TOOL_START" != "null" ]; then
             echo -e "\n${DIM}⚡ ${TOOL_START}${NC}"
         fi
