@@ -452,29 +452,6 @@ if [ -n "$STATS" ]; then
         TOKENS_PER_SEC="N/A"
     fi
 
-    echo ""
-    echo -e "${BOLD}Final Context State:${NC}"
-    printf "  %-16s %s\n" "Input:"       "$(printf "%'d" "$LAST_INPUT") tokens"
-    printf "  %-16s %s\n" "Output:"      "$(printf "%'d" "$LAST_OUTPUT") tokens"
-    printf "  %-16s %s\n" "Total:"       "$(printf "%'d" "$LAST_TOTAL") tokens"
-    echo ""
-
-    echo -e "${BOLD}Performance:${NC}"
-    printf "  %-16s %s\n" "Turns:"       "$TURN_COUNT"
-    printf "  %-16s %s\n" "Total Output:" "$(printf "%'d" "$TOTAL_OUTPUT") tokens"
-    printf "  %-16s %s\n" "Tokens/s:"    "${TOKENS_PER_SEC}"
-
-    # Show last response stop reason
-    if [ -n "$LAST_STOP_REASON" ] && [ "$LAST_STOP_REASON" != "null" ] && [ "$LAST_STOP_REASON" != "stop" ] && [ "$LAST_STOP_REASON" != "toolUse" ]; then
-        echo -e "  ${DIM}Last response stopReason: ${LAST_STOP_REASON}${NC}"
-    fi
-
-    if [ "$(echo "$TOTAL_COST > 0" | bc 2>/dev/null)" = "1" ]; then
-        echo ""
-        echo -e "${BOLD}Cost:${NC}"
-        printf "  %-16s \$%.4f\n" "Total:" "$TOTAL_COST"
-    fi
-
     # Session message summary
     echo ""
     echo -e "${BOLD}Session Messages:${NC}"
@@ -523,6 +500,26 @@ if [ -n "$STATS" ]; then
     ' "$SESSION_FILE" 2>/dev/null | while IFS= read -r line; do
         echo -e "${NC}${line}${NC}"
     done
+
+    # Performance metrics
+    echo ""
+    echo -e "${BOLD}Performance:${NC}"
+    printf "  %-16s %s\n" "Turns:"       "$TURN_COUNT"
+    printf "  %-16s %s\n" "Input:"       "$(printf "%'d" "$LAST_INPUT") tokens"
+    printf "  %-16s %s\n" "Output:"      "$(printf "%'d" "$TOTAL_OUTPUT") tokens"
+    printf "  %-16s %s\n" "Total:"       "$(printf "%'d" "$LAST_TOTAL") tokens"
+    printf "  %-16s %s\n" "Tokens/s:"    "${TOKENS_PER_SEC}"
+
+    # Show last response stop reason
+    if [ -n "$LAST_STOP_REASON" ] && [ "$LAST_STOP_REASON" != "null" ] && [ "$LAST_STOP_REASON" != "stop" ] && [ "$LAST_STOP_REASON" != "toolUse" ]; then
+        echo -e "  ${DIM}Last response stopReason: ${LAST_STOP_REASON}${NC}"
+    fi
+
+    if [ "$(echo "$TOTAL_COST > 0" | bc 2>/dev/null)" = "1" ]; then
+        echo ""
+        echo -e "${BOLD}Cost:${NC}"
+        printf "  %-16s \$%.4f\n" "Total:" "$TOTAL_COST"
+    fi
 
     # Context limit enforcement result
     if [ "$MAX_CONTEXT" -gt 0 ]; then
