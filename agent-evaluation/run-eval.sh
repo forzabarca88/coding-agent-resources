@@ -198,6 +198,12 @@ display_stream_events() {
     local start_line="$2"
 
     while IFS= read -r LINE; do
+        # Track streaming start time when assistant begins generating
+        IS_ASSISTANT_START=$(echo "$LINE" | jq -r 'select(.type == "message_start" and .message.role == "assistant") | "yes"' 2>/dev/null)
+        if [ "$IS_ASSISTANT_START" = "yes" ]; then
+            date +%s.%N > "$STREAM_START_FILE"
+        fi
+
         # Show thinking/reasoning content (dimmed to distinguish from response)
         THINKING=$(echo "$LINE" | jq -r 'select(.type == "message_update" and .assistantMessageEvent.type == "thinking_delta") | .assistantMessageEvent.delta' 2>/dev/null)
         if [ -n "$THINKING" ] && [ "$THINKING" != "null" ]; then
@@ -216,10 +222,22 @@ display_stream_events() {
             echo ""
         fi
 
-        # Warn when model output was truncated (hit output token limit)
+        # Show stop reason when assistant message ends
         STOP_REASON=$(echo "$LINE" | jq -r 'select(.type == "message_end" and .message.role == "assistant") | .message.stopReason // ""' 2>/dev/null)
-        if [ "$STOP_REASON" = "length" ]; then
-            echo -e "${YELLOW}⚠ Model output truncated (output token limit reached)${NC}" >&2
+        if [ -n "$STOP_REASON" ] && [ "$STOP_REASON" != "null" ] && [ "$STOP_REASON" != "stop" ] && [ "$STOP_REASON" != "toolUse" ]; then
+            echo -e "${DIM}[stopReason: ${STOP_REASON}]${NC}" >&2
+        fi
+
+        # Track streaming end time, accumulate duration
+        IS_ASSISTANT_END=$(echo "$LINE" | jq -r 'select(.type == "message_end" and .message.role == "assistant") | "yes"' 2>/dev/null)
+        if [ "$IS_ASSISTANT_END" = "yes" ] && [ -s "$STREAM_START_FILE" ]; then
+            START=$(cat "$STREAM_START_FILE")
+            END=$(date +%s.%N)
+            DUR=$(echo "$END - $START" | bc 2>/dev/null || echo 0)
+            TOTAL=$(cat "$STREAMING_TIME_FILE")
+            TOTAL=$(echo "$TOTAL + $DUR" | bc 2>/dev/null || echo 0)
+            echo "$TOTAL" > "$STREAMING_TIME_FILE"
+            : > "$STREAM_START_FILE"
         fi
 
         # Show tool execution start
@@ -227,6 +245,16 @@ display_stream_events() {
         TOOL_START=$(echo "$LINE" | jq -r 'select(.type == "tool_execution_start") | "\(.toolName)(\(( .args | tostring )[0:200]))"' 2>/dev/null)
         if [ -n "$TOOL_START" ] && [ "$TOOL_START" != "null" ]; then
             echo -e "\n${DIM}⚡ ${TOOL_START}${NC}"
+        fi
+
+        # Show tool execution end
+        TOOL_END=$(echo "$LINE" | jq -r 'select(.type == "tool_execution_end" and .isError == false) | "\(.toolName) ok"' 2>/dev/null)
+        if [ -n "$TOOL_END" ] && [ "$TOOL_END" != "null" ]; then
+            echo -e "${DIM}  ${TOOL_END}${NC}"
+        fi
+        TOOL_ERR=$(echo "$LINE" | jq -r 'select(.type == "tool_execution_end" and .isError == true) | "\(.toolName) ERROR"' 2>/dev/null)
+        if [ -n "$TOOL_ERR" ] && [ "$TOOL_ERR" != "null" ]; then
+            echo -e "${DIM}  ${TOOL_ERR}${NC}"
         fi
     done < <(tail -n "+$((start_line + 1))" "$file" 2>/dev/null)
 }
@@ -240,6 +268,12 @@ LAST_STREAM_LINE_COUNT=0
 LATEST_TOTAL_TOKENS=0
 LATEST_USAGE_INPUT=0
 LATEST_USAGE_OUTPUT=0
+
+# Streaming timing tracking (wall-clock time between message_start and message_end)
+STREAM_START_FILE="$TMPDIR/stream-start"
+STREAMING_TIME_FILE="$TMPDIR/streaming-time"
+echo 0 > "$STREAMING_TIME_FILE"
+: > "$STREAM_START_FILE"
 
 if [ -n "$SESSION_FILE" ] && [ -f "$SESSION_FILE" ]; then
     # Get initial line counts
@@ -383,55 +417,42 @@ fi
 
 # Aggregate token usage from all assistant messages
 # Note: usage.input is cumulative per message, so the last message's values
-# represent the final context state. But we still sum totalTokens across
-# all messages for the session total.
+# represent the final context state. The per-turn output values are summed
+# for total output across all turns.
 STATS=$(jq -s '
-    [.[] | select(.message.usage != null) | .message.usage] |
+    [.[] | select(.message.usage != null) | {usage: .message.usage, stopReason: .message.stopReason}] |
     if length == 0 then empty
     else
         {
-            total_input:       (map(.input) | add),
-            total_output:      (map(.output) | add),
-            total_tokens:      (map(.totalTokens) | add),
-            total_cache_read:  (map(.cacheRead) | add // 0),
-            total_cache_write: (map(.cacheWrite) | add // 0),
-            total_cost:        (map(.cost.total) | add),
+            total_output:      (map(.usage.output) | add),
+            total_cost:        (map(.usage.cost.total) | add),
             turn_count:        length,
-            last_input:        (last | .input),
-            last_output:       (last | .output),
-            last_total:        (last | .totalTokens)
+            last_input:        (last | .usage.input),
+            last_output:       (last | .usage.output),
+            last_total:        (last | .usage.totalTokens),
+            last_stop_reason:  (last | .stopReason // "")
         }
     end
 ' "$SESSION_FILE")
 
 if [ -n "$STATS" ]; then
-    TOTAL_INPUT=$(echo "$STATS" | jq -r '.total_input')
     TOTAL_OUTPUT=$(echo "$STATS" | jq -r '.total_output')
-    TOTAL_TOKENS=$(echo "$STATS" | jq -r '.total_tokens')
-    TOTAL_CACHE_READ=$(echo "$STATS" | jq -r '.total_cache_read')
-    TOTAL_CACHE_WRITE=$(echo "$STATS" | jq -r '.total_cache_write')
     TOTAL_COST=$(echo "$STATS" | jq -r '.total_cost')
     TURN_COUNT=$(echo "$STATS" | jq -r '.turn_count')
     LAST_INPUT=$(echo "$STATS" | jq -r '.last_input')
     LAST_OUTPUT=$(echo "$STATS" | jq -r '.last_output')
     LAST_TOTAL=$(echo "$STATS" | jq -r '.last_total')
+    LAST_STOP_REASON=$(echo "$STATS" | jq -r '.last_stop_reason')
 
-    # Tokens per second
-    if [ -n "${SESSION_DURATION:-}" ] && [ "$SESSION_DURATION" -gt 0 ]; then
-        TOKENS_PER_SEC=$(echo "scale=1; $TOTAL_TOKENS / $SESSION_DURATION" | bc 2>/dev/null || echo "0")
+    # Tokens per second (based on wall-clock streaming time)
+    TOTAL_STREAMING_TIME=$(cat "$STREAMING_TIME_FILE" 2>/dev/null || echo 0)
+    if [ -n "$TOTAL_STREAMING_TIME" ] && [ "$(echo "$TOTAL_STREAMING_TIME > 0" | bc 2>/dev/null)" = "1" ]; then
+        TOKENS_PER_SEC=$(echo "scale=1; $TOTAL_OUTPUT / $TOTAL_STREAMING_TIME" | bc 2>/dev/null || echo "0")
     else
         TOKENS_PER_SEC="N/A"
     fi
 
     echo ""
-    echo -e "${BOLD}Token Usage:${NC}"
-    printf "  %-16s %s\n" "Input:"       "$(printf "%'d" "$TOTAL_INPUT") tokens"
-    printf "  %-16s %s\n" "Output:"      "$(printf "%'d" "$TOTAL_OUTPUT") tokens"
-    printf "  %-16s %s\n" "Total:"       "$(printf "%'d" "$TOTAL_TOKENS") tokens"
-    printf "  %-16s %s\n" "Cache Read:"  "$(printf "%'d" "$TOTAL_CACHE_READ") tokens"
-    printf "  %-16s %s\n" "Cache Write:" "$(printf "%'d" "$TOTAL_CACHE_WRITE") tokens"
-    echo ""
-
     echo -e "${BOLD}Final Context State:${NC}"
     printf "  %-16s %s\n" "Input:"       "$(printf "%'d" "$LAST_INPUT") tokens"
     printf "  %-16s %s\n" "Output:"      "$(printf "%'d" "$LAST_OUTPUT") tokens"
@@ -440,13 +461,68 @@ if [ -n "$STATS" ]; then
 
     echo -e "${BOLD}Performance:${NC}"
     printf "  %-16s %s\n" "Turns:"       "$TURN_COUNT"
+    printf "  %-16s %s\n" "Total Output:" "$(printf "%'d" "$TOTAL_OUTPUT") tokens"
     printf "  %-16s %s\n" "Tokens/s:"    "${TOKENS_PER_SEC}"
+
+    # Show last response stop reason
+    if [ -n "$LAST_STOP_REASON" ] && [ "$LAST_STOP_REASON" != "null" ] && [ "$LAST_STOP_REASON" != "stop" ] && [ "$LAST_STOP_REASON" != "toolUse" ]; then
+        echo -e "  ${DIM}Last response stopReason: ${LAST_STOP_REASON}${NC}"
+    fi
 
     if [ "$(echo "$TOTAL_COST > 0" | bc 2>/dev/null)" = "1" ]; then
         echo ""
         echo -e "${BOLD}Cost:${NC}"
         printf "  %-16s \$%.4f\n" "Total:" "$TOTAL_COST"
     fi
+
+    # Session message summary
+    echo ""
+    echo -e "${BOLD}Session Messages:${NC}"
+    echo ""
+
+    # Display each message with its full content
+    jq -r '
+        select(.type == "message") |
+        if .message.role == "assistant" then
+            "  [assistant] stopReason=" + (.message.stopReason // "?") +
+            "  in=" + ((.message.usage.input // 0)|tostring) +
+            " out=" + ((.message.usage.output // 0)|tostring) +
+            "  total=" + ((.message.usage.totalTokens // 0)|tostring) +
+            (if (.message.content | length) > 0 then
+                "\n" + (
+                    [.message.content[]? |
+                        if .type == "text" then "    text: " + .text
+                        elif .type == "thinking" then "    thinking: " + .thinking
+                        elif .type == "toolCall" then "    toolCall: " + .name + "(" + (.arguments | tostring) + ")"
+                        else "    " + .type
+                        end
+                    ] | join("\n")
+                )
+            else
+                "  (empty)"
+            end)
+        elif .message.role == "user" then
+            "  [user]\n" + (
+                [.message.content[]? |
+                    if .type == "text" then "    " + .text
+                    else "    " + .type
+                    end
+                ] | join("\n")
+            )
+        elif .message.role == "toolResult" then
+            "  [toolResult] " + (.message.toolName // "?") + " (" + (.message.toolCallId // "?") + ")\n" + (
+                [.message.content[]? |
+                    if .type == "text" then "    " + .text
+                    else "    " + .type
+                    end
+                ] | join("\n")
+            )
+        else
+            "  [" + .message.role + "]"
+        end
+    ' "$SESSION_FILE" 2>/dev/null | while IFS= read -r line; do
+        echo -e "${NC}${line}${NC}"
+    done
 
     # Context limit enforcement result
     if [ "$MAX_CONTEXT" -gt 0 ]; then
