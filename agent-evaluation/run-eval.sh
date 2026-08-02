@@ -88,6 +88,97 @@ RED='\033[0;31m'
 NC='\033[0m' # No Colour
 
 # ---------------------------------------------------------------------------
+# Helper: append a row to eval-results.md (create header if missing)
+# ---------------------------------------------------------------------------
+RESULTS_FILE="$SCRIPT_DIR/eval-results.md"
+
+append_eval_results() {
+    local date="$1" model="$2" duration="$3" context="$4"
+    local turns="$5" limit="$6" exceeded="$7" exit_code="$8" notes="$9"
+
+    if [ ! -f "$RESULTS_FILE" ]; then
+        printf '%s\n\n%s\n%s\n' \
+            '# Evaluation Results' \
+            '| Date | Model | Duration | Total Context Used | Turns | Limit | Exceeded | Exit | Notes |' \
+            '|---|---|---|---|---|---|---|---|---|' > "$RESULTS_FILE"
+    fi
+
+    printf "| %s | %s | %s | %s | %s | %s | %s | %s | %s |\n" \
+        "$date" "$model" "$duration" "$context" \
+        "$turns" "$limit" "$exceeded" "$exit_code" "$notes" >> "$RESULTS_FILE"
+
+    echo -e "${GREEN}Results appended to:${NC} $RESULTS_FILE"
+}
+
+# ---------------------------------------------------------------------------
+# Helper: parse basic stats from a session file and append to eval-results.md
+# Used by the cleanup trap when the script is interrupted.
+# ---------------------------------------------------------------------------
+append_eval_results_from_session() {
+    local session_file="$1" model="$2" max_context="$3" exit_code="$4" notes="$5"
+
+    if [ ! -f "$session_file" ]; then
+        return 1
+    fi
+
+    # Extract what we can from the session file
+    local run_date=$(date '+%Y-%m-%d %H:%M')
+    local duration="?"
+    local total_context="?"
+    local turns="?"
+    local limit_str="$max_context"
+    local exceeded_str="?"
+
+    # Parse duration from session timestamps (using jq fromdateiso8601 for portability)
+    local first_ts=$(jq -r 'select(.type == "session") | .timestamp' "$session_file" 2>/dev/null | head -1)
+    local last_ts=$(jq -r 'select(.message.usage != null) | .timestamp' "$session_file" 2>/dev/null | tail -n 1)
+    if [ -n "$first_ts" ] && [ -n "$last_ts" ]; then
+        local first_epoch=$(echo "$first_ts" | jq -Rr 'gsub("\\.[0-9]+Z$"; "Z") | fromdateiso8601' 2>/dev/null)
+        local last_epoch=$(echo "$last_ts" | jq -Rr 'gsub("\\.[0-9]+Z$"; "Z") | fromdateiso8601' 2>/dev/null)
+        if [ -n "$first_epoch" ] && [ -n "$last_epoch" ] && [ "$last_epoch" -gt "$first_epoch" ] 2>/dev/null; then
+            local secs=$((last_epoch - first_epoch))
+            if [ "$secs" -ge 60 ]; then
+                duration="$((secs / 60))m $((secs % 60))s"
+            else
+                duration="${secs}s"
+            fi
+        fi
+    fi
+
+    # Parse latest token usage
+    local stats=$(jq -s '
+        [.[] | select(.message.usage != null) | {usage: .message.usage}] |
+        if length == 0 then empty
+        else {
+            total_output: (map(.usage.output) | add),
+            turn_count:   length,
+            last_total:   (last | .usage.totalTokens),
+            last_input:   (last | .usage.input),
+            last_output:  (last | .usage.output)
+        } end
+    ' "$session_file" 2>/dev/null)
+
+    if [ -n "$stats" ]; then
+        total_context=$(echo "$stats" | jq -r '.last_total // "?"')
+        turns=$(echo "$stats" | jq -r '.turn_count // "?"')
+    fi
+
+    if [ "$max_context" -gt 0 ] 2>/dev/null; then
+        if [ "$total_context" != "?" ] && [ "$total_context" -gt "$max_context" ] 2>/dev/null; then
+            exceeded_str="Yes"
+        else
+            exceeded_str="No"
+        fi
+    else
+        limit_str="unlimited"
+        exceeded_str="N/A"
+    fi
+
+    append_eval_results "$run_date" "$model" "$duration" "$total_context" \
+        "$turns" "$limit_str" "$exceeded_str" "$exit_code" "$notes"
+}
+
+# ---------------------------------------------------------------------------
 # Prompt for model (if not already set via --model)
 # ---------------------------------------------------------------------------
 if [ -z "$MODEL" ]; then
@@ -115,12 +206,18 @@ fi
 # ---------------------------------------------------------------------------
 TMPDIR=$(mktemp -d) || { echo "Error: Failed to create temp directory" >&2; exit 1; }
 CLEANUP=1
+RESULTS_WRITTEN=0
 
 cleanup() {
     # Kill pi if still running
     if [ -n "${PI_PID:-}" ] && kill -0 "$PI_PID" 2>/dev/null; then
         kill "$PI_PID" 2>/dev/null || true
         wait "$PI_PID" 2>/dev/null || true
+    fi
+    # If the normal flow didn't get to write results, salvage what we can
+    # from the session file so the run is not lost entirely.
+    if [ "$RESULTS_WRITTEN" -eq 0 ] && [ -n "${SESSION_FILE:-}" ] && [ -f "$SESSION_FILE" ]; then
+        append_eval_results_from_session "$SESSION_FILE" "$MODEL" "$MAX_CONTEXT" 1 "interrupted"
     fi
     # Remove temp dir
     if [ "$CLEANUP" -eq 1 ]; then
@@ -170,6 +267,9 @@ CONNECTING_SHOWN=0
 while true; do
     SESSION_FILE=$(find "$TMPDIR" -maxdepth 1 -name "*.jsonl" ! -name "pi-stream.jsonl" -type f 2>/dev/null | head -1)
     if [ -n "$SESSION_FILE" ]; then
+        # Preserve temp dir from this point, so killing the script still
+        # leaves the session data available for inspection / recovery.
+        CLEANUP=0
         break
     fi
     if ! kill -0 "$PI_PID" 2>/dev/null; then
@@ -192,71 +292,70 @@ done
 
 # ---------------------------------------------------------------------------
 # Helper: display stream events from JSON lines
+#
+# Uses a single jq pass over all new lines instead of ~7 jq forks per line.
+# Text/thinking deltas are base64-encoded by jq (they may contain newlines)
+# and decoded in bash with a single base64 -d fork per delta line.
 # ---------------------------------------------------------------------------
 display_stream_events() {
     local file="$1"
     local start_line="$2"
 
-    while IFS= read -r LINE; do
-        # Track streaming start time when assistant begins generating
-        IS_ASSISTANT_START=$(echo "$LINE" | jq -r 'select(.type == "message_start" and .message.role == "assistant") | "yes"' 2>/dev/null)
-        if [ "$IS_ASSISTANT_START" = "yes" ]; then
-            date +%s.%N > "$STREAM_START_FILE"
-        fi
-
-        # Show thinking/reasoning content (dimmed to distinguish from response)
-        THINKING=$(echo "$LINE" | jq -r 'select(.type == "message_update" and .assistantMessageEvent.type == "thinking_delta") | .assistantMessageEvent.delta' 2>/dev/null)
-        if [ -n "$THINKING" ] && [ "$THINKING" != "null" ]; then
-            echo -en "${DIM}${THINKING}${NC}"
-        fi
-
-        # Extract text from text_delta events (token-level streaming)
-        DELTA=$(echo "$LINE" | jq -r 'select(.type == "message_update" and .assistantMessageEvent.type == "text_delta") | .assistantMessageEvent.delta' 2>/dev/null)
-        if [ -n "$DELTA" ] && [ "$DELTA" != "null" ]; then
-            echo -n "$DELTA"
-        fi
-
-        # Add newline after assistant message ends
-        IS_END=$(echo "$LINE" | jq -r 'select(.type == "message_end" and .message.role == "assistant") | "yes"' 2>/dev/null)
-        if [ "$IS_END" = "yes" ]; then
-            echo ""
-        fi
-
-        # Show stop reason when assistant message ends
-        STOP_REASON=$(echo "$LINE" | jq -r 'select(.type == "message_end" and .message.role == "assistant") | .message.stopReason // ""' 2>/dev/null)
-        if [ -n "$STOP_REASON" ] && [ "$STOP_REASON" != "null" ] && [ "$STOP_REASON" != "stop" ] && [ "$STOP_REASON" != "toolUse" ]; then
-            echo -e "${DIM}[stopReason: ${STOP_REASON}]${NC}" >&2
-        fi
-
-        # Track streaming end time, accumulate duration
-        IS_ASSISTANT_END=$(echo "$LINE" | jq -r 'select(.type == "message_end" and .message.role == "assistant") | "yes"' 2>/dev/null)
-        if [ "$IS_ASSISTANT_END" = "yes" ] && [ -s "$STREAM_START_FILE" ]; then
-            START=$(cat "$STREAM_START_FILE")
-            END=$(date +%s.%N)
-            DUR=$(echo "$END - $START" | bc 2>/dev/null || echo 0)
-            TOTAL=$(cat "$STREAMING_TIME_FILE")
-            TOTAL=$(echo "$TOTAL + $DUR" | bc 2>/dev/null || echo 0)
-            echo "$TOTAL" > "$STREAMING_TIME_FILE"
-            : > "$STREAM_START_FILE"
-        fi
-
-        # Show tool execution start
-        # Use tostring to safely handle both string and object args
-        TOOL_START=$(echo "$LINE" | jq -r 'select(.type == "tool_execution_start") | "\(.toolName)(\(( .args | tostring )[0:200]))"' 2>/dev/null)
-        if [ -n "$TOOL_START" ] && [ "$TOOL_START" != "null" ]; then
-            echo -e "\n${DIM}⚡ ${TOOL_START}${NC}"
-        fi
-
-        # Show tool execution end
-        TOOL_END=$(echo "$LINE" | jq -r 'select(.type == "tool_execution_end" and .isError == false) | "\(.toolName) ok"' 2>/dev/null)
-        if [ -n "$TOOL_END" ] && [ "$TOOL_END" != "null" ]; then
-            echo -e "${DIM}  ${TOOL_END}${NC}"
-        fi
-        TOOL_ERR=$(echo "$LINE" | jq -r 'select(.type == "tool_execution_end" and .isError == true) | "\(.toolName) ERROR"' 2>/dev/null)
-        if [ -n "$TOOL_ERR" ] && [ "$TOOL_ERR" != "null" ]; then
-            echo -e "${DIM}  ${TOOL_ERR}${NC}"
-        fi
-    done < <(tail -n "+$((start_line + 1))" "$file" 2>/dev/null)
+    tail -n "+$((start_line + 1))" "$file" 2>/dev/null | jq -r '
+        if   .type == "message_start" and .message.role == "assistant" then
+            "START"
+        elif .type == "message_update" and .assistantMessageEvent.type == "thinking_delta" then
+            "THINK\t" + ((.assistantMessageEvent.delta // "") | @base64)
+        elif .type == "message_update" and .assistantMessageEvent.type == "text_delta" then
+            "TEXT\t" + ((.assistantMessageEvent.delta // "") | @base64)
+        elif .type == "message_end" and .message.role == "assistant" then
+            "END\t" + (.message.stopReason // "stop")
+        elif .type == "tool_execution_start" then
+            "TSTART\t" + .toolName + "(" + ((.args | tostring)[0:200]) + ")"
+        elif .type == "tool_execution_end" and .isError == false then
+            "TOK\t" + .toolName
+        elif .type == "tool_execution_end" and .isError == true then
+            "TERR\t" + .toolName
+        else
+            empty
+        end
+    ' 2>/dev/null | while IFS=$'\t' read -r TAG PAYLOAD; do
+        case "$TAG" in
+            START)
+                date +%s.%N > "$STREAM_START_FILE"
+                ;;
+            THINK)
+                echo -en "${DIM}$(printf '%s' "$PAYLOAD" | base64 -d 2>/dev/null)${NC}"
+                ;;
+            TEXT)
+                echo -n "$(printf '%s' "$PAYLOAD" | base64 -d 2>/dev/null)"
+                ;;
+            END)
+                echo ""
+                if [ -n "$PAYLOAD" ] && [ "$PAYLOAD" != "stop" ] && [ "$PAYLOAD" != "toolUse" ]; then
+                    echo -e "${DIM}[stopReason: ${PAYLOAD}]${NC}" >&2
+                fi
+                if [ -s "$STREAM_START_FILE" ]; then
+                    START=$(cat "$STREAM_START_FILE")
+                    END=$(date +%s.%N)
+                    DUR=$(echo "$END - $START" | bc 2>/dev/null || echo 0)
+                    TOTAL=$(cat "$STREAMING_TIME_FILE")
+                    TOTAL=$(echo "$TOTAL + $DUR" | bc 2>/dev/null || echo 0)
+                    echo "$TOTAL" > "$STREAMING_TIME_FILE"
+                    : > "$STREAM_START_FILE"
+                fi
+                ;;
+            TSTART)
+                echo -e "\n${DIM}⚡ ${PAYLOAD}${NC}"
+                ;;
+            TOK)
+                echo -e "${DIM}  ${PAYLOAD} ok${NC}"
+                ;;
+            TERR)
+                echo -e "${DIM}  ${PAYLOAD} ERROR${NC}"
+                ;;
+        esac
+    done
 }
 
 # ---------------------------------------------------------------------------
@@ -295,13 +394,12 @@ if [ -n "$SESSION_FILE" ] && [ -f "$SESSION_FILE" ]; then
         # --- Read any new lines from the session file for usage monitoring ---
         CURRENT_SESSION_COUNT=$(wc -l < "$SESSION_FILE" 2>/dev/null || echo 0)
         if [ "$CURRENT_SESSION_COUNT" -gt "$LAST_SESSION_LINE_COUNT" ]; then
-            while IFS= read -r LINE; do
-                # Check if this line has usage data (assistant message or compaction)
-                USAGE=$(echo "$LINE" | jq -r 'select(.message.usage != null) | .message.usage.totalTokens' 2>/dev/null)
-                if [ -n "$USAGE" ] && [ "$USAGE" != "null" ] && [ "$USAGE" -gt 0 ] 2>/dev/null; then
-                    LATEST_TOTAL_TOKENS=$USAGE
-                    LATEST_USAGE_INPUT=$(echo "$LINE" | jq -r 'select(.message.usage != null) | .message.usage.input' 2>/dev/null)
-                    LATEST_USAGE_OUTPUT=$(echo "$LINE" | jq -r 'select(.message.usage != null) | .message.usage.output' 2>/dev/null)
+            # Single jq pass over new session lines to extract usage data
+            while IFS=$'\t' read -r TOTAL INPUT OUTPUT; do
+                if [ -n "$TOTAL" ] && [ "$TOTAL" != "null" ] && [ "$TOTAL" -gt 0 ] 2>/dev/null; then
+                    LATEST_TOTAL_TOKENS=$TOTAL
+                    LATEST_USAGE_INPUT=$INPUT
+                    LATEST_USAGE_OUTPUT=$OUTPUT
 
                     # Check if limit exceeded
                     if [ "$MAX_CONTEXT" -gt 0 ] && [ "$LATEST_TOTAL_TOKENS" -gt "$MAX_CONTEXT" ]; then
@@ -309,7 +407,11 @@ if [ -n "$SESSION_FILE" ] && [ -f "$SESSION_FILE" ]; then
                         break 2  # break out of both loops
                     fi
                 fi
-            done < <(tail -n "+$((LAST_SESSION_LINE_COUNT + 1))" "$SESSION_FILE" 2>/dev/null)
+            done < <(tail -n "+$((LAST_SESSION_LINE_COUNT + 1))" "$SESSION_FILE" 2>/dev/null | jq -r '
+                select(.message.usage != null) |
+                [.message.usage.totalTokens, .message.usage.input, .message.usage.output] |
+                @tsv
+            ' 2>/dev/null)
 
             LAST_SESSION_LINE_COUNT=$CURRENT_SESSION_COUNT
         fi
@@ -548,7 +650,6 @@ echo -e "${GREEN}Session file:${NC} $SESSION_FILE"
 # ---------------------------------------------------------------------------
 # Update eval-results.md
 # ---------------------------------------------------------------------------
-RESULTS_FILE="$SCRIPT_DIR/eval-results.md"
 
 # Format date from start epoch (GNU date first, then BSD, then fallback)
 if date -d "@$START_EPOCH" '+%Y-%m-%d %H:%M' >/dev/null 2>&1; then
@@ -636,21 +737,9 @@ if [ "$EXIT_CODE" -eq 0 ]; then
     fi
 fi
 
-# Create file with header if it doesn't exist
-if [ ! -f "$RESULTS_FILE" ]; then
-    printf '%s\n\n%s\n%s\n' \
-        '# Evaluation Results' \
-        '| Date | Model | Duration | Total Context Used | Turns | Limit | Exceeded | Exit | Notes |' \
-        '|---|---|---|---|---|---|---|---|---|' > "$RESULTS_FILE"
-fi
+# Append row to eval-results.md
+append_eval_results "$RUN_DATE" "$MODEL" "$DURATION" "$TOTAL_CONTEXT" \
+    "$TURNS" "$LIMIT_STR" "$EXCEEDED_STR" "$EXIT_CODE" "$NOTES"
+RESULTS_WRITTEN=1
 
-# Append row
-printf "| %s | %s | %s | %s | %s | %s | %s | %s | %s |\n" \
-    "$RUN_DATE" "$MODEL" "$DURATION" "$TOTAL_CONTEXT" \
-    "$TURNS" "$LIMIT_STR" "$EXCEEDED_STR" "$EXIT_CODE" "$NOTES" >> "$RESULTS_FILE"
-echo ""
-echo -e "${GREEN}Results appended to:${NC} $RESULTS_FILE"
-
-# Don't clean up so user can inspect the session file
-CLEANUP=0
 exit "$EXIT_CODE"
