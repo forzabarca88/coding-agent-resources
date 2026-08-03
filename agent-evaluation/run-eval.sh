@@ -94,18 +94,20 @@ RESULTS_FILE="$SCRIPT_DIR/eval-results.md"
 
 append_eval_results() {
     local date="$1" model="$2" duration="$3" context="$4"
-    local turns="$5" limit="$6" exceeded="$7" exit_code="$8" notes="$9"
+    local turns="$5" limit="$6" exceeded="$7" exit_code="$8"
+    local passed_tests="$9" failed_tests="${10}" notes="${11}"
 
     if [ ! -f "$RESULTS_FILE" ]; then
         printf '%s\n\n%s\n%s\n' \
             '# Evaluation Results' \
-            '| Date | Model | Duration | Total Context Used | Turns | Limit | Exceeded | Exit | Notes |' \
-            '|---|---|---|---|---|---|---|---|---|' > "$RESULTS_FILE"
+            '| Date | Model | Duration | Total Context Used | Turns | Limit | Exceeded | Exit | Passed Tests | Failed Tests | Notes |' \
+            '|---|---|---|---|---|---|---|---|---|---|---|' > "$RESULTS_FILE"
     fi
 
-    printf "| %s | %s | %s | %s | %s | %s | %s | %s | %s |\n" \
+    printf "| %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |\n" \
         "$date" "$model" "$duration" "$context" \
-        "$turns" "$limit" "$exceeded" "$exit_code" "$notes" >> "$RESULTS_FILE"
+        "$turns" "$limit" "$exceeded" "$exit_code" \
+        "$passed_tests" "$failed_tests" "$notes" >> "$RESULTS_FILE"
 
     echo -e "${GREEN}Results appended to:${NC} $RESULTS_FILE"
 }
@@ -175,7 +177,7 @@ append_eval_results_from_session() {
     fi
 
     append_eval_results "$run_date" "$model" "$duration" "$total_context" \
-        "$turns" "$limit_str" "$exceeded_str" "$exit_code" "$notes"
+        "$turns" "$limit_str" "$exceeded_str" "$exit_code" "?" "?" "$notes"
 }
 
 # ---------------------------------------------------------------------------
@@ -694,22 +696,46 @@ fi
 # Post-checks: validate tests pass and test files were not modified
 # ---------------------------------------------------------------------------
 NOTES=""
+PASSED_TESTS="?"
+FAILED_TESTS="?"
 if [ "$EXIT_CODE" -eq 0 ]; then
     echo ""
     echo -e "${BOLD}${CYAN}Running post-checks...${NC}"
 
-    # Check 1: npx vitest run test/
-    echo -e "${DIM}  [1/2] Running npx vitest run test/...${NC}"
-    set +e
-    npx vitest run test/ > "$TMPDIR/vitest-output.log" 2>&1
-    VITEST_EXIT=$?
-    set -e
-    if [ "$VITEST_EXIT" -ne 0 ]; then
-        echo -e "  ${RED}✗ Tests failed (exit code: $VITEST_EXIT)${NC}"
-        NOTES="vitest failed"
+    # Check 1: run_tests.sh
+    echo -e "${DIM}  [1/2] Running ./run_tests.sh...${NC}"
+    if [ ! -f "$SCRIPT_DIR/run_tests.sh" ]; then
+        echo -e "  ${YELLOW}⚠ run_tests.sh not found, skipping tests${NC}"
+        NOTES="run_tests.sh missing"
         EXIT_CODE=1
     else
-        echo -e "  ${GREEN}✓ Tests passed${NC}"
+        set +e
+        TEST_OUTPUT=$(./run_tests.sh 2>&1)
+        TEST_EXIT=$?
+        set -e
+
+        # Display the test output (everything before the ---TEST_RESULTS--- marker).
+        # awk exits 0 regardless of match, so this is safe under set -e/pipefail.
+        echo "$TEST_OUTPUT" | awk '/^---TEST_RESULTS---$/{exit} 1'
+
+        # Parse the structured results block (awk always exits 0, so a missing
+        # field or block degrades gracefully instead of aborting the script).
+        RESULTS_BLOCK=$(echo "$TEST_OUTPUT" | awk '/^---TEST_RESULTS---$/{f=1; next} /^---END_TEST_RESULTS---$/{exit} f')
+        if [ -n "$RESULTS_BLOCK" ]; then
+            PASSED_TESTS=$(echo "$RESULTS_BLOCK" | awk -F= '/^testsPassed=/{print $2}')
+            FAILED_TESTS=$(echo "$RESULTS_BLOCK" | awk -F= '/^testsFailed=/{print $2}')
+            # If parsing returned empty strings, restore defaults
+            [ -z "$PASSED_TESTS" ] && PASSED_TESTS="?"
+            [ -z "$FAILED_TESTS" ] && FAILED_TESTS="?"
+        fi
+
+        if [ "$TEST_EXIT" -ne 0 ]; then
+            echo -e "  ${RED}✗ Tests failed (exit code: $TEST_EXIT, failed: ${FAILED_TESTS})${NC}"
+            NOTES="vitest failed"
+            EXIT_CODE=1
+        else
+            echo -e "  ${GREEN}✓ Tests passed (${PASSED_TESTS} passed)${NC}"
+        fi
     fi
 
     # Check 2: No changes to test/ or .gitignore
@@ -739,7 +765,8 @@ fi
 
 # Append row to eval-results.md
 append_eval_results "$RUN_DATE" "$MODEL" "$DURATION" "$TOTAL_CONTEXT" \
-    "$TURNS" "$LIMIT_STR" "$EXCEEDED_STR" "$EXIT_CODE" "$NOTES"
+    "$TURNS" "$LIMIT_STR" "$EXCEEDED_STR" "$EXIT_CODE" \
+    "$PASSED_TESTS" "$FAILED_TESTS" "$NOTES"
 RESULTS_WRITTEN=1
 
 exit "$EXIT_CODE"
