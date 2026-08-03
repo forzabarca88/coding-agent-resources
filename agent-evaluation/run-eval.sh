@@ -4,7 +4,7 @@
 # Runs pi with @eval-prompt.md, monitors token usage in real-time,
 # streams the model's text output to the terminal, and terminates the
 # session if the context limit is exceeded.
-# Usage: ./run-eval.sh [--model <model>] [--max-context <tokens>]
+# Usage: ./run-eval.sh [--model <model>] [--max-context <tokens>] [--clear] [--commit]
 # =============================================================================
 set -uo pipefail
 
@@ -12,6 +12,8 @@ set -uo pipefail
 # Config
 # ---------------------------------------------------------------------------
 DEFAULT_MAX_CONTEXT=64000
+CLEAR=0
+COMMIT=0
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
@@ -40,14 +42,25 @@ while [ $# -gt 0 ]; do
             MAX_CONTEXT="$2"
             shift 2
             ;;
+        --clear)
+            CLEAR=1
+            shift
+            ;;
+        --commit)
+            COMMIT=1
+            shift
+            ;;
         --help|-h)
-            echo "Usage: $0 [--model <model>] [--max-context <tokens>]"
+            echo "Usage: $0 [--model <model>] [--max-context <tokens>] [--clear] [--commit]"
             echo ""
             echo "Options:"
             echo "  -m, --model <model>        Model identifier (e.g. anthropic/claude-sonnet-4-20250514)"
             echo "                              If not set, you will be prompted interactively."
             echo "  -c, --max-context <tokens>  Max context window in tokens (default: $DEFAULT_MAX_CONTEXT)"
             echo "                               Set to 0 to disable the limit."
+            echo "      --clear                 Reset working directory (git clean -fd; git checkout -f) before run."
+            echo "                              Reverts all tracked files (including eval-results.md) and removes untracked files."
+            echo "      --commit                Commit eval-results.md after the run (regardless of exit status)"
             echo "  -h, --help                  Show this help"
             exit 0
             ;;
@@ -73,11 +86,6 @@ for cmd in pi jq bc; do
     fi
 done
 
-if [ ! -f "eval-prompt.md" ]; then
-    echo "Error: eval-prompt.md not found in $SCRIPT_DIR" >&2
-    exit 1
-fi
-
 # Colours for output
 BOLD='\033[1m'
 DIM='\033[2m'
@@ -86,6 +94,26 @@ CYAN='\033[0;36m'
 YELLOW='\033[0;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Colour
+
+if [ ! -f "eval-prompt.md" ]; then
+    echo "Error: eval-prompt.md not found in $SCRIPT_DIR" >&2
+    exit 1
+fi
+
+# ---------------------------------------------------------------------------
+# --clear: reset working directory before run
+# ---------------------------------------------------------------------------
+if [ "$CLEAR" -eq 1 ]; then
+    if ! git rev-parse --git-dir >/dev/null 2>&1; then
+        echo -e "${RED}Error: --clear requires a git repository.${NC}" >&2
+        exit 1
+    fi
+    echo -e "${DIM}Resetting working directory (git clean -fd; git checkout -f)...${NC}"
+    cd "$SCRIPT_DIR"
+    git clean -fd . || { echo -e "${RED}Error: git clean failed.${NC}" >&2; exit 1; }
+    git checkout -f . || { echo -e "${RED}Error: git checkout failed.${NC}" >&2; exit 1; }
+    echo ""
+fi
 
 # ---------------------------------------------------------------------------
 # Helper: append a row to eval-results.md (create header if missing)
@@ -768,5 +796,24 @@ append_eval_results "$RUN_DATE" "$MODEL" "$DURATION" "$TOTAL_CONTEXT" \
     "$TURNS" "$LIMIT_STR" "$EXCEEDED_STR" "$EXIT_CODE" \
     "$PASSED_TESTS" "$FAILED_TESTS" "$NOTES"
 RESULTS_WRITTEN=1
+
+# ---------------------------------------------------------------------------
+# --commit: commit eval-results.md after the run
+# ---------------------------------------------------------------------------
+if [ "$COMMIT" -eq 1 ]; then
+    echo ""
+    echo -e "${BOLD}Committing eval-results.md...${NC}"
+
+    if ! git rev-parse --git-dir >/dev/null 2>&1; then
+        echo -e "  ${YELLOW}⚠ Not a git repository, skipping commit.${NC}"
+    elif ! git config user.name >/dev/null 2>&1 || ! git config user.email >/dev/null 2>&1; then
+        echo -e "  ${YELLOW}⚠ Git user.name or user.email not set, skipping commit.${NC}"
+    else
+        git add "$RESULTS_FILE"
+        COMMIT_DATE=$(date '+%Y-%m-%d %H:%M')
+        git commit -m "eval: $MODEL ($COMMIT_DATE) exit=$EXIT_CODE"
+        echo ""
+    fi
+fi
 
 exit "$EXIT_CODE"
