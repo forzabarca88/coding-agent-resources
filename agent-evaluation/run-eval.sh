@@ -4,7 +4,7 @@
 # Runs pi with @eval-prompt.md, monitors token usage in real-time,
 # streams the model's text output to the terminal, and terminates the
 # session if the context limit is exceeded.
-# Usage: ./run-eval.sh [--model <model>] [--max-context <tokens>] [--clear] [--commit]
+# Usage: ./run-eval.sh [--model <model>] [--max-context <tokens>] [--notes <text>] [--clear] [--commit]
 # =============================================================================
 set -uo pipefail
 
@@ -14,6 +14,7 @@ set -uo pipefail
 DEFAULT_MAX_CONTEXT=64000
 CLEAR=0
 COMMIT=0
+USER_NOTES=""
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
@@ -50,14 +51,23 @@ while [ $# -gt 0 ]; do
             COMMIT=1
             shift
             ;;
+        --notes|-n)
+            if [ $# -lt 2 ]; then
+                echo "Error: --notes requires a string." >&2
+                exit 1
+            fi
+            USER_NOTES="$2"
+            shift 2
+            ;;
         --help|-h)
-            echo "Usage: $0 [--model <model>] [--max-context <tokens>] [--clear] [--commit]"
+            echo "Usage: $0 [--model <model>] [--max-context <tokens>] [--notes <text>] [--clear] [--commit]"
             echo ""
             echo "Options:"
             echo "  -m, --model <model>        Model identifier (e.g. anthropic/claude-sonnet-4-20250514)"
             echo "                              If not set, you will be prompted interactively."
             echo "  -c, --max-context <tokens>  Max context window in tokens (default: $DEFAULT_MAX_CONTEXT)"
             echo "                               Set to 0 to disable the limit."
+            echo "  -n, --notes <text>          Notes to include in the eval-results.md row"
             echo "      --clear                 Reset working directory (git clean -fd; git checkout -f) before run."
             echo "                              Reverts all tracked files (including eval-results.md) and removes untracked files."
             echo "      --commit                Commit eval-results.md after the run (regardless of exit status)"
@@ -269,6 +279,7 @@ cleanup() {
                 tn="interrupted, vitest failed"
             fi
         fi
+        tn="${USER_NOTES:+${USER_NOTES}, }${tn}"
         append_eval_results_from_session "$SESSION_FILE" "$MODEL" "$MAX_CONTEXT" 1 "$tn" "$pt" "$ft"
     fi
     # Remove temp dir
@@ -742,7 +753,7 @@ else
     EXIT_CODE=0
 fi
 
-NOTES=""
+NOTES="$USER_NOTES"
 PASSED_TESTS="?"
 FAILED_TESTS="?"
 
@@ -759,7 +770,7 @@ echo -e "${BOLD}${CYAN}Running post-checks...${NC}"
 echo -e "${DIM}  [1/2] Running ./run_tests.sh...${NC}"
 if [ ! -f "$SCRIPT_DIR/run_tests.sh" ]; then
     echo -e "  ${YELLOW}⚠ run_tests.sh not found, skipping tests${NC}"
-    NOTES="run_tests.sh missing"
+    NOTES="${NOTES:+${NOTES}, }run_tests.sh missing"
     EXIT_CODE=1
 else
     set +e
@@ -784,7 +795,7 @@ else
 
     if [ "$TEST_EXIT" -ne 0 ]; then
         echo -e "  ${RED}✗ Tests failed (exit code: $TEST_EXIT, failed: ${FAILED_TESTS})${NC}"
-        NOTES="vitest failed"
+        NOTES="${NOTES:+${NOTES}, }vitest failed"
         EXIT_CODE=1
     else
         echo -e "  ${GREEN}✓ Tests passed (${PASSED_TESTS} passed)${NC}"
@@ -799,11 +810,7 @@ set -e
 if [ -n "$GIT_CHANGES" ]; then
     echo -e "  ${RED}✗ Unauthorized modifications detected:${NC}"
     echo "$GIT_CHANGES" | sed 's/^/      /'
-    if [ -z "$NOTES" ]; then
-        NOTES="test files modified"
-    else
-        NOTES="${NOTES}, test files modified"
-    fi
+    NOTES="${NOTES:+${NOTES}, }test files modified"
     EXIT_CODE=1
 else
     echo -e "  ${GREEN}✓ No unauthorized modifications${NC}"
