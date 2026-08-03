@@ -24,6 +24,7 @@ The `.gitignore` file must not be modified - **modification will result in disqu
 
 You should not read the following files as they won't help you with the task:
 - `run-eval.sh`
+- `run_tests.sh`
 - `eval-results.md`
 
 **Modification  of any of the existing test files or creation of new test files is NOT ALLOWED, and will result in disqualification.**
