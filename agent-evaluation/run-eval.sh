@@ -197,15 +197,21 @@ append_eval_results_from_session() {
 
     # Parse latest token usage
     local stats=$(jq -s '
-        [.[] | select(.message.usage != null) | {usage: .message.usage}] |
-        if length == 0 then empty
-        else {
-            total_output: (map(.usage.output) | add),
-            turn_count:   length,
-            last_total:   (last | .usage.totalTokens),
-            last_input:   (last | .usage.input),
-            last_output:  (last | .usage.output)
-        } end
+        [.[] | select(.message.usage != null) | {usage: .message.usage}] as $all |
+        if ($all | length) == 0 then empty
+        else
+            # A failed final response (e.g. context overflow) carries zeroed
+            # usage; use the last message with real usage as the context snapshot.
+            ($all | map(select((.usage.totalTokens // 0) > 0))) as $withUsage |
+            ($withUsage | last // {}) as $lastValid |
+            {
+                total_output: ($all | map(.usage.output) | add),
+                turn_count:   ($all | length),
+                last_total:   ((($lastValid | .usage) // {}) | .totalTokens // 0),
+                last_input:   ((($lastValid | .usage) // {}) | .input // 0),
+                last_output:  ((($lastValid | .usage) // {}) | .output // 0)
+            }
+        end
     ' "$session_file" 2>/dev/null)
 
     if [ -n "$stats" ]; then
@@ -594,17 +600,28 @@ fi
 # represent the final context state. The per-turn output values are summed
 # for total output across all turns.
 STATS=$(jq -s '
-    [.[] | select(.message.usage != null) | {usage: .message.usage, stopReason: .message.stopReason}] |
-    if length == 0 then empty
+    [.[] | select(.message.usage != null) | {usage: .message.usage, stopReason: .message.stopReason, errorMessage: .message.errorMessage}] as $all |
+    if ($all | length) == 0 then empty
     else
+        # The final response may be a failed call (e.g. context overflow) whose
+        # usage is all zeros; snapshot the final context from the last message
+        # that actually carried usage data.
+        ($all | map(select((.usage.totalTokens // 0) > 0))) as $withUsage |
+        ($withUsage | last // {}) as $lastValid |
         {
-            total_output:      (map(.usage.output) | add),
-            total_cost:        (map(.usage.cost.total) | add),
-            turn_count:        length,
-            last_input:        (last | .usage.input),
-            last_output:       (last | .usage.output),
-            last_total:        (last | .usage.totalTokens),
-            last_stop_reason:  (last | .stopReason // "")
+            total_output:      ($all | map(.usage.output) | add),
+            total_cost:        ($all | map(.usage.cost.total // 0) | add),
+            turn_count:        ($all | length),
+            last_input:        ((($lastValid | .usage) // {}) | .input // 0),
+            last_output:       ((($lastValid | .usage) // {}) | .output // 0),
+            last_total:        ((($lastValid | .usage) // {}) | .totalTokens // 0),
+            last_stop_reason:  ($all | last | (.stopReason // "")),
+            overflow_total:    (
+                ($all | last | (.errorMessage // "")) as $err |
+                if ($err | test("exceeds the available context size")) then
+                    ($err | capture("request \\((?<n>[0-9]+) tokens\\)") | .n | tonumber)
+                else 0 end
+            )
         }
     end
 ' "$SESSION_FILE")
@@ -617,6 +634,15 @@ if [ -n "$STATS" ]; then
     LAST_OUTPUT=$(echo "$STATS" | jq -r '.last_output')
     LAST_TOTAL=$(echo "$STATS" | jq -r '.last_total')
     LAST_STOP_REASON=$(echo "$STATS" | jq -r '.last_stop_reason')
+    OVERFLOW_TOTAL=$(echo "$STATS" | jq -r '.overflow_total // 0')
+
+    # If the final response died with a context-size error, the last usage
+    # snapshot predates the failed request. Use the request size reported by
+    # the engine as the true final context and flag the limit as exceeded.
+    if [ "$MAX_CONTEXT" -gt 0 ] && [ "$OVERFLOW_TOTAL" -gt 0 ] 2>/dev/null && [ "$OVERFLOW_TOTAL" -gt "$MAX_CONTEXT" ]; then
+        LIMIT_EXCEEDED=1
+        LAST_TOTAL=$OVERFLOW_TOTAL
+    fi
 
     # Tokens per second (based on wall-clock streaming time)
     TOTAL_STREAMING_TIME=$(cat "$STREAMING_TIME_FILE" 2>/dev/null || echo 0)
