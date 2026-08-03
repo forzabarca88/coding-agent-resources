@@ -147,14 +147,14 @@ append_eval_results() {
     if [ ! -f "$RESULTS_FILE" ]; then
         printf '%s\n\n%s\n%s\n' \
             '# Evaluation Results' \
-            '| Date | Model | Duration | Total Context Used | Turns | Limit | Exceeded | Exit | Passed Tests | Failed Tests | Notes |' \
+            '| Model | Notes | Duration | Total Context Used | Turns | Limit | Exceeded | Exit | Passed Tests | Failed Tests | Date |' \
             '|---|---|---|---|---|---|---|---|---|---|---|' > "$RESULTS_FILE"
     fi
 
     printf "| %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |\n" \
-        "$date" "$model" "$duration" "$context" \
+        "$model" "$notes" "$duration" "$context" \
         "$turns" "$limit" "$exceeded" "$exit_code" \
-        "$passed_tests" "$failed_tests" "$notes" >> "$RESULTS_FILE"
+        "$passed_tests" "$failed_tests" "$date" >> "$RESULTS_FILE"
 
     echo -e "${GREEN}Results appended to:${NC} $RESULTS_FILE"
 }
