@@ -11,6 +11,8 @@ This repository contains reusable components that can be symlinked into pi's age
 ```
 coding-agent-resources/
 ├── agents/           # Agent definitions (planner, reviewer, scout, worker)
+├── agent-evaluation/  # Evaluation harness (web-agent) with its own README
+├── docs/             # Static documentation site (renders eval results live)
 ├── extensions/       # Pi extensions (auto-recover, followup, provider-health-check, success-tone)
 │   └── subagent/     # Subagent extension
 ├── prompts/          # Pre-defined prompt templates (ralph-loop)
@@ -91,6 +93,27 @@ Place extension files in `~/.pi/agent/extensions/` for global use, or `.pi/exten
 ### Using Skills
 
 Skills are automatically available when symlinked. Reference them by name in agent tasks.
+
+## Documentation Site
+
+The `docs/` directory contains a static documentation site for the repository — plain HTML/CSS/JS with no build step. The evaluation-results page fetches `data/eval-results.md` at runtime and renders it as HTML.
+
+`docs/data/eval-results.md` is the **single canonical results file**. `agent-evaluation/run-eval.sh` appends each run to it directly — there is no other copy anywhere.
+
+Serve it locally from the `docs/` folder (or the repository root — either works):
+
+```bash
+cd docs
+npx serve .          # or: npx http-server .   /   python3 -m http.server
+```
+
+### GitHub Pages
+
+Publish the site from the `docs/` folder: **Settings → Pages → Source: Deploy from a branch → Branch: `main` → `/docs`**. The results file sits inside the published folder, so the page always reads the latest committed run — `run-eval.sh --commit` stages it.
+
+### Pages
+
+- **Evaluation Results** — Renders `eval-results.md` live as HTML (currently the only page; more are planned).
 
 ## License
 

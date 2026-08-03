@@ -20,12 +20,22 @@ coding-agent-resources/
 ├── LICENSE                   # MIT License
 ├── README.md                 # Repository overview and usage instructions
 ├── install_for_pi.sh         # Installation script for symlinking resources to pi
+├── agent-evaluation/
+│   ├── README.md             # web-agent evaluation harness documentation
+│   └── run-eval.sh           # Eval runner (appends results to docs/data/eval-results.md)
 ├── agents/
 │   ├── README.md             # Agent definitions overview
 │   ├── planner.md            # Creates implementation plans from context and requirements
 │   ├── reviewer.md           # Reviews code changes for quality, security, and maintainability
 │   ├── scout.md              # Performs fast codebase reconnaissance and returns compressed context
 │   └── worker.md             # Executes implementation tasks with full tool access
+├── docs/
+│   ├── index.html            # Documentation site home page (evaluation results)
+│   ├── data/
+│   │   └── eval-results.md   # Single canonical results file; run-eval.sh appends runs here
+│   └── assets/
+│       ├── styles.css        # Site stylesheet
+│       └── site.js           # Fetches data/eval-results.md and renders it as HTML
 ├── extensions/
 │   ├── README.md             # Extensions overview
 │   ├── auto-recover.ts       # Detects unexecuted tool calls and prompts model to continue
