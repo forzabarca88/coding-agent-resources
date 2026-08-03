@@ -122,19 +122,28 @@ if [ "$CLEAR" -eq 1 ]; then
     cd "$SCRIPT_DIR"
     git clean -fd . || { echo -e "${RED}Error: git clean failed.${NC}" >&2; exit 1; }
     git checkout -f . || { echo -e "${RED}Error: git checkout failed.${NC}" >&2; exit 1; }
+    # The results file lives in the docs site now; it must not reappear in
+    # this directory from HEAD.
+    rm -f "$SCRIPT_DIR/eval-results.md"
+    # Revert the results file too — or drop it if it is not tracked at HEAD.
+    git checkout -f -- "$RESULTS_FILE" 2>/dev/null || rm -f "$RESULTS_FILE"
     echo ""
 fi
 
 # ---------------------------------------------------------------------------
 # Helper: append a row to eval-results.md (create header if missing)
 # ---------------------------------------------------------------------------
-RESULTS_FILE="$SCRIPT_DIR/eval-results.md"
+# The results file lives in the docs site (docs/data/eval-results.md) — the
+# single canonical copy, read directly by the site at runtime (e.g. on GitHub
+# Pages, which serves only files inside the published docs/ folder).
+RESULTS_FILE="$SCRIPT_DIR/../docs/data/eval-results.md"
 
 append_eval_results() {
     local date="$1" model="$2" duration="$3" context="$4"
     local turns="$5" limit="$6" exceeded="$7" exit_code="$8"
     local passed_tests="$9" failed_tests="${10}" notes="${11}"
 
+    mkdir -p "$(dirname "$RESULTS_FILE")"
     if [ ! -f "$RESULTS_FILE" ]; then
         printf '%s\n\n%s\n%s\n' \
             '# Evaluation Results' \
