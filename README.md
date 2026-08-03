@@ -96,9 +96,11 @@ Skills are automatically available when symlinked. Reference them by name in age
 
 ## Documentation Site
 
-The `docs/` directory contains a static documentation site for the repository — plain HTML/CSS/JS with no build step. The evaluation-results page fetches `data/eval-results.md` at runtime and renders it as HTML.
+The `docs/` directory contains a static documentation site — plain HTML/CSS/JS with no build step. It is organised as an index page (`index.html`) that lists every published page as a ledger-style entry; each page lives in its own HTML file at the root of `docs/`. To add a page: create the HTML file, add one entry to the index list, and add the page to the site nav and footer (the small link lists shared by every page).
 
 `docs/data/eval-results.md` is the **single canonical results file**. `agent-evaluation/run-eval.sh` appends each run to it directly — there is no other copy anywhere.
+
+Shared styling lives in `assets/styles.css`; `assets/site.js` handles common behaviour (marking the current page in the site nav), while page-specific scripts such as `assets/results.js` are loaded only on the page that needs them.
 
 Serve it locally from the `docs/` folder (or the repository root — either works):
 
@@ -113,7 +115,8 @@ Publish the site from the `docs/` folder: **Settings → Pages → Source: Deplo
 
 ### Pages
 
-- **Evaluation Results** — Renders `eval-results.md` live as HTML (currently the only page; more are planned).
+- **Index** — `index.html`; the landing page, listing all published pages.
+- **Evaluation Results** — `evaluation-results.html`; fetches `data/eval-results.md` at runtime and renders it as HTML (live data, no build step).
 
 ## License
 

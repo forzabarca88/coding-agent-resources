@@ -100,14 +100,34 @@ a:focus-visible {
   font-weight: 400;
   color: var(--carbon);
   letter-spacing: 0.02em;
+  text-decoration: none;
 }
+.brand:hover { text-decoration: none; }
 .brand__mark { color: var(--carbon); flex-shrink: 0; }
-.site-header__doc {
+
+/* Site navigation — the list of pages, with the current one marked */
+.site-nav {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+.site-nav__link {
   font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  color: var(--mist);
-  text-transform: lowercase;
-  letter-spacing: 0.03em;
+  font-size: 0.75rem;
+  color: var(--carbon);
+  text-decoration: none;
+}
+.site-nav__link:hover {
+  text-decoration: underline;
+  text-decoration-color: var(--carbon);
+  text-underline-offset: 3px;
+}
+.site-nav__link[aria-current="page"] {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--carbon);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
 }
 
 /* ============================================================
@@ -162,18 +182,6 @@ a:focus-visible {
   letter-spacing: 0.06em;
   margin-bottom: 1rem;
 }
-.chip {
-  display: inline-block;
-  padding: 0.15rem 0.5rem;
-  font-family: var(--font-mono);
-  font-size: 0.625rem;
-  font-weight: 400;
-  letter-spacing: 0.1em;
-  background: var(--carbon);
-  color: #fff;
-  border-radius: 2px;
-  line-height: 1.3;
-}
 .intro p {
   max-width: 62ch;
   margin-bottom: 0.75rem;
@@ -181,13 +189,104 @@ a:focus-visible {
   line-height: 1.65;
 }
 .intro p:last-child { margin-bottom: 0; }
-.intro code {
+.intro code, .masthead__subhead code, .page-index code {
   font-family: var(--font-mono);
   font-size: 0.8125em;
   background: var(--zebra);
   padding: 0.1em 0.4em;
   border-radius: 2px;
   color: var(--carbon);
+}
+
+/* ============================================================
+   Page index — the ledger-style list of pages on the index page
+   ============================================================ */
+.page-index {
+  padding: 2.25rem 0;
+  border-bottom: 1px solid var(--rule);
+}
+.page-index__list {
+  list-style: none;
+  margin: 0;
+}
+.page-index__item {
+  display: grid;
+  grid-template-columns: minmax(9rem, 1fr) 3fr auto;
+  gap: 1rem 2rem;
+  align-items: center;
+  padding: 1.5rem 0;
+  border-bottom: 1px solid var(--rule);
+  border-radius: 2px;
+  color: var(--ink);
+  text-decoration: none;
+}
+.page-index__item:last-child { border-bottom: 0; }
+.page-index__item:hover { background: var(--zebra); }
+.page-index__item:focus-visible {
+  outline: 2px solid var(--carbon);
+  outline-offset: 2px;
+}
+.page-index__path {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--carbon-soft);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.page-index__body { display: block; }
+.page-index__title {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.15rem;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.page-index__desc {
+  display: block;
+  color: var(--mist);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  max-width: 62ch;
+  margin-top: 0.2rem;
+}
+.page-index__meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  justify-self: end;
+}
+.page-index__arrow {
+  font-family: var(--font-mono);
+  color: var(--carbon);
+  transition: transform 0.15s;
+}
+.page-index__item:hover .page-index__arrow { transform: translateX(3px); }
+.page-index__note {
+  margin-top: 1.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--mist);
+}
+
+/* Status chip/tag — solid label used in section headings and on index entries */
+.chip, .tag {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: var(--carbon);
+  color: #fff;
+  border-radius: 2px;
+  line-height: 1.3;
+}
+.tag--quiet {
+  background: transparent;
+  color: var(--mist);
+  border: 1px solid var(--rule-strong);
 }
 
 /* ============================================================
@@ -322,13 +421,21 @@ a:focus-visible {
   line-height: 1.5;
 }
 .page-footer a { color: var(--carbon); }
+.page-footer__nav {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
 
 /* ============================================================
    Responsive
    ============================================================ */
 @media (max-width: 640px) {
   .page { padding: 0 16px; }
+  .site-header { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
   .masthead { padding: 2rem 0 1.5rem; }
+  .page-index__item { grid-template-columns: 1fr; gap: 0.35rem; }
+  .page-index__meta { justify-self: start; }
   .md thead th, .md tbody td { padding: 0.4rem 0.5rem; font-size: 0.75rem; }
   .page-footer { flex-direction: column; }
 }
