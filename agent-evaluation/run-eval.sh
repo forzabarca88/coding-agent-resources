@@ -146,6 +146,7 @@ append_eval_results() {
 # ---------------------------------------------------------------------------
 append_eval_results_from_session() {
     local session_file="$1" model="$2" max_context="$3" exit_code="$4" notes="$5"
+    local passed_tests="${6:-?}" failed_tests="${7:-?}"
 
     if [ ! -f "$session_file" ]; then
         return 1
@@ -205,7 +206,7 @@ append_eval_results_from_session() {
     fi
 
     append_eval_results "$run_date" "$model" "$duration" "$total_context" \
-        "$turns" "$limit_str" "$exceeded_str" "$exit_code" "?" "?" "$notes"
+        "$turns" "$limit_str" "$exceeded_str" "$exit_code" "$passed_tests" "$failed_tests" "$notes"
 }
 
 # ---------------------------------------------------------------------------
@@ -247,7 +248,28 @@ cleanup() {
     # If the normal flow didn't get to write results, salvage what we can
     # from the session file so the run is not lost entirely.
     if [ "$RESULTS_WRITTEN" -eq 0 ] && [ -n "${SESSION_FILE:-}" ] && [ -f "$SESSION_FILE" ]; then
-        append_eval_results_from_session "$SESSION_FILE" "$MODEL" "$MAX_CONTEXT" 1 "interrupted"
+        # Run tests too, so the row doesn't get "?" counts.
+        local pt="?" ft="?" tn="interrupted"
+        if [ -f "$SCRIPT_DIR/run_tests.sh" ]; then
+            set +e
+            local to
+            to=$(./run_tests.sh 2>&1)
+            local te=$?
+            set -e
+            echo "$to" | awk '/^---TEST_RESULTS---$/{exit} 1'
+            local rb
+            rb=$(echo "$to" | awk '/^---TEST_RESULTS---$/{f=1; next} /^---END_TEST_RESULTS---$/{exit} f')
+            if [ -n "$rb" ]; then
+                pt=$(echo "$rb" | awk -F= '/^testsPassed=/{print $2}')
+                ft=$(echo "$rb" | awk -F= '/^testsFailed=/{print $2}')
+                [ -z "$pt" ] && pt="?"
+                [ -z "$ft" ] && ft="?"
+            fi
+            if [ "$te" -ne 0 ]; then
+                tn="interrupted, vitest failed"
+            fi
+        fi
+        append_eval_results_from_session "$SESSION_FILE" "$MODEL" "$MAX_CONTEXT" 1 "$tn" "$pt" "$ft"
     fi
     # Remove temp dir
     if [ "$CLEANUP" -eq 1 ]; then
@@ -720,75 +742,77 @@ else
     EXIT_CODE=0
 fi
 
-# ---------------------------------------------------------------------------
-# Post-checks: validate tests pass and test files were not modified
-# ---------------------------------------------------------------------------
 NOTES=""
 PASSED_TESTS="?"
 FAILED_TESTS="?"
-if [ "$EXIT_CODE" -eq 0 ]; then
-    echo ""
-    echo -e "${BOLD}${CYAN}Running post-checks...${NC}"
 
-    # Check 1: run_tests.sh
-    echo -e "${DIM}  [1/2] Running ./run_tests.sh...${NC}"
-    if [ ! -f "$SCRIPT_DIR/run_tests.sh" ]; then
-        echo -e "  ${YELLOW}⚠ run_tests.sh not found, skipping tests${NC}"
-        NOTES="run_tests.sh missing"
-        EXIT_CODE=1
-    else
-        set +e
-        TEST_OUTPUT=$(./run_tests.sh 2>&1)
-        TEST_EXIT=$?
-        set -e
+# ---------------------------------------------------------------------------
+# Post-checks: run tests and validate test files were not modified.
+# These run unconditionally (even if context limit was exceeded) so that the
+# eval-results.md row always contains real test counts.
+# ---------------------------------------------------------------------------
+echo ""
+echo -e "${BOLD}${CYAN}Running post-checks...${NC}"
 
-        # Display the test output (everything before the ---TEST_RESULTS--- marker).
-        # awk exits 0 regardless of match, so this is safe under set -e/pipefail.
-        echo "$TEST_OUTPUT" | awk '/^---TEST_RESULTS---$/{exit} 1'
-
-        # Parse the structured results block (awk always exits 0, so a missing
-        # field or block degrades gracefully instead of aborting the script).
-        RESULTS_BLOCK=$(echo "$TEST_OUTPUT" | awk '/^---TEST_RESULTS---$/{f=1; next} /^---END_TEST_RESULTS---$/{exit} f')
-        if [ -n "$RESULTS_BLOCK" ]; then
-            PASSED_TESTS=$(echo "$RESULTS_BLOCK" | awk -F= '/^testsPassed=/{print $2}')
-            FAILED_TESTS=$(echo "$RESULTS_BLOCK" | awk -F= '/^testsFailed=/{print $2}')
-            # If parsing returned empty strings, restore defaults
-            [ -z "$PASSED_TESTS" ] && PASSED_TESTS="?"
-            [ -z "$FAILED_TESTS" ] && FAILED_TESTS="?"
-        fi
-
-        if [ "$TEST_EXIT" -ne 0 ]; then
-            echo -e "  ${RED}✗ Tests failed (exit code: $TEST_EXIT, failed: ${FAILED_TESTS})${NC}"
-            NOTES="vitest failed"
-            EXIT_CODE=1
-        else
-            echo -e "  ${GREEN}✓ Tests passed (${PASSED_TESTS} passed)${NC}"
-        fi
-    fi
-
-    # Check 2: No changes to test/ or .gitignore
-    echo -e "${DIM}  [2/2] Checking for modifications to test/ and .gitignore...${NC}"
+# Check 1: run_tests.sh
+# Always run if the file exists, regardless of EXIT_CODE.
+echo -e "${DIM}  [1/2] Running ./run_tests.sh...${NC}"
+if [ ! -f "$SCRIPT_DIR/run_tests.sh" ]; then
+    echo -e "  ${YELLOW}⚠ run_tests.sh not found, skipping tests${NC}"
+    NOTES="run_tests.sh missing"
+    EXIT_CODE=1
+else
     set +e
-    GIT_CHANGES=$(git status --porcelain -- "test/" ".gitignore" 2>/dev/null)
+    TEST_OUTPUT=$(./run_tests.sh 2>&1)
+    TEST_EXIT=$?
     set -e
-    if [ -n "$GIT_CHANGES" ]; then
-        echo -e "  ${RED}✗ Unauthorized modifications detected:${NC}"
-        echo "$GIT_CHANGES" | sed 's/^/      /'
-        if [ -z "$NOTES" ]; then
-            NOTES="test files modified"
-        else
-            NOTES="${NOTES}, test files modified"
-        fi
-        EXIT_CODE=1
-    else
-        echo -e "  ${GREEN}✓ No unauthorized modifications${NC}"
+
+    # Display the test output (everything before the ---TEST_RESULTS--- marker).
+    # awk exits 0 regardless of match, so this is safe under set -e/pipefail.
+    echo "$TEST_OUTPUT" | awk '/^---TEST_RESULTS---$/{exit} 1'
+
+    # Parse the structured results block (awk always exits 0, so a missing
+    # field or block degrades gracefully instead of aborting the script).
+    RESULTS_BLOCK=$(echo "$TEST_OUTPUT" | awk '/^---TEST_RESULTS---$/{f=1; next} /^---END_TEST_RESULTS---$/{exit} f')
+    if [ -n "$RESULTS_BLOCK" ]; then
+        PASSED_TESTS=$(echo "$RESULTS_BLOCK" | awk -F= '/^testsPassed=/{print $2}')
+        FAILED_TESTS=$(echo "$RESULTS_BLOCK" | awk -F= '/^testsFailed=/{print $2}')
+        # If parsing returned empty strings, restore defaults
+        [ -z "$PASSED_TESTS" ] && PASSED_TESTS="?"
+        [ -z "$FAILED_TESTS" ] && FAILED_TESTS="?"
     fi
 
-    if [ "$EXIT_CODE" -eq 0 ]; then
-        echo -e "${GREEN}${BOLD}All checks passed.${NC}"
+    if [ "$TEST_EXIT" -ne 0 ]; then
+        echo -e "  ${RED}✗ Tests failed (exit code: $TEST_EXIT, failed: ${FAILED_TESTS})${NC}"
+        NOTES="vitest failed"
+        EXIT_CODE=1
     else
-        echo -e "${RED}${BOLD}Post-checks failed.${NC}"
+        echo -e "  ${GREEN}✓ Tests passed (${PASSED_TESTS} passed)${NC}"
     fi
+fi
+
+# Check 2: No changes to test/ or .gitignore
+echo -e "${DIM}  [2/2] Checking for modifications to test/ and .gitignore...${NC}"
+set +e
+GIT_CHANGES=$(git status --porcelain -- "test/" ".gitignore" 2>/dev/null)
+set -e
+if [ -n "$GIT_CHANGES" ]; then
+    echo -e "  ${RED}✗ Unauthorized modifications detected:${NC}"
+    echo "$GIT_CHANGES" | sed 's/^/      /'
+    if [ -z "$NOTES" ]; then
+        NOTES="test files modified"
+    else
+        NOTES="${NOTES}, test files modified"
+    fi
+    EXIT_CODE=1
+else
+    echo -e "  ${GREEN}✓ No unauthorized modifications${NC}"
+fi
+
+if [ "$EXIT_CODE" -eq 0 ]; then
+    echo -e "${GREEN}${BOLD}All checks passed.${NC}"
+else
+    echo -e "${RED}${BOLD}Post-checks failed.${NC}"
 fi
 
 # Append row to eval-results.md
