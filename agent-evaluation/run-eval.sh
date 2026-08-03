@@ -19,6 +19,11 @@ USER_NOTES=""
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
+# The results file lives in the docs site (docs/data/eval-results.md) — the
+# single canonical copy, read directly by the site at runtime (e.g. on GitHub
+# Pages, which serves only files inside the published docs/ folder).
+RESULTS_FILE="$SCRIPT_DIR/../docs/data/eval-results.md"
+
 # ---------------------------------------------------------------------------
 # Parse CLI arguments
 # ---------------------------------------------------------------------------
@@ -133,11 +138,6 @@ fi
 # ---------------------------------------------------------------------------
 # Helper: append a row to eval-results.md (create header if missing)
 # ---------------------------------------------------------------------------
-# The results file lives in the docs site (docs/data/eval-results.md) — the
-# single canonical copy, read directly by the site at runtime (e.g. on GitHub
-# Pages, which serves only files inside the published docs/ folder).
-RESULTS_FILE="$SCRIPT_DIR/../docs/data/eval-results.md"
-
 append_eval_results() {
     local date="$1" model="$2" duration="$3" context="$4"
     local turns="$5" limit="$6" exceeded="$7" exit_code="$8"
