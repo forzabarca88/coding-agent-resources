@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light">
+  <meta name="description" content="Evaluation results for the coding agent harness, rendered live from agent-evaluation/eval-results.md.">
+  <title>Evaluation Results — Coding Agent Resources</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='6' fill='none' stroke='%232e4a7a' stroke-width='2.5'/%3E%3Cpath d='M16 3v6M16 23v6M3 16h6M23 16h6' stroke='%232e4a7a' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Fragment+Mono:ital@0;1&family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js" defer></script>
+  <script src="assets/site.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <div class="page">
+    <header class="site-header">
+      <p class="brand">
+        <svg class="brand__mark" width="18" height="18" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+          <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="2.5"/>
+          <path d="M16 3v6M16 23v6M3 16h6M23 16h6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+        <span>Coding Agent Resources</span>
+      </p>
+      <p class="site-header__doc">Documentation · docs/</p>
+    </header>
+
+    <main id="main">
+      <!-- Masthead -->
+      <header class="masthead">
+        <p class="eyebrow">Coding Agent Resources · Agent Evaluation</p>
+        <h1 class="masthead__title">Evaluation results</h1>
+        <p class="masthead__subhead">
+          Rendered live from <a href="data/eval-results.md">data/eval-results.md</a>
+          — every logged run, exactly as recorded.
+        </p>
+      </header>
+
+      <!-- Placeholder introduction -->
+      <section class="intro" aria-labelledby="intro-heading">
+        <h2 id="intro-heading" class="intro__heading">
+          <span class="chip">Placeholder</span>
+          Introduction
+        </h2>
+        <p>
+          This page publishes the results of the evaluation harness in
+          <code>agent-evaluation/</code>. The harness sends a coding agent at a task and logs how
+          it performed — how long it took, how much context it consumed, and whether its work
+          passed the test suite.
+        </p>
+        <p>
+          This introduction is a placeholder: a fuller description of the benchmark task, the
+          harness, and how to read these numbers is planned for this space. The results below are
+          read live from the markdown file, so the page stays current as new runs are logged.
+        </p>
+      </section>
+
+      <!-- Results, rendered live from agent-evaluation/eval-results.md -->
+      <section class="results">
+        <p id="results-status" class="results-status" role="status" aria-live="polite">
+          Loading data/eval-results.md…
+        </p>
+        <button id="results-retry" type="button" class="retry" hidden>Reload results</button>
+        <article id="results-content" class="md"></article>
+      </section>
+    </main>
+
+    <footer class="page-footer">
+      <p>Coding Agent Resources · documentation site</p>
+      <p>Source: <a href="data/eval-results.md">eval-results.md</a> · more pages to come</p>
+    </footer>
+  </div>
+</body>
+</html>
