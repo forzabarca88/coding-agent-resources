@@ -9,14 +9,14 @@ Extensions are TypeScript modules that hook into pi's event system to provide ad
 ## Available Extensions
 
 ### [auto-recover.ts](./auto-recover.ts)
-- **Purpose**: Detects when an agent turn ends with tool calls that weren't executed
+- **Purpose**: Detects when an agent run ends with an unexecuted trailing tool call
 - **Behavior**: Automatically sends a user message prompting the model to continue
-- **Trigger**: `agent_end` event
+- **Trigger**: `agent_settled` event (fires only when Pi will not continue automatically, i.e. the next step is a transition back to the user turn)
 - **Features**:
-  - Detects unexecuted tool calls in assistant messages
+  - Strict trigger: only fires when the END of the final assistant message is a tool call — either a structured, unexecuted `toolCall` part, or final text/thinking that literally ends with a leaked tool-call tag (e.g. Gemma's `<|tool_call|>call:...<tool_call|>`)
+  - Never fires on messages that merely mention tool-call syntax and end in normal prose
   - Tracks consecutive recoveries (max 3)
   - Provides UI notifications for recovery status
-  - Handles both structured toolCall objects and XML tool call tags
 
 ### [followup.ts](./followup.ts)
 - **Purpose**: Registers `/followup` command for queuing messages
