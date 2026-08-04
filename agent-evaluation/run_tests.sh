@@ -5,8 +5,8 @@
 # Usage: ./run_tests.sh
 #
 # Output:
-#   - Full vitest output (default reporter) is printed to stdout
-#   - A structured summary block is appended at the end for machine parsing:
+#   - Vitest's per-test console output is suppressed; only a structured
+#     summary block is printed for machine parsing:
 #       ---TEST_RESULTS---
 #       testFilesPassed=<n>
 #       testFilesFailed=<n>
@@ -20,7 +20,9 @@
 #
 # Counts are extracted from vitest's structured JSON reporter
 # (--reporter=json --outputFile=...) via jq, avoiding fragile regex
-# parsing of the human-readable console output.
+# parsing of the human-readable console output. If vitest fails to
+# produce a report, its raw output is dumped to stderr so the cause
+# is not lost.
 # =============================================================================
 set -euo pipefail
 
@@ -38,14 +40,17 @@ for cmd in npx jq; do
 done
 
 # ---------------------------------------------------------------------------
-# Run vitest: default reporter for console output, JSON reporter for parsing
+# Run vitest with only the JSON reporter: no per-test console output, just
+# a structured report file. All output is captured in case the report fails
+# to be produced (see the fallback below).
 # ---------------------------------------------------------------------------
 TMPDIR=$(mktemp -d) || { echo "Error: Failed to create temp directory" >&2; exit 1; }
 trap 'rm -rf "$TMPDIR"' EXIT
 RESULTS_FILE="$TMPDIR/vitest-results.json"
+LOG_FILE="$TMPDIR/vitest.log"
 
 set +e
-npx vitest run test/ --reporter=default --reporter=json --outputFile="$RESULTS_FILE" 2>&1
+npx vitest run test/ --reporter=json --outputFile="$RESULTS_FILE" >"$LOG_FILE" 2>&1
 VITEST_EXIT=$?
 set -e
 
@@ -71,6 +76,10 @@ if [ -f "$RESULTS_FILE" ] && [ -s "$RESULTS_FILE" ]; then
         TESTS_FAILED="?"
     fi
 else
+    # No usable report (e.g. vitest crashed before writing JSON): dump its
+    # raw output to stderr so the failure isn't reduced to just "?" counts.
+    echo "Vitest produced no JSON report (exit code ${VITEST_EXIT}); raw output:" >&2
+    cat "$LOG_FILE" >&2
     TEST_FILES_PASSED="?"
     TEST_FILES_FAILED="?"
     TEST_FILES_TOTAL="?"
