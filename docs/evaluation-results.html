@@ -58,11 +58,39 @@ ain/agent-evaluation</a> and logs how
           it performed — how long it took, how much context it consumed, and whether its work
           passed the test suite.
         </p>
-        <p>
-          This introduction is a placeholder: a fuller description of the benchmark task, the
-          harness, and how to read these numbers is planned for this space. The results below are
-          read live from the markdown file, so the page stays current as new runs are logged.
-        </p>
+        <div class="specs">
+          <h3 class="specs__heading">
+            <span class="chip">Hardware</span>
+            Test machine
+          </h3>
+          <p class="specs__note">
+            The test machine has the following — admittedly less than stellar — specs. This is
+            somewhat intended: it offers a different lens to most online results.
+          </p>
+          <dl class="specs__grid">
+            <div class="specs__cell">
+              <dt>CPU</dt>
+              <dd>Intel Core i7-4770</dd>
+            </div>
+            <div class="specs__cell">
+              <dt>RAM</dt>
+              <dd>16 GB DDR3</dd>
+            </div>
+            <div class="specs__cell">
+              <dt>GPU</dt>
+              <dd>AMD Radeon RX 9060 XT</dd>
+            </div>
+            <div class="specs__cell">
+              <dt>OS</dt>
+              <dd>Windows 10 <span class="specs__detail">(pi running in WSL)</span></dd>
+            </div>
+          </dl>
+          <p class="specs__note specs__note--run">
+            If you wish to run the evaluation yourself to compare results, simply clone
+            <a href="https://github.com/forzabarca88/coding-agent-resources">the repo</a> and run:
+          </p>
+          <pre class="specs__command">./run-eval.sh --model &lt;pi provider name&gt;/&lt;pi model name&gt;</pre>
+        </div>
       </section>
 
       <!-- Results, rendered live from data/eval-results.md -->

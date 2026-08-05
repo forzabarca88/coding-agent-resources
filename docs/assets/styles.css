@@ -22,6 +22,7 @@
   --rule: rgba(46, 74, 122, 0.18);
   --rule-strong: rgba(46, 74, 122, 0.35);
   --zebra: rgba(46, 74, 122, 0.04);
+  --carbon-bright: #8FA6CC; /* carbon lightened for use on ink */
   --font-display: "Bricolage Grotesque", "Arial Black", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Fragment Mono", "JetBrains Mono", ui-monospace, "SF Mono", "Cascadia Code", monospace;
   --font-body: "Instrument Sans", system-ui, sans-serif;
@@ -196,6 +197,82 @@ a:focus-visible {
   padding: 0.1em 0.4em;
   border-radius: 2px;
   color: var(--carbon);
+}
+
+/* ============================================================
+   Specs — test machine card in the introduction
+   ============================================================ */
+.specs {
+  margin-top: 2rem;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--carbon);
+  border-radius: 2px;
+  background: var(--zebra);
+  padding: 1.5rem 1.75rem 1.75rem;
+}
+.specs__heading {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--ink);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 1rem;
+}
+.specs .specs__note {
+  max-width: 62ch;
+  margin-bottom: 1.25rem;
+  font-size: 1rem;
+  line-height: 1.65;
+}
+.specs .specs__note--run { margin-bottom: 0.75rem; }
+.specs__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--rule);
+  border: 1px solid var(--rule);
+  margin-bottom: 1.5rem;
+}
+.specs__cell {
+  background: var(--paper);
+  padding: 0.9rem 1.1rem;
+}
+.specs__cell dt {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 400;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--carbon-soft);
+  margin-bottom: 0.35rem;
+}
+.specs__cell dd {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  color: var(--ink);
+}
+.specs__detail {
+  color: var(--mist);
+  font-size: 0.8125em;
+}
+.specs__command {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--paper);
+  background: var(--ink);
+  padding: 0.9rem 1.1rem;
+  border-radius: 2px;
+  white-space: nowrap;
+  overflow-x: auto;
+}
+.specs__command::before {
+  content: "$ ";
+  color: var(--carbon-bright);
 }
 
 /* ============================================================
@@ -437,5 +514,7 @@ a:focus-visible {
   .page-index__item { grid-template-columns: 1fr; gap: 0.35rem; }
   .page-index__meta { justify-self: start; }
   .md thead th, .md tbody td { padding: 0.4rem 0.5rem; font-size: 0.75rem; }
+  .specs { padding: 1.25rem 1.25rem 1.5rem; }
+  .specs__grid { grid-template-columns: 1fr; }
   .page-footer { flex-direction: column; }
 }
