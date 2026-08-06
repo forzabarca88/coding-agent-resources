@@ -4,17 +4,17 @@
 # Runs pi with @eval-prompt.md, monitors token usage in real-time,
 # streams the model's text output to the terminal, and terminates the
 # session if the context limit is exceeded.
-# Usage: ./run-eval.sh [--model <model>] [--max-context <tokens>] [--notes <text>] [--clear] [--commit]
+# Usage: ./run-eval.sh [--model <model>] [--think <level>] [--max-context <tokens>] [--notes <text>] [--clear] [--commit]
 # =============================================================================
 set -uo pipefail
 
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
-DEFAULT_MAX_CONTEXT=64000
 CLEAR=0
 COMMIT=0
 USER_NOTES=""
+THINK=""
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
@@ -28,10 +28,22 @@ RESULTS_FILE="$SCRIPT_DIR/../docs/data/eval-results.md"
 # Parse CLI arguments
 # ---------------------------------------------------------------------------
 MODEL=""
-MAX_CONTEXT=$DEFAULT_MAX_CONTEXT
+# Unset/unlimited by default; only restricted when -c is provided.
+MAX_CONTEXT=0
+
+# Valid thinking levels accepted by pi's --thinking flag
+VALID_THINK_LEVELS="off minimal low medium high xhigh max"
 
 while [ $# -gt 0 ]; do
     case "$1" in
+        --think|-t)
+            if [ $# -lt 2 ]; then
+                echo "Error: --think requires a thinking level." >&2
+                exit 1
+            fi
+            THINK="$2"
+            shift 2
+            ;;
         --model|-m)
             if [ $# -lt 2 ]; then
                 echo "Error: --model requires a model identifier." >&2
@@ -65,13 +77,15 @@ while [ $# -gt 0 ]; do
             shift 2
             ;;
         --help|-h)
-            echo "Usage: $0 [--model <model>] [--max-context <tokens>] [--notes <text>] [--clear] [--commit]"
+            echo "Usage: $0 [--model <model>] [--think <level>] [--max-context <tokens>] [--notes <text>] [--clear] [--commit]"
             echo ""
             echo "Options:"
             echo "  -m, --model <model>        Model identifier (e.g. anthropic/claude-sonnet-4-20250514)"
             echo "                              If not set, you will be prompted interactively."
-            echo "  -c, --max-context <tokens>  Max context window in tokens (default: $DEFAULT_MAX_CONTEXT)"
-            echo "                               Set to 0 to disable the limit."
+            echo "  -t, --think <level>        Model thinking level: $VALID_THINK_LEVELS"
+            echo "                              (passed through to pi's --thinking flag)"
+            echo "  -c, --max-context <tokens>  Max context window in tokens."
+            echo "                               Defaults to unlimited (no context-size restriction) when not set."
             echo "  -n, --notes <text>          Notes to include in the eval-results.md row"
             echo "      --clear                 Reset working directory (git clean -fd; git checkout -f) before run."
             echo "                              Reverts all tracked files (including eval-results.md) and removes untracked files."
@@ -89,6 +103,17 @@ done
 if ! [[ "$MAX_CONTEXT" =~ ^[0-9]+$ ]]; then
     echo "Error: --max-context must be a positive integer." >&2
     exit 1
+fi
+
+# Validate thinking level if provided
+if [ -n "$THINK" ]; then
+    case " $VALID_THINK_LEVELS " in
+        *" $THINK "*) ;;
+        *)
+            echo "Error: invalid --think level '$THINK'. Must be one of: $VALID_THINK_LEVELS" >&2
+            exit 1
+            ;;
+    esac
 fi
 
 # ---------------------------------------------------------------------------
@@ -311,6 +336,9 @@ trap cleanup EXIT INT TERM
 echo -e "${BOLD}Model:${NC}        $MODEL"
 echo -e "${BOLD}Prompt:${NC}       @eval-prompt.md"
 echo -e "${BOLD}Mode:${NC}         non-interactive (streaming)"
+if [ -n "$THINK" ]; then
+    echo -e "${BOLD}Thinking:${NC}      $THINK"
+fi
 if [ "$MAX_CONTEXT" -gt 0 ]; then
     echo -e "${BOLD}Max context:${NC}   $(printf "%'d" "$MAX_CONTEXT") tokens"
 fi
@@ -330,7 +358,12 @@ START_EPOCH=$(date +%s)
 STREAM_FILE="$TMPDIR/pi-stream.jsonl"
 
 set +e
-pi --session-dir "$TMPDIR" --model "$MODEL" --mode json @eval-prompt.md > "$STREAM_FILE" &
+# Build the pi command; --thinking is only added when --think was supplied.
+PI_ARGS=(--session-dir "$TMPDIR" --model "$MODEL" --mode json)
+if [ -n "$THINK" ]; then
+    PI_ARGS+=(--thinking "$THINK")
+fi
+pi "${PI_ARGS[@]}" @eval-prompt.md > "$STREAM_FILE" &
 PI_PID=$!
 set -e
 
