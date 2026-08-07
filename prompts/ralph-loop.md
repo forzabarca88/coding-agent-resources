@@ -124,7 +124,18 @@ When dispatching workers to fix issues, it is **imperative** that you provide de
 If you have stopped the loop and there is work outstanding, do **not** attempt to do the remaining work yourself - provide a detailed summary of the status to the user so that they may decide on next steps.
 
 
-## Phase 6 — Home (Final Summary)
+## Phase 6 - Cleanup
+
+You should do a final check around which files exist in the codebase.
+
+Cleanup any files which were created **only** for assisting with the implementation - e.g. markdown files related to planning or implementation by the `scout`, `planner`, `worker`, or `reviewer` subagents.
+
+Ensure that documentation has been appropriately updated, and that all remaining files are up to date in the context of the overarching change.
+
+Ultimately, your goal in this phase is to ensure that the user could feasibly run `git add -A` and it would only stage required files. 
+
+
+## Phase 7 — Home (Final Summary)
 
 Output a final summary:
 
