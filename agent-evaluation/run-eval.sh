@@ -653,6 +653,7 @@ STATS=$(jq -s '
             last_output:       ((($lastValid | .usage) // {}) | .output // 0),
             last_total:        ((($lastValid | .usage) // {}) | .totalTokens // 0),
             last_stop_reason:  ($all | last | (.stopReason // "")),
+            last_error_message: ($all | last | (.errorMessage // "")),
             overflow_total:    (
                 ($all | last | (.errorMessage // "")) as $err |
                 if ($err | test("exceeds the available context size")) then
@@ -671,6 +672,7 @@ if [ -n "$STATS" ]; then
     LAST_OUTPUT=$(echo "$STATS" | jq -r '.last_output')
     LAST_TOTAL=$(echo "$STATS" | jq -r '.last_total')
     LAST_STOP_REASON=$(echo "$STATS" | jq -r '.last_stop_reason')
+    LAST_ERROR_MESSAGE=$(echo "$STATS" | jq -r '.last_error_message // ""')
     OVERFLOW_TOTAL=$(echo "$STATS" | jq -r '.overflow_total // 0')
 
     # If the final response died with a context-size error, the last usage
@@ -702,6 +704,9 @@ if [ -n "$STATS" ]; then
             "  in=" + ((.message.usage.input // 0)|tostring) +
             " out=" + ((.message.usage.output // 0)|tostring) +
             "  total=" + ((.message.usage.totalTokens // 0)|tostring) +
+            (if ((.message.errorMessage // null) != null) and ((.message.errorMessage | length) > 0) then
+                "  error: " + .message.errorMessage
+            else "" end) +
             (if (.message.content | length) > 0 then
                 "\n" + (
                     [.message.content[]? |
@@ -750,6 +755,9 @@ if [ -n "$STATS" ]; then
     # Show last response stop reason
     if [ -n "$LAST_STOP_REASON" ] && [ "$LAST_STOP_REASON" != "null" ] && [ "$LAST_STOP_REASON" != "stop" ] && [ "$LAST_STOP_REASON" != "toolUse" ]; then
         echo -e "  ${DIM}Last response stopReason: ${LAST_STOP_REASON}${NC}"
+        if [ -n "$LAST_ERROR_MESSAGE" ] && [ "$LAST_ERROR_MESSAGE" != "null" ]; then
+            echo -e "  ${DIM}Last response error: ${LAST_ERROR_MESSAGE}${NC}"
+        fi
     fi
 
     if [ "$(echo "$TOTAL_COST > 0" | bc 2>/dev/null)" = "1" ]; then
