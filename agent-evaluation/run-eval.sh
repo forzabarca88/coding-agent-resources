@@ -336,6 +336,7 @@ trap cleanup EXIT INT TERM
 echo -e "${BOLD}Model:${NC}        $MODEL"
 echo -e "${BOLD}Prompt:${NC}       @eval-prompt.md"
 echo -e "${BOLD}Mode:${NC}         non-interactive (streaming)"
+echo -e "${BOLD}Subagent:${NC}      disabled"
 if [ -n "$THINK" ]; then
     echo -e "${BOLD}Thinking:${NC}      $THINK"
 fi
@@ -359,7 +360,10 @@ STREAM_FILE="$TMPDIR/pi-stream.jsonl"
 
 set +e
 # Build the pi command; --thinking is only added when --think was supplied.
-PI_ARGS=(--session-dir "$TMPDIR" --model "$MODEL" --mode json)
+# The subagent extension tool is excluded so the model under evaluation cannot
+# delegate work to subagents (which would skew results / add uncontrolled token
+# usage and tool invocations).
+PI_ARGS=(--session-dir "$TMPDIR" --model "$MODEL" --mode json --exclude-tools subagent)
 if [ -n "$THINK" ]; then
     PI_ARGS+=(--thinking "$THINK")
 fi
