@@ -20,3 +20,4 @@
 | lmstudio-jdcmedia/unsloth/gemma-4-12b-it-qat | quant: Q4_K_XL, KV quant: Q8_0, vitest failed, tool call formatting issues | 2m 45s | 25421 | 14 | 128000 | No | 1 | 13 | 234 | 2026-08-04 11:55 |
 | lmstudio-jdcmedia/lmstudio-community/bonsai-27b | quant: Q1_0, KV quant: Q8_0, vitest failed, garbled response issues | 40m 9s | 81315 | 38 | 128000 | No | 1 | 26 | 133 | 2026-08-07 23:00 |
 | lmstudio-jdcmedia/unsloth/gemma-4-12b-it-qat | quant: Q4_K_XL, KV quant: Q8_0, vitest failed, tool call formatting issues | 2m 55s | 37761 | 16 | 128000 | No | 1 | ? | ? | 2026-08-04 11:13 |
+| openrouter/openai/gpt-5.6-sol | thinking: medium | 2m 17s | 45496 | 19 | 128000 | No | 0 | 247 | 0 | 2026-08-08 13:37 |
