@@ -36,4 +36,4 @@ Steps MUST be listed in the logical order required for implementation.
 - `path/to/new.ts` - purpose
 
 ## Risks
-Anything to watch out for.
+Anything which may block or impede the implementation.
