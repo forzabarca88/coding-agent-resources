@@ -60,13 +60,17 @@
         <div class="specs">
           <h3 class="specs__heading">
             <span class="chip">Hardware</span>
-            Test machine
+            Test machines
           </h3>
           <p class="specs__note">
-            The results contain some cloud model (Openrouter, Mistral, etc) evaulation results for reference. For the local models, the test machine has the following - admittedly less than stellar - specs. This is
-            somewhat intended: it offers a different lens to most online results.
+            The results contain some cloud model (Openrouter, Mistral, etc) evaluation results for reference. For the local models, the test machines have the following specs. Each machine is identified by the model reference prefix used in the results table (e.g. <code>lmstudio-jdcmedia/ornith-1.0-35b</code>).
           </p>
+          <h4 class="specs__machine">Machine 1</h4>
           <dl class="specs__grid">
+            <div class="specs__cell">
+              <dt>Model reference</dt>
+              <dd><code>lmstudio-jdcmedia</code></dd>
+            </div>
             <div class="specs__cell">
               <dt>CPU</dt>
               <dd>Intel Core i7-4770</dd>
@@ -77,11 +81,42 @@
             </div>
             <div class="specs__cell">
               <dt>GPU</dt>
-              <dd>AMD Radeon RX 9060 XT</dd>
+              <dd>AMD Radeon RX 9060 XT (16GB)</dd>
             </div>
             <div class="specs__cell">
               <dt>OS</dt>
-              <dd>Windows 10 <span class="specs__detail">(pi running in WSL)</span></dd>
+              <dd>Windows 10</dd>
+            </div>
+            <div class="specs__cell">
+              <dt>Harness</dt>
+              <dd>pi running in WSL</dd>
+            </div>
+          </dl>
+          <h4 class="specs__machine">Machine 2</h4>
+          <dl class="specs__grid">
+            <div class="specs__cell">
+              <dt>Model reference</dt>
+              <dd><code>lmstudio-jdc-ws</code></dd>
+            </div>
+            <div class="specs__cell">
+              <dt>CPU</dt>
+              <dd>Xeon W-2235</dd>
+            </div>
+            <div class="specs__cell">
+              <dt>RAM</dt>
+              <dd>128 GB DDR4 (quad-channel)</dd>
+            </div>
+            <div class="specs__cell">
+              <dt>GPU</dt>
+              <dd>AMD Radeon RX 9060 XT (16GB) + Nvidia RTX 3060 TI (8GB)</dd>
+            </div>
+            <div class="specs__cell">
+              <dt>OS</dt>
+              <dd>Windows 11 Pro</dd>
+            </div>
+            <div class="specs__cell">
+              <dt>Harness</dt>
+              <dd>pi running in WSL</dd>
             </div>
           </dl>
           <p class="specs__note specs__note--run">
