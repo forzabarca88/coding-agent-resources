@@ -55,8 +55,7 @@
       return;
     }
     contentEl.innerHTML = marked.parse(md);
-    var table = contentEl.querySelector('table');
-    if (table) polishTable(table);
+    Array.prototype.forEach.call(contentEl.querySelectorAll('table'), polishTable);
     var runs = contentEl.querySelectorAll('tbody tr').length;
     setStatus('Loaded ' + runs + (runs === 1 ? ' run' : ' runs') + ' from data/eval-results.md.');
   }
