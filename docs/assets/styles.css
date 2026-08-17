@@ -499,6 +499,8 @@ a:focus-visible {
 .md td.over { color: var(--red); font-weight: 500; }
 .md td.pass-count { color: var(--carbon); }
 .md td.fail-count { color: var(--red); }
+.md td.exit-ok { color: var(--carbon); }
+.md td.exit-fail { color: var(--red); font-weight: 500; }
 
 /* ============================================================
    Page footer

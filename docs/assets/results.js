@@ -24,7 +24,7 @@
 
   // Presentational polish for the rendered table, derived from the table
   // itself so it can never drift from the source: right-align numeric
-  // columns and flag failures.
+  // columns, flag failures, and color the exit code.
   function polishTable(table) {
     var numeric = /duration|context|turns|limit|exit|passed|failed/i;
     var heads = Array.prototype.slice.call(table.querySelectorAll('thead th'));
@@ -38,6 +38,12 @@
         if (numeric.test(th.textContent)) td.classList.add('num');
         if (/exceeded/i.test(th.textContent) && td.textContent.trim().toLowerCase() === 'yes') {
           td.classList.add('over');
+        }
+        // Exit code is success only when it is exactly 0; any other value
+        // (non-zero integer, signal number, or an unknown marker like ?)
+        // counts as failure. Empty cells are left alone.
+        if (/^exit/i.test(th.textContent) && td.textContent.trim() !== '') {
+          td.classList.add(td.textContent.trim() === '0' ? 'exit-ok' : 'exit-fail');
         }
         if (/passed/i.test(th.textContent) && /^\d+$/.test(td.textContent.trim())) {
           td.classList.add('pass-count');
