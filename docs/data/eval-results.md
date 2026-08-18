@@ -34,3 +34,4 @@
 | lmstudio-jdcmedia/lmstudio-community/bonsai-27b | quant: Q1_0, KV quant: Q8_0, vitest failed, garbled response issues | 40m 9s | 81315 | 38 | 128000 | No | 1 | 26 | 133 | 2026-08-07 23:00 |
 | lmstudio-jdc-ws/unsloth/laguna-s-2.1 | quant: Q4_K_XL, KV quant: Q8_0, vitest failed, thinking hit output limit | 208m 53s | 104868 | 8 | 128000 | No | 1 | 13 | 10 | 2026-08-18 12:14 |
 | lmstudio-jdcmedia/unsloth/gemma-4-12b-it-qat | quant: Q4_K_XL, KV quant: Q8_0, vitest failed, tool call formatting issues | 2m 55s | 37761 | 16 | 128000 | No | 1 | ? | ? | 2026-08-04 11:13 |
+| lmstudio-jdc-ws/unsloth/muse-glimmer-30b | quant: Q4_K_XL, KV quant: Q8_0, thinking: high, vitest failed | 102m 6s | 126998 | 257 | 131000 | No | 1 | 165 | 82 | 2026-08-18 21:01 |
