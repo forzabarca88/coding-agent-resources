@@ -23,7 +23,7 @@
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b | quant: Q4_K_XL, KV quant: Q4_0, thinking: low, MTP, vitest failed | 117m 3s | 123924 | 37 | 128000 | Yes | 1 | 236 | 11 | 2026-08-17 18:12 |
 | lmstudio-jdc-ws/unsloth/ornith-1.0-35b | quant: Q8_K_XL, KV quant: Q8_0, vitest failed | 90m 1s | 124066 | 37 | 128000 | Yes | 1 | 226 | 21 | 2026-08-17 15:42 |
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b | quant: Q4_K_XL, KV quant: Q4_0, thinking: xhigh, MTP, vitest failed | 125m 40s | 123916 | 41 | 128000 | No | 1 | 224 | 23 | 2026-08-16 15:49 |
-| lmstudio-jdcmedia/deepreinforce-ai/ornith-1.0-9b | quant: Q4_K_M, KV quant: Q8_0, vitest failed, thinking loop hit output limit | 71m 56s | 167439 | 141 | 262000 | Yes | 1 | 169 | 78 | 2026-08-04 12:31 |
+| lmstudio-jdcmedia/deepreinforce-ai/ornith-1.0-9b | quant: Q4_K_M, KV quant: Q8_0, vitest failed, thinking hit output limit | 71m 56s | 167439 | 141 | 262000 | Yes | 1 | 169 | 78 | 2026-08-04 12:31 |
 | lmstudio-jdcmedia/unsloth/qwen3.6-27b | quant: Q3_K_S, KV quant: Q4_0, vitest failed | 27m 52s | 81307 | 22 | 80000 | Yes | 1 | 133 | 114 | 2026-08-03 22:43 |
 | lmstudio-jdcmedia/deepreinforce-ai/ornith-1.0-9b | quant: Q4_K_M, KV quant: None, vitest failed | 31m 44s | 122292 | 49 | 128000 | Yes | 1 | 130 | 117 | 2026-08-04 11:16 |
 | lmstudio-jdcmedia/unsloth/qwen3.5-9b | quant: Q8_0, KV quant: Q8_0, vitest failed | 46m 14s | 124153 | 119 | 128000 | Yes | 1 | 128 | 119 | 2026-08-04 10:07 |
@@ -31,5 +31,5 @@
 | lmstudio-jdcmedia/unsloth/gemma-4-31b-it | quant: IQ3_XXS, KV quant: Q4_0, vitest failed | 19m 28s | 55377 | 21 | 48000 | Yes | 1 | 67 | 149 | 2026-08-04 12:09 |
 | lmstudio-jdcmedia/unsloth/gemma-4-12b-it-qat | quant: Q4_K_XL, KV quant: Q8_0, vitest failed, tool call formatting issues | 2m 45s | 25421 | 14 | 128000 | No | 1 | 13 | 234 | 2026-08-04 11:55 |
 | lmstudio-jdcmedia/lmstudio-community/bonsai-27b | quant: Q1_0, KV quant: Q8_0, vitest failed, garbled response issues | 40m 9s | 81315 | 38 | 128000 | No | 1 | 26 | 133 | 2026-08-07 23:00 |
+| lmstudio-jdc-ws/unsloth/laguna-s-2.1 | quant: Q4_K_XL, KV quant: Q8_0, vitest failed, thinking hit output limit | 208m 53s | 104868 | 8 | 128000 | No | 1 | 13 | 10 | 2026-08-18 12:14 |
 | lmstudio-jdcmedia/unsloth/gemma-4-12b-it-qat | quant: Q4_K_XL, KV quant: Q8_0, vitest failed, tool call formatting issues | 2m 55s | 37761 | 16 | 128000 | No | 1 | ? | ? | 2026-08-04 11:13 |
-| lmstudio-jdc-ws/unsloth/laguna-s-2.1 | quant: Q4_K_XL, KV quant: Q8_0, vitest failed | 208m 53s | 104868 | 8 | 128000 | No | 1 | 13 | 10 | 2026-08-18 12:14 |
