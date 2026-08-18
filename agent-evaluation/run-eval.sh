@@ -2,7 +2,8 @@
 # =============================================================================
 # Pi Eval Runner
 # Runs pi with @eval-prompt.md, monitors token usage in real-time,
-# streams the model's text output to the terminal, and terminates the
+# streams the model's text output to the terminal, prints the running
+# total token count after every completed turn, and terminates the
 # session if the context limit is exceeded.
 # Usage: ./run-eval.sh [--model <model>] [--think <level>] [--max-context <tokens>] [--notes <text>] [--clear] [--commit]
 # =============================================================================
@@ -474,9 +475,58 @@ display_stream_events() {
 }
 
 # ---------------------------------------------------------------------------
+# Helper: process newly appended session lines that carry token usage data.
+#
+# Each assistant message in the session file (a completed turn) carries a
+# usage record. A single jq pass extracts usage from all lines after
+# start_line; for every turn found it updates the LATEST_* globals and prints
+# the current total token count. LAST_SESSION_LINE_COUNT is advanced past the
+# lines actually consumed.
+# ---------------------------------------------------------------------------
+process_session_usage() {
+    local start_line="$1"
+    local TOTAL INPUT OUTPUT
+    local snapshot
+
+    # Snapshot the newly appended lines once. The bookmark below is derived
+    # from this snapshot's actual length, so lines appended while we read
+    # are processed exactly once — never skipped, never duplicated.
+    snapshot=$(tail -n "+$((start_line + 1))" "$SESSION_FILE" 2>/dev/null)
+
+    while IFS=$'\t' read -r TOTAL INPUT OUTPUT; do
+        if [ -n "$TOTAL" ] && [ "$TOTAL" != "null" ] && [ "$TOTAL" -gt 0 ] 2>/dev/null; then
+            LATEST_TOTAL_TOKENS=$TOTAL
+            LATEST_USAGE_INPUT=$INPUT
+            LATEST_USAGE_OUTPUT=$OUTPUT
+
+            # Turn complete: report the current total token count
+            LIVE_TURNS=$((LIVE_TURNS + 1))
+            echo -e "  ${GREEN}✓ turn ${LIVE_TURNS} complete — total tokens: $(printf "%'d" "$LATEST_TOTAL_TOKENS")${NC}"
+
+            # Check if limit exceeded
+            if [ "$MAX_CONTEXT" -gt 0 ] && [ "$LATEST_TOTAL_TOKENS" -gt "$MAX_CONTEXT" ]; then
+                LIMIT_EXCEEDED=1
+            fi
+        fi
+    done < <(printf '%s\n' "$snapshot" | jq -r '
+        select(.message.usage != null) |
+        [.message.usage.totalTokens, .message.usage.input, .message.usage.output] |
+        @tsv
+    ' 2>/dev/null)
+
+    # Advance the bookmark by the number of lines actually consumed. The
+    # printf '%s\n' restores the trailing newline stripped by the command
+    # substitution, keeping the count consistent with the file's wc -l.
+    if [ -n "$snapshot" ]; then
+        LAST_SESSION_LINE_COUNT=$((start_line + $(printf '%s\n' "$snapshot" | wc -l)))
+    fi
+}
+
+# ---------------------------------------------------------------------------
 # Monitor session file for token usage, and stream file for text output
 # ---------------------------------------------------------------------------
 LIMIT_EXCEEDED=0
+LIVE_TURNS=0
 LAST_SESSION_LINE_COUNT=0
 LAST_STREAM_LINE_COUNT=0
 LATEST_TOTAL_TOKENS=0
@@ -490,8 +540,9 @@ echo 0 > "$STREAMING_TIME_FILE"
 : > "$STREAM_START_FILE"
 
 if [ -n "$SESSION_FILE" ] && [ -f "$SESSION_FILE" ]; then
-    # Get initial line counts
-    LAST_SESSION_LINE_COUNT=$(wc -l < "$SESSION_FILE" 2>/dev/null || echo 0)
+    # Get the initial line count for the stream file. The session file stays
+    # at the pre-initialized 0 so turns that completed before monitoring
+    # began are still reported.
     LAST_STREAM_LINE_COUNT=$(wc -l < "$STREAM_FILE" 2>/dev/null || echo 0)
 
     # Monitor loop: polls while pi runs, or until limit exceeded
@@ -509,26 +560,11 @@ if [ -n "$SESSION_FILE" ] && [ -f "$SESSION_FILE" ]; then
         # --- Read any new lines from the session file for usage monitoring ---
         CURRENT_SESSION_COUNT=$(wc -l < "$SESSION_FILE" 2>/dev/null || echo 0)
         if [ "$CURRENT_SESSION_COUNT" -gt "$LAST_SESSION_LINE_COUNT" ]; then
-            # Single jq pass over new session lines to extract usage data
-            while IFS=$'\t' read -r TOTAL INPUT OUTPUT; do
-                if [ -n "$TOTAL" ] && [ "$TOTAL" != "null" ] && [ "$TOTAL" -gt 0 ] 2>/dev/null; then
-                    LATEST_TOTAL_TOKENS=$TOTAL
-                    LATEST_USAGE_INPUT=$INPUT
-                    LATEST_USAGE_OUTPUT=$OUTPUT
-
-                    # Check if limit exceeded
-                    if [ "$MAX_CONTEXT" -gt 0 ] && [ "$LATEST_TOTAL_TOKENS" -gt "$MAX_CONTEXT" ]; then
-                        LIMIT_EXCEEDED=1
-                        break 2  # break out of both loops
-                    fi
-                fi
-            done < <(tail -n "+$((LAST_SESSION_LINE_COUNT + 1))" "$SESSION_FILE" 2>/dev/null | jq -r '
-                select(.message.usage != null) |
-                [.message.usage.totalTokens, .message.usage.input, .message.usage.output] |
-                @tsv
-            ' 2>/dev/null)
-
-            LAST_SESSION_LINE_COUNT=$CURRENT_SESSION_COUNT
+            process_session_usage "$LAST_SESSION_LINE_COUNT"
+            # Stop monitoring as soon as the context limit is exceeded
+            if [ "$LIMIT_EXCEEDED" -eq 1 ]; then
+                break
+            fi
         fi
 
         # Check if pi is still running (after reading output)
@@ -546,6 +582,14 @@ fi
 CURRENT_STREAM_COUNT=$(wc -l < "$STREAM_FILE" 2>/dev/null || echo 0)
 if [ "$CURRENT_STREAM_COUNT" -gt "${LAST_STREAM_LINE_COUNT:-0}" ]; then
     display_stream_events "$STREAM_FILE" "${LAST_STREAM_LINE_COUNT:-0}"
+fi
+
+# Final drain: capture any remaining session usage events after pi exited
+if [ -n "${SESSION_FILE:-}" ] && [ -f "$SESSION_FILE" ]; then
+    CURRENT_SESSION_COUNT=$(wc -l < "$SESSION_FILE" 2>/dev/null || echo 0)
+    if [ "$CURRENT_SESSION_COUNT" -gt "${LAST_SESSION_LINE_COUNT:-0}" ]; then
+        process_session_usage "$LAST_SESSION_LINE_COUNT"
+    fi
 fi
 set -e
 
@@ -573,11 +617,17 @@ fi
 END_EPOCH=$(date +%s)
 WALL_CLOCK=$((END_EPOCH - START_EPOCH))
 
-# Capture pi exit code (if it has exited)
+# Capture pi exit code (if it has exited). The wait is wrapped in
+# set +e: when pi was killed (context limit), wait returns non-zero and
+# must not abort the script under set -e. In the limit-exceeded path pi
+# was already reaped above, so wait reports 127 here — PI_EXIT_CODE is
+# only surfaced when no session file exists, so this is harmless.
 PI_EXIT_CODE=""
 if ! kill -0 "$PI_PID" 2>/dev/null; then
+    set +e
     wait "$PI_PID" 2>/dev/null
     PI_EXIT_CODE=$?
+    set -e
 fi
 
 echo -e "${DIM}────────────────────────────────────────────────────${NC}"
