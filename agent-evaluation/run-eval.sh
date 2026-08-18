@@ -441,10 +441,15 @@ display_stream_events() {
                 date +%s.%N > "$STREAM_START_FILE"
                 ;;
             THINK)
-                echo -en "${DIM}$(printf '%s' "$PAYLOAD" | base64 -d 2>/dev/null)${NC}"
+                # NB: never wrap the decoded delta in $(...) — command
+                # substitution strips trailing newlines, so deltas that
+                # carry line breaks (e.g. "\n\n") would print nothing.
+                printf '%b' "${DIM}"
+                printf '%s' "$PAYLOAD" | base64 -d 2>/dev/null
+                printf '%b' "${NC}"
                 ;;
             TEXT)
-                echo -n "$(printf '%s' "$PAYLOAD" | base64 -d 2>/dev/null)"
+                printf '%s' "$PAYLOAD" | base64 -d 2>/dev/null
                 ;;
             END)
                 echo ""
