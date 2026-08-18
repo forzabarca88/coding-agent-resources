@@ -55,7 +55,7 @@
           This page publishes the results of the evaluation harness in
           <code>agent-evaluation/</code>. The harness sends a coding agent at a task within <a href="https://github.com/forzabarca88/coding-agent-resources/tree/main/agent-evaluation">https://github.com/forzabarca88/coding-agent-resources/tree/main/agent-evaluation</a> and logs how
           it performed — how long it took, how much context it consumed, and whether its work
-          passed the test suite.
+          passed the test suite. The default output token limit was set to 64000 unless specified otherwise.
         </p>
         <div class="specs">
           <h3 class="specs__heading">
@@ -121,7 +121,7 @@
           </dl>
           <p class="specs__note specs__note--run">
             If you wish to run the evaluation yourself to compare results, simply clone
-            <a href="https://github.com/forzabarca88/coding-agent-resources">the repo</a> and run:
+            <a href="https://github.com/forzabarca88/coding-agent-resources">the repo</a> and run the following after updating your pi "models.json" file:
           </p>
           <pre class="specs__command">cd agent-evaluation; ./run-eval.sh --model &lt;pi provider name&gt;/&lt;pi model name&gt;</pre>
         </div>
