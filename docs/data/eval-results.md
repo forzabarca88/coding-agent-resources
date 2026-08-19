@@ -19,6 +19,7 @@
 | lmstudio-jdc-ws/ornith-ai/ornith-1.0-35b | quant: Q8_0, KV quant: Q8_0 | 56m 51s | 114180 | 105 | 128000 | No | 0 | 247 | 0 | 2026-08-17 20:36 |
 | lmstudio-jdcmedia/unsloth/qwen3.6-27b | quant: Q3_K_S, KV quant: Q4_0 | 71m 13s | 115361 | 93 | 128000 | No | 0 | 247 | 0 | 2026-08-03 18:44 |
 | lmstudio-jdcmedia/unsloth/qwen3.6-27b | quant: Q3_K_S, KV quant: Q4_0 | 64m 30s | 123968 | 96 | 128000 | No | 0 | 247 | 0 | 2026-08-05 20:18 |
+| lmstudio-jdc-ws/qwen/qwen3.8-27b | quant: Q4_K_M, KV quant: Q4_0, thinking: xhigh, MTP | 135m 0s | 144189 | 60 | 196000 | No | 0 | 247 | 0 | 2026-08-19 23:47 |
 | lmstudio-jdc-ws/qwen/qwen3.8-27b | quant: Q4_K_M, KV quant: Q4_0, thinking: low, MTP, vitest failed | 111m 0s | 123925 | 51 | 128000 | Yes | 1 | 246 | 1 | 2026-08-17 21:46 |
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b | quant: Q4_K_XL, KV quant: Q4_0, thinking: low, MTP, vitest failed | 117m 3s | 123924 | 37 | 128000 | Yes | 1 | 236 | 11 | 2026-08-17 18:12 |
 | lmstudio-jdc-ws/unsloth/ornith-1.0-35b | quant: Q8_K_XL, KV quant: Q8_0, vitest failed | 90m 1s | 124066 | 37 | 128000 | Yes | 1 | 226 | 21 | 2026-08-17 15:42 |
