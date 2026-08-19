@@ -416,8 +416,33 @@ done
 display_stream_events() {
     local file="$1"
     local start_line="$2"
+    local new_lines=0
 
-    tail -n "+$((start_line + 1))" "$file" 2>/dev/null | jq -r '
+    # Snapshot the newly appended lines exactly once into a scratch file, then
+    # count and display from that same snapshot, so what is shown is exactly what
+    # is bookmarked. Streaming text arrives as one JSON event per line (delta-
+    # only text_delta events) and the stream file may grow while we display.
+    # Two bookkeeping mistakes are avoided by counting newline-terminated lines
+    # from the snapshot itself:
+    #   - bookmarking a wc -l captured BEFORE the read lags behind lines appended
+    #     during the display, re-printing the same deltas on the next poll
+    #     (duplicated words like "WaitWait");
+    #   - counting a line pi is still writing (no trailing newline yet) as
+    #     complete advances the bookmark past it and skips it forever.
+    # Writing the tail to a real file (rather than a $(...) variable, which
+    # strips trailing newlines) lets wc -l distinguish complete lines from
+    # partial ones; a partial line is left for the next poll once it completes.
+    tail -n "+$((start_line + 1))" "$file" > "$TAIL_SNAPSHOT_FILE" 2>/dev/null
+
+    if [ -s "$TAIL_SNAPSHOT_FILE" ]; then
+        new_lines=$(wc -l < "$TAIL_SNAPSHOT_FILE" 2>/dev/null || echo 0)
+    fi
+
+    if [ "$new_lines" -gt 0 ]; then
+        # Feed jq only the complete lines (head) — never a partial JSON line,
+        # which jq would reject and could swallow buffered output of earlier
+        # lines. The partial line is picked up by the next poll once complete.
+        head -n "$new_lines" "$TAIL_SNAPSHOT_FILE" 2>/dev/null | jq -r '
         if   .type == "message_start" and .message.role == "assistant" then
             "START"
         elif .type == "message_update" and .assistantMessageEvent.type == "thinking_delta" then
@@ -435,48 +460,54 @@ display_stream_events() {
         else
             empty
         end
-    ' 2>/dev/null | while IFS=$'\t' read -r TAG PAYLOAD; do
-        case "$TAG" in
-            START)
-                date +%s.%N > "$STREAM_START_FILE"
-                ;;
-            THINK)
-                # NB: never wrap the decoded delta in $(...) — command
-                # substitution strips trailing newlines, so deltas that
-                # carry line breaks (e.g. "\n\n") would print nothing.
-                printf '%b' "${DIM}"
-                printf '%s' "$PAYLOAD" | base64 -d 2>/dev/null
-                printf '%b' "${NC}"
-                ;;
-            TEXT)
-                printf '%s' "$PAYLOAD" | base64 -d 2>/dev/null
-                ;;
-            END)
-                echo ""
-                if [ -n "$PAYLOAD" ] && [ "$PAYLOAD" != "stop" ] && [ "$PAYLOAD" != "toolUse" ]; then
-                    echo -e "${DIM}[stopReason: ${PAYLOAD}]${NC}" >&2
-                fi
-                if [ -s "$STREAM_START_FILE" ]; then
-                    START=$(cat "$STREAM_START_FILE")
-                    END=$(date +%s.%N)
-                    DUR=$(echo "$END - $START" | bc 2>/dev/null || echo 0)
-                    TOTAL=$(cat "$STREAMING_TIME_FILE")
-                    TOTAL=$(echo "$TOTAL + $DUR" | bc 2>/dev/null || echo 0)
-                    echo "$TOTAL" > "$STREAMING_TIME_FILE"
-                    : > "$STREAM_START_FILE"
-                fi
-                ;;
-            TSTART)
-                echo -e "\n${DIM}⚡ ${PAYLOAD}${NC}"
-                ;;
-            TOK)
-                echo -e "${DIM}  ${PAYLOAD} ok${NC}"
-                ;;
-            TERR)
-                echo -e "${DIM}  ${PAYLOAD} ERROR${NC}"
-                ;;
-        esac
-    done
+        ' 2>/dev/null | while IFS=$'\t' read -r TAG PAYLOAD; do
+            case "$TAG" in
+                START)
+                    date +%s.%N > "$STREAM_START_FILE"
+                    ;;
+                THINK)
+                    # NB: never wrap the decoded delta in $(...) — command
+                    # substitution strips trailing newlines, so deltas that
+                    # carry line breaks (e.g. "\n\n") would print nothing.
+                    printf '%b' "${DIM}"
+                    printf '%s' "$PAYLOAD" | base64 -d 2>/dev/null
+                    printf '%b' "${NC}"
+                    ;;
+                TEXT)
+                    printf '%s' "$PAYLOAD" | base64 -d 2>/dev/null
+                    ;;
+                END)
+                    echo ""
+                    if [ -n "$PAYLOAD" ] && [ "$PAYLOAD" != "stop" ] && [ "$PAYLOAD" != "toolUse" ]; then
+                        echo -e "${DIM}[stopReason: ${PAYLOAD}]${NC}" >&2
+                    fi
+                    if [ -s "$STREAM_START_FILE" ]; then
+                        START=$(cat "$STREAM_START_FILE")
+                        END=$(date +%s.%N)
+                        DUR=$(echo "$END - $START" | bc 2>/dev/null || echo 0)
+                        TOTAL=$(cat "$STREAMING_TIME_FILE")
+                        TOTAL=$(echo "$TOTAL + $DUR" | bc 2>/dev/null || echo 0)
+                        echo "$TOTAL" > "$STREAMING_TIME_FILE"
+                        : > "$STREAM_START_FILE"
+                    fi
+                    ;;
+                TSTART)
+                    echo -e "\n${DIM}⚡ ${PAYLOAD}${NC}"
+                    ;;
+                TOK)
+                    echo -e "${DIM}  ${PAYLOAD} ok${NC}"
+                    ;;
+                TERR)
+                    echo -e "${DIM}  ${PAYLOAD} ERROR${NC}"
+                    ;;
+            esac
+        done
+
+        # Advance the global bookmark past the complete lines actually consumed
+        # from this snapshot. Updated inline (rather than via a return/value
+        # that would capture the decoded text stream).
+        LAST_STREAM_LINE_COUNT=$((start_line + new_lines))
+    fi
 }
 
 # ---------------------------------------------------------------------------
@@ -491,39 +522,45 @@ display_stream_events() {
 process_session_usage() {
     local start_line="$1"
     local TOTAL INPUT OUTPUT
-    local snapshot
+    local new_lines=0
 
-    # Snapshot the newly appended lines once. The bookmark below is derived
-    # from this snapshot's actual length, so lines appended while we read
-    # are processed exactly once — never skipped, never duplicated.
-    snapshot=$(tail -n "+$((start_line + 1))" "$SESSION_FILE" 2>/dev/null)
+    # Snapshot the newly appended lines once into a scratch file. The bookmark
+    # below is derived from the snapshot's count of newline-terminated lines, so
+    # lines appended while we read are processed exactly once — never skipped,
+    # never duplicated — and a partially-written line (no trailing newline yet)
+    # is left for the next poll once it completes.
+    tail -n "+$((start_line + 1))" "$SESSION_FILE" > "$TAIL_SESSION_FILE" 2>/dev/null
 
-    while IFS=$'\t' read -r TOTAL INPUT OUTPUT; do
-        if [ -n "$TOTAL" ] && [ "$TOTAL" != "null" ] && [ "$TOTAL" -gt 0 ] 2>/dev/null; then
-            LATEST_TOTAL_TOKENS=$TOTAL
-            LATEST_USAGE_INPUT=$INPUT
-            LATEST_USAGE_OUTPUT=$OUTPUT
+    if [ -s "$TAIL_SESSION_FILE" ]; then
+        new_lines=$(wc -l < "$TAIL_SESSION_FILE" 2>/dev/null || echo 0)
+    fi
 
-            # Turn complete: report the current total token count
-            LIVE_TURNS=$((LIVE_TURNS + 1))
-            echo -e "  ${GREEN}✓ turn ${LIVE_TURNS} complete — total tokens: $(printf "%'d" "$LATEST_TOTAL_TOKENS")${NC}"
+    if [ "$new_lines" -gt 0 ]; then
+        # Only complete lines reach jq — a partial JSON line would be rejected
+        # and could swallow buffered output of earlier lines.
+        while IFS=$'\t' read -r TOTAL INPUT OUTPUT; do
+            if [ -n "$TOTAL" ] && [ "$TOTAL" != "null" ] && [ "$TOTAL" -gt 0 ] 2>/dev/null; then
+                LATEST_TOTAL_TOKENS=$TOTAL
+                LATEST_USAGE_INPUT=$INPUT
+                LATEST_USAGE_OUTPUT=$OUTPUT
 
-            # Check if limit exceeded
-            if [ "$MAX_CONTEXT" -gt 0 ] && [ "$LATEST_TOTAL_TOKENS" -gt "$MAX_CONTEXT" ]; then
-                LIMIT_EXCEEDED=1
+                # Turn complete: report the current total token count
+                LIVE_TURNS=$((LIVE_TURNS + 1))
+                echo -e "  ${GREEN}✓ turn ${LIVE_TURNS} complete — total tokens: $(printf "%'d" "$LATEST_TOTAL_TOKENS")${NC}"
+
+                # Check if limit exceeded
+                if [ "$MAX_CONTEXT" -gt 0 ] && [ "$LATEST_TOTAL_TOKENS" -gt "$MAX_CONTEXT" ]; then
+                    LIMIT_EXCEEDED=1
+                fi
             fi
-        fi
-    done < <(printf '%s\n' "$snapshot" | jq -r '
-        select(.message.usage != null) |
-        [.message.usage.totalTokens, .message.usage.input, .message.usage.output] |
-        @tsv
-    ' 2>/dev/null)
+        done < <(head -n "$new_lines" "$TAIL_SESSION_FILE" 2>/dev/null | jq -r '
+            select(.message.usage != null) |
+            [.message.usage.totalTokens, .message.usage.input, .message.usage.output] |
+            @tsv
+        ' 2>/dev/null)
 
-    # Advance the bookmark by the number of lines actually consumed. The
-    # printf '%s\n' restores the trailing newline stripped by the command
-    # substitution, keeping the count consistent with the file's wc -l.
-    if [ -n "$snapshot" ]; then
-        LAST_SESSION_LINE_COUNT=$((start_line + $(printf '%s\n' "$snapshot" | wc -l)))
+        # Advance the bookmark by the number of complete lines actually consumed.
+        LAST_SESSION_LINE_COUNT=$((start_line + new_lines))
     fi
 }
 
@@ -541,6 +578,11 @@ LATEST_USAGE_OUTPUT=0
 # Streaming timing tracking (wall-clock time between message_start and message_end)
 STREAM_START_FILE="$TMPDIR/stream-start"
 STREAMING_TIME_FILE="$TMPDIR/streaming-time"
+# Scratch file holding the tail snapshot for display_stream_events. A real file
+# (not a command-substitution variable) preserves newline-terminated lines so
+# partially-written lines are never counted as complete.
+TAIL_SNAPSHOT_FILE="$TMPDIR/stream-tail-snapshot"
+TAIL_SESSION_FILE="$TMPDIR/session-tail-snapshot"
 echo 0 > "$STREAMING_TIME_FILE"
 : > "$STREAM_START_FILE"
 
@@ -558,8 +600,10 @@ if [ -n "$SESSION_FILE" ] && [ -f "$SESSION_FILE" ]; then
         # --- Read new JSON events from the stream file and display text ---
         CURRENT_STREAM_COUNT=$(wc -l < "$STREAM_FILE" 2>/dev/null || echo 0)
         if [ "$CURRENT_STREAM_COUNT" -gt "$LAST_STREAM_LINE_COUNT" ]; then
+            # display_stream_events advances LAST_STREAM_LINE_COUNT past the lines it
+            # actually consumed (a wc -l taken before the read can lag lines appended
+            # during the display, re-printing the same deltas).
             display_stream_events "$STREAM_FILE" "$LAST_STREAM_LINE_COUNT"
-            LAST_STREAM_LINE_COUNT=$CURRENT_STREAM_COUNT
         fi
 
         # --- Read any new lines from the session file for usage monitoring ---
