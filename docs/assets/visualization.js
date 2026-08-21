@@ -3,8 +3,9 @@
 
   // Loads data/eval-results.md and renders a scatter plot of successful runs:
   // Total Context Used (tokens) on the X axis, Turns on the Y axis, points
-  // coloured by Model. Used by visualization.html only. Always derives
-  // everything from the markdown file at runtime — nothing is hardcoded.
+  // coloured by Model with direct labels where space allows. Used by
+  // visualization.html only. Everything is derived from the markdown at
+  // runtime — nothing is hardcoded.
   var RESULTS_PATH = 'data/eval-results.md';
 
   var statusEl = document.getElementById('viz-status');
@@ -14,28 +15,35 @@
   var summaryEl = document.getElementById('viz-summary');
   var retryEl = document.getElementById('viz-retry');
   var sourceBtns = Array.prototype.slice.call(document.querySelectorAll('[data-source]'));
-  var modelSel = document.getElementById('model-filter');
   var topSel = document.getElementById('top-filter');
 
-  // Muted print-ink hues, in the same family as the site palette, assigned to
-  // models in order of appearance. Fixed order keeps colours stable across
-  // reloads regardless of how the markdown changes.
+  // Print-ink hues with strong separation, drawn from the site family (carbon
+  // blue anchor, then chroma spread around the wheel). Models receive colours
+  // in order of first successful appearance, so colours stay stable.
   var PALETTE = [
-    '#2E4A7A', // carbon blue
-    '#1F6F8F', // sea
-    '#0E7A7B', // teal
-    '#5B7A2E', // leaf
-    '#A86A2B', // ochre
     '#B42318', // rust
+    '#2E4A7A', // carbon blue
+    '#0E7A7B', // teal
+    '#A86A2B', // ochre
+    '#1F6F8F', // sea
+    '#5B7A2E', // leaf
     '#7A4A6B', // plum
-    '#4A5A78'  // slate
+    '#8F5B2A', // cinnamon
+    '#3B6E5E', // pine
+    '#7748A8', // violet
+    '#A35D14', // bronze
+    '#C2563E'  // vermilion
   ];
 
-  var state = { source: 'all', model: 'all', top: 10 };
+  var state = {
+    source: 'all',        // 'all' | 'Provider' | 'Local'
+    models: '',           // '' = all, else comma-separated selected model names
+    top: 25               // 'all' or a number
+  };
 
   // Every parsed row from the markdown tables, in file order.
   var allRows = [];
-  // Distinct model names that produced a successful run, in file order.
+  // Distinct successful model names, in order of first appearance.
   var modelOrder = [];
   // Index of the currently pinned (clicked) point, or -1.
   var pinned = -1;
@@ -174,16 +182,21 @@
     return r.code === '0' && isFinite(r.tokensN) && isFinite(r.turnsN) && r.tokensN > 0;
   }
 
+  function modelSelected(r) {
+    if (!state.models) return true;
+    return state.models.split(',').indexOf(r.model) !== -1;
+  }
+
   function visibleRows() {
     var rows = allRows.filter(function (r) {
       if (!isSuccessful(r)) return false;
-      if (state.source === 'Provider' && r.local) return false;
-      if (state.source === 'Local' && !r.local) return false;
-      if (state.model !== 'all' && r.model !== state.model) return false;
+      if (r.local && state.source === 'Provider') return false;
+      if (!r.local && state.source === 'Local') return false;
+      if (!modelSelected(r)) return false;
       return true;
     });
     rows.sort(function (a, b) { return b.tokensN - a.tokensN; });
-    if (state.model === 'all' && state.top !== 'all') {
+    if (state.models === '' && state.top !== 'all') {
       rows = rows.slice(0, state.top);
     }
     return rows;
@@ -196,13 +209,25 @@
   }
 
   /* ------------------------------------------------------------------ *
-   * Tooltip
+   * Tooltip — notes first, then the numeric record
    * ------------------------------------------------------------------ */
 
   function tooltipHTML(r) {
-    return (
-      '<div class="tip__model">' + esc(r.model) + '</div>' +
-      '<div class="tip__tag">' + (r.local ? 'Local' : 'Provider') + ' · ' + esc(r.date || '—') + '</div>' +
+    var color = modelColor(r.model);
+    var html =
+      '<div class="tip__head">' +
+      '<span class="tip__dot" style="background:' + color + '"></span>' +
+      '<span class="tip__model">' + esc(r.model) + '</span>' +
+      '</div>' +
+      '<div class="tip__tag">' + (r.local ? 'Local' : 'Provider') + ' · ' + esc(r.date || '—') + '</div>';
+    if (r.notes) {
+      html +=
+        '<div class="tip__notes">' +
+        '<span class="tip__notes-label">Notes</span>' +
+        '<p class="tip__notes-text">' + esc(r.notes) + '</p>' +
+        '</div>';
+    }
+    html +=
       '<dl class="tip__grid">' +
       '<dt>Context used</dt><dd>' + fmt(r.tokensN) + ' tokens</dd>' +
       '<dt>Turns</dt><dd>' + fmt(r.turnsN) + '</dd>' +
@@ -212,9 +237,8 @@
       '<dt>Exit</dt><dd>' + esc(r.code) + '</dd>' +
       '<dt>Passed</dt><dd>' + fmt(r.passedN) + '</dd>' +
       '<dt>Failed</dt><dd>' + fmt(r.failedN) + '</dd>' +
-      '</dl>' +
-      (r.notes ? '<p class="tip__notes">' + esc(r.notes) + '</p>' : '')
-    );
+      '</dl>';
+    return html;
   }
 
   function showTooltip(idx) {
@@ -222,7 +246,7 @@
     if (!p) return;
     tooltipEl.innerHTML = tooltipHTML(p.row);
     tooltipEl.classList.remove('is-hidden');
-    var margin = 16; // gap from the point
+    var margin = 16;
     var flipLeft = p.left > 62;
     var below = p.top < 34;
     tooltipEl.classList.toggle('tip--flip', flipLeft);
@@ -244,6 +268,143 @@
   }
 
   /* ------------------------------------------------------------------ *
+   * Label placement — deterministic, space permitting
+   * ------------------------------------------------------------------ */
+
+  // Works on integer "key" coordinates: round each point to the nearest
+  // multiple of STEP and cluster anything in the same cell. Cells that stay
+  // alone become direct labels; crowded cells become a shared numeric tag.
+  var STEP = 25;
+
+  function makeKey(n) { return Math.round(n / STEP); }
+
+  // key -> { key, modelCounts, minV, maxV, h, v, rows: [] }
+  function buildKeyMap(rows, xF, yF) {
+    var map = {};
+    rows.forEach(function (r) {
+      var h = makeKey(xF(r.tokensN));
+      var v = makeKey(yF(r.turnsN));
+      var k = h + ':' + v;
+      if (!map[k]) {
+        map[k] = { key: k, h: h, v: v, minV: v, maxV: v, rows: [] };
+      }
+      map[k].rows.push(r);
+      if (v < map[k].minV) map[k].minV = v;
+      if (v > map[k].maxV) map[k].maxV = v;
+    });
+    return map;
+  }
+
+  // Deterministic collision resolution: when two candidate labels land too
+  // close together, push the range(s) apart instead of dropping either one.
+  function resolveRanges(cells) {
+    var list = Object.keys(cells).map(function (k) { return cells[k]; });
+    list.sort(function (a, b) { return (a.h - b.h) || (a.v - b.v); });
+    for (var i = 0; i < list.length; i++) {
+      for (var j = i + 1; j < list.length; j++) {
+        var a = list[i];
+        var b = list[j];
+        if (Math.abs(a.h - b.h) > 1) continue;      // different columns
+        var aV = a.minV, bV = b.minV;
+        if (aV > bV) { var t = a; a = b; b = t; }    // sort by vertical start
+        if (bV - aV < 3) {                            // overlap
+          var overlap = 3 - (bV - aV);
+          var push = Math.ceil(overlap / 2);
+          a.maxV = Math.min(a.maxV + push, 9999);
+          b.minV = Math.max(b.minV - push, -9999);
+        }
+      }
+    }
+  }
+
+  // Cell -> concrete label anchor (coordinates are chart units, scaled later).
+  function cellLabel(cell, rows, xF, yF) {
+    var minRow = null;
+    cell.rows.forEach(function (r) {
+      if (!minRow || yF(r.turnsN) < yF(minRow.turnsN)) minRow = r;
+    });
+    var cx = xF(minRow.tokensN);
+    return { cx: cx, cy: yF(minRow.turnsN), label: minRow.model, row: minRow };
+  }
+
+  function candidateAnchor(r, xF, yF) {
+    return { cx: xF(r.tokensN), cy: yF(r.turnsN), label: r.model, row: r };
+  }
+
+  // Tries to shorten where two labelled points sit close; keeps things tidy.
+  function shortNames(model) {
+    var s = model;
+    s = s.replace(/^lmstudio-(jdc-ws|jdcmedia)\//, '');
+    s = s.replace(/^openrouter\//, '');
+    s = s.replace(/^mistral\//, '');
+    return s;
+  }
+
+  // Returns [{ row, cx, cy, label, isLabel, count }]
+  function placeLabels(rows, xF, yF) {
+    if (!rows.length) return [];
+    var map = buildKeyMap(rows, xF, yF);
+    resolveRanges(map);
+
+    var cells = Object.keys(map).map(function (k) { return map[k]; });
+    var anchors = [];
+    var NO_LABEL = [];
+    var used = {};
+
+    cells.forEach(function (cell) {
+      var labelKey = cell.key;
+      var count = cell.rows.length;
+      if (used[labelKey]) {
+        // duplicate key (two cells resolved to the same anchor) — drop the label
+        var idx = anchors.indexOf(used[labelKey]);
+        if (idx !== -1) { anchors.splice(idx, 1); NO_LABEL.push(used[labelKey]); }
+        return;
+      }
+      var a = cellLabel(cell, rows, xF, yF);
+      if (count > 1) {
+        // too crowded for a direct label — shared numeric tag at the centroid
+        a.isLabel = false;
+        a.count = count;
+      } else {
+        a.isLabel = true;
+        a.count = 1;
+      }
+      a.short = shortNames(a.label);
+      anchors.push(a);
+      used[labelKey] = a;
+    });
+
+    // Dropped duplicate keys: place those rows' own labels if the space allows.
+    var point = { ptUsed: {} };
+    (function () { /* no-op, kept for parity */ })();
+
+    // Position candidate labels for the multi-row duplicate cells.
+    var dupRows = [];
+    cells.forEach(function (cell) {
+      if (NO_LABEL.indexOf(cell.key) !== -1) {
+        cell.rows.forEach(function (r) { dupRows.push(r); });
+      }
+    });
+
+    // Deterministic check: assign labels to the dropped rows unless they
+    // collide with already-placed anchors. Simple greedy in rows order.
+    dupRows.forEach(function (r) {
+      var a = candidateAnchor(r, xF, yF);
+      var collides = anchors.some(function (o) {
+        return Math.abs(o.cx - a.cx) < 30 && Math.abs(o.cy - a.cy) < 26;
+      });
+      if (!collides) {
+        a.isLabel = true;
+        a.count = 1;
+        a.short = shortNames(a.label);
+        anchors.push(a);
+      }
+    });
+
+    return anchors;
+  }
+
+  /* ------------------------------------------------------------------ *
    * Drawing
    * ------------------------------------------------------------------ */
 
@@ -255,7 +416,6 @@
       chartEl.innerHTML = '';
       tooltipEl.classList.add('is-hidden');
       if (summaryEl) summaryEl.textContent = '';
-      if (legendEl) legendEl.innerHTML = '';
       return;
     }
 
@@ -275,6 +435,8 @@
 
     function x(v) { return M.left + (v / xMax) * plotW; }
     function y(v) { return M.top + plotH - (v / yMax) * plotH; }
+
+    var anchors = placeLabels(rows, x, y);
 
     var out = [];
 
@@ -312,6 +474,24 @@
       'transform="rotate(-90 26 ' + (M.top + plotH / 2) + ')" text-anchor="middle">Turns</text>'
     );
 
+    // --- Labels (behind points so points stay readable) ---------------
+    anchors.forEach(function (a) {
+      var fill = modelColor(a.label);
+      if (a.isLabel) {
+        out.push(
+          '<text class="pt-label pt-label--name" x="' + (a.cx + 10) + '" y="' + a.cy + '" ' +
+          'fill="' + fill + '">' + esc(a.short) + '</text>'
+        );
+      } else if (a.count > 1) {
+        out.push(
+          '<g class="pt-tag" data-count="' + a.count + '">' +
+          '<rect x="' + (a.cx - 13) + '" y="' + (a.cy - 11) + '" width="26" height="22" rx="11"/>' +
+          '<text x="' + a.cx + '" y="' + (a.cy + 4) + '" text-anchor="middle">+' + a.count + '</text>' +
+          '</g>'
+        );
+      }
+    });
+
     // --- Points ---------------------------------------------------------
     rows.forEach(function (r, i) {
       var px = x(r.tokensN);
@@ -334,8 +514,8 @@
     out.push('</svg>');
 
     chartEl.innerHTML = out.join('');
-    drawLegend(rows);
     bindPoints();
+    drawLegend();
     updatePin();
     renderSummary(rows);
   }
@@ -343,39 +523,64 @@
   function renderSummary(rows) {
     if (!summaryEl) return;
     var total = allRows.filter(isSuccessful).length;
-    var scope = state.source === 'all' ? 'all sources' : (state.source === 'Provider' ? 'provider (cloud) runs' : 'local runs');
-    summaryEl.textContent =
-      'Showing ' + rows.length + ' of ' + total + ' successful runs (' + scope + '), ' +
-      'ranked by context used. Each point is one row of data/eval-results.md.';
+    var modelCount = state.models ? state.models.split(',').length : modelOrder.length;
+    var scope = state.source === 'all'
+      ? 'all sources'
+      : (state.source === 'Provider' ? 'provider runs' : 'local runs');
+    var text = 'Showing ' + rows.length + ' of ' + total + ' successful runs (' + scope;
+    if (state.models) text += ', ' + modelCount + ' of ' + modelOrder.length + ' models selected';
+    else text += ', all ' + modelOrder.length + ' models';
+    text += ').';
+    if (state.models === '' && state.top !== 'all') text += ' Ranked by context used.';
+    text += ' Model labels are placed where space allows.';
+    summaryEl.textContent = text;
   }
 
-  function drawLegend(rows) {
+  function drawLegend() {
     if (!legendEl) return;
-    var shown = {};
-    rows.forEach(function (r) { shown[r.model] = true; });
-    var models = modelOrder.filter(function (m) { return shown[m]; });
+    var selected = state.models ? state.models.split(',') : [];
+    var html =
+      '<div class="legend-head">' +
+      '<span class="legend-head__label">Models — click to toggle</span>' +
+      '<span class="legend-actions">' +
+      '<button type="button" class="legend-btn" id="legend-all">All</button>' +
+      '<button type="button" class="legend-btn" id="legend-none">None</button>' +
+      '</span>' +
+      '</div>';
 
-    var html = models.map(function (m) {
-      var active = state.model === m ? ' is-active' : '';
-      return (
-        '<button type="button" class="legend-item' + active + '" data-model="' + esc(m) + '">' +
-        '<span class="legend-swatch" style="background:' + modelColor(m) + '"></span>' +
-        '<span class="legend-name">' + esc(m) + '</span>' +
-        '</button>'
-      );
-    }).join('');
+    html += '<div class="legend-items">' +
+      modelOrder.map(function (m) {
+        var active = !state.models || selected.indexOf(m) !== -1;
+        var visible = active; // visibility is derived at draw time
+        var cls = 'legend-item' + (active ? ' is-active' : '') + (visible ? '' : ' is-dim');
+        return (
+          '<button type="button" class="' + cls + '" data-model="' + esc(m) + '" ' +
+          'style="--modcol:' + modelColor(m) + '">' +
+          '<span class="legend-swatch" style="background:' + modelColor(m) + '"></span>' +
+          '<span class="legend-name">' + esc(m) + '</span>' +
+          '</button>'
+        );
+      }).join('') +
+      '</div>';
 
-    legendEl.innerHTML = html || '<p class="legend-empty">No models match the current filters.</p>';
+    legendEl.innerHTML = html;
 
     Array.prototype.forEach.call(legendEl.querySelectorAll('.legend-item'), function (btn) {
       btn.addEventListener('click', function () {
         var m = btn.getAttribute('data-model');
-        modelSel.value = m;
-        state.model = m;
-        syncControls();
+        var selected = state.models ? state.models.split(',') : modelOrder.slice();
+        var i = selected.indexOf(m);
+        if (i === -1) selected.push(m);
+        else selected.splice(i, 1);
+        state.models = selected.length === modelOrder.length ? '' : selected.join(',');
         draw();
       });
     });
+
+    var allBtn = legendEl.querySelector('#legend-all');
+    var noneBtn = legendEl.querySelector('#legend-none');
+    if (allBtn) allBtn.addEventListener('click', function () { state.models = ''; draw(); });
+    if (noneBtn) noneBtn.addEventListener('click', function () { state.models = 'NONE'; draw(); });
   }
 
   /* ------------------------------------------------------------------ *
@@ -401,19 +606,10 @@
       btn.setAttribute('aria-pressed', String(btn.getAttribute('data-source') === state.source));
       btn.classList.toggle('is-active', btn.getAttribute('data-source') === state.source);
     });
-    if (modelSel) modelSel.value = state.model;
     if (topSel) {
-      topSel.disabled = state.model !== 'all';
+      topSel.disabled = state.models !== '';
       topSel.value = String(state.top);
     }
-  }
-
-  function populateSelects() {
-    if (!modelSel) return;
-    modelSel.innerHTML = '<option value="all">All models</option>' +
-      modelOrder.map(function (m) {
-        return '<option value="' + esc(m) + '">' + esc(m) + '</option>';
-      }).join('');
   }
 
   /* ------------------------------------------------------------------ *
@@ -442,7 +638,6 @@
           setStatus('No successful runs (exit 0) found in data/eval-results.md.', true);
           return;
         }
-        populateSelects();
         syncControls();
         draw();
         setStatus('Loaded ' + successful + ' successful run' + (successful === 1 ? '' : 's') +
@@ -462,17 +657,9 @@
   sourceBtns.forEach(function (btn) {
     btn.addEventListener('click', function () {
       state.source = btn.getAttribute('data-source');
-      syncControls();
       draw();
     });
   });
-  if (modelSel) {
-    modelSel.addEventListener('change', function () {
-      state.model = modelSel.value;
-      syncControls();
-      draw();
-    });
-  }
   if (topSel) {
     topSel.addEventListener('change', function () {
       state.top = topSel.value === 'all' ? 'all' : parseInt(topSel.value, 10);
