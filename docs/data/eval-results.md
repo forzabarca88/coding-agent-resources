@@ -46,3 +46,4 @@
 | lmstudio-jdc-ws/unsloth/laguna-s-2.1 | quant: Q4_K_XL, KV quant: Q8_0, vitest failed, thinking hit output limit | 208m 53s | 104868 | 8 | 128000 | No | 1 | 13 | 10 | 2026-08-18 12:14 |
 | lmstudio-jdc-ws/unsloth/gemma-4-31b-it-qat | quant: Q4_K_XL, KV quant: Q4_0, vitest failed, tool call formatting issues | 21m 56s | 44128 | 20 | 131000 | No | 1 | 19 | 0 | 2026-08-20 19:08 |
 | lmstudio-jdcmedia/unsloth/gemma-4-12b-it-qat | quant: Q4_K_XL, KV quant: Q8_0, vitest failed, tool call formatting issues | 2m 55s | 37761 | 16 | 128000 | No | 1 | ? | ? | 2026-08-04 11:13 |
+| openrouter/deepseek/deepseek-v4-flash-0731 | thinking: xhigh, vitest failed | 27m 45s | 131052 | 98 | 131000 | Yes | 1 | 238 | 9 | 2026-08-21 23:17 |
