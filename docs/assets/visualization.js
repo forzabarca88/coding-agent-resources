@@ -202,7 +202,11 @@
       if (!modelSelected(r)) return false;
       return true;
     });
-    rows.sort(function (a, b) { return b.tokensN - a.tokensN; });
+    // "Top N" means best: the runs that used the LEAST context (less context
+    // is better), so the top-N slice takes the ascending order; the slice is
+    // applied only when every model is selected. (The ascending order also
+    // gives label placement / hover priority to the least-context runs.)
+    rows.sort(function (a, b) { return a.tokensN - b.tokensN; });
     if (state.models === '' && state.top !== 'all') {
       rows = rows.slice(0, state.top);
     }
@@ -424,6 +428,22 @@
       'aria-label="Scatter plot of total context used against turns for successful evaluation runs">'
     );
 
+    // --- Best-area tint: soft diagonal fade emphasising the bottom-left
+    // (least context, fewest turns) without hard edges. Drawn before the
+    // grid so the ruled lines stay visible on top. Purely decorative. ---
+    out.push(
+      '<defs>' +
+      '<linearGradient id="viz-best" x1="0" y1="1" x2="0.55" y2="0.45">' +
+      '<stop offset="0" stop-color="#5D6B82" stop-opacity="0.15"/>' +
+      '<stop offset="1" stop-color="#5D6B82" stop-opacity="0"/>' +
+      '</linearGradient>' +
+      '</defs>'
+    );
+    out.push(
+      '<rect class="best-area" x="' + M.left + '" y="' + M.top + '" width="' + plotW + '" height="' + plotH + '" ' +
+      'fill="url(#viz-best)" pointer-events="none" aria-hidden="true" focusable="false"/>'
+    );
+
     // --- Vertical grid + X labels ------------------------------------
     xs.forEach(function (v) {
       var px = x(v);
@@ -505,11 +525,11 @@
     }).length;
     var selectedCount = state.models === 'NONE' ? 0 : (state.models ? state.models.split(',').length : modelOrder.length);
     var text = 'Showing ' + rows.length + ' of ' + scopeTotal + ' successful runs (' + scope;
-    if (state.models === 'NONE') text += ', no models selected';
-    else if (state.models) text += ', ' + selectedCount + ' of ' + modelOrder.length + ' models selected';
-    else text += ', all ' + modelOrder.length + ' models';
+    if (state.models === 'NONE') text += '; no models selected';
+    else if (state.models) text += '; ' + selectedCount + ' of ' + modelOrder.length + ' models';
+    else text += '; all ' + modelOrder.length + ' models';
     text += ').';
-    if (state.models === '' && state.top !== 'all') text += ' Ranked by context used.';
+    if (state.models === '' && state.top !== 'all') text += ' Least context first.';
     summaryEl.textContent = text;
   }
 
@@ -552,6 +572,10 @@
           : (sel.length === 0 ? 'NONE' : sel.join(','));
         syncControls();
         draw();
+        // draw() re-renders the chip strip; restore keyboard focus to the
+        // chip just toggled so tabbing through models keeps working.
+        var el = chipsEl.querySelector('.model-chip[data-model="' + m.replace(/"/g, '\\"') + '"]');
+        if (el) el.focus();
       });
     });
   }
@@ -559,6 +583,10 @@
   /* ------------------------------------------------------------------ *
    * Interactions
    * ------------------------------------------------------------------ */
+
+  // Guard against a keydown-triggered pin being immediately un-pinned by a
+  // browser/AT-synthesised click on the same element (role="button").
+  var suppressNextClick = false;
 
   function bindPoints() {
     Array.prototype.forEach.call(chartEl.querySelectorAll('.pt'), function (g) {
@@ -569,6 +597,7 @@
       g.addEventListener('focus', function () { showTooltip(idx); });
       g.addEventListener('blur', function () { hideTooltip(); });
       g.addEventListener('click', function () {
+        if (suppressNextClick) { suppressNextClick = false; return; }
         if (!row()) return;
         pinned = pinned === row() ? null : row();
         updatePin();
@@ -578,6 +607,7 @@
         e.preventDefault();
         if (!row()) return;
         pinned = pinned === row() ? null : row();
+        suppressNextClick = true;
         updatePin();
       });
     });
@@ -593,7 +623,7 @@
 
   // Original option labels for the runs-to-show select, restored when the
   // control is re-enabled. When models are selected the chart shows all runs
-  // of those models, so a stale "Top 25 by context" label would mislead.
+  // of those models, so a stale "25 with least context" label would mislead.
   var topOptionTexts = {};
   if (topSel) {
     Array.prototype.forEach.call(topSel.querySelectorAll('option'), function (o) {

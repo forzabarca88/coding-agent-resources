@@ -607,8 +607,11 @@ a:focus-visible {
 .select:disabled { opacity: 0.5; }
 .select:focus-visible { outline: 2px solid var(--carbon); outline-offset: 1px; }
 
-.viz-plot { position: relative; }
-.viz-chart { margin: 0.5rem 0 0.75rem; }
+.viz-plot {
+  position: relative;
+  margin: 0.5rem 0 0.75rem;
+}
+.viz-chart { margin: 0; }
 .chart-svg { display: block; width: 100%; height: auto; }
 .chart-svg .grid-v,
 .chart-svg .grid-h { stroke: var(--rule); stroke-width: 1; }

@@ -56,9 +56,9 @@
         <p class="viz__note">
           Each point is one successful run (exit code 0). Total Context Used is the
           cumulative context consumed during the run; Turns is the number of agent turns
-          taken. The 25 runs that used the most context are shown by default; use the
-          filters above to change the selection. Hover or click a point for its full
-          record.
+          taken — the less of each, the better. The 25 runs with the least context are shown
+          by default (ranked by context alone); use the filters above to change the
+          selection. Hover or click a point for its full record.
         </p>
 
         <!-- Controls -->
@@ -74,10 +74,10 @@
           <label class="viz-control" for="top-filter">
             <span class="viz-control__label">Runs to show</span>
             <select id="top-filter" class="select">
-              <option value="25" selected>Top 25 by context</option>
-              <option value="15">Top 15 by context</option>
-              <option value="10">Top 10 by context</option>
-              <option value="all">All</option>
+              <option value="25" selected>25 with least context</option>
+              <option value="15">15 with least context</option>
+              <option value="10">10 with least context</option>
+              <option value="all">All runs</option>
             </select>
           </label>
           <div class="viz-control viz-control--models">
@@ -115,7 +115,8 @@
         <p>
           Total Context Used is the cumulative context the agent consumed during the run;
           Turns is the number of agent turns taken to complete the task. Only runs that
-          exited cleanly (exit code 0) are plotted.
+          exited cleanly (exit code 0) are plotted. The tint in the bottom-left corner marks
+          the best region — least context and fewest turns.
         </p>
         <p>
           Cloud results are labelled <em>Provider</em>; runs on the local test machines are
