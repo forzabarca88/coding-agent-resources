@@ -704,11 +704,18 @@ a:focus-visible {
   color: var(--carbon-bright);
   margin-bottom: 0.2rem;
 }
-.tip__notes-text {
-  font-size: 0.8125rem;
-  line-height: 1.5;
-  color: #fff;
-  margin: 0;
+.tip__notes-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+.tip__chip {
+  font-size: 0.7rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 2px;
+  padding: 0.12rem 0.45rem;
+  color: var(--paper);
 }
 .tip__grid {
   display: grid;
@@ -728,14 +735,6 @@ a:focus-visible {
   font-size: 0.75rem;
   color: var(--paper);
   text-align: right;
-}
-.tip__notes {
-  font-size: 0.75rem;
-  line-height: 1.5;
-  color: #C9D3E4;
-  border-top: 1px solid rgba(255,255,255,0.12);
-  padding-top: 0.5rem;
-  margin: 0;
 }
 .viz-summary {
   font-family: var(--font-mono);

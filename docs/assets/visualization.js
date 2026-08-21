@@ -47,10 +47,15 @@
   var allRows = [];
   // Distinct successful model names, in order of first appearance.
   var modelOrder = [];
-  // Index of the currently pinned (clicked) point, or -1.
-  var pinned = -1;
+  // The row object currently pinned (clicked), or null. Stored as a row
+  // reference (not an index) so it survives re-draws and is re-validated by
+  // identity against the current point list.
+  var pinned = null;
   // Rendering map for tooltip positioning: idx -> {row, left, top}.
   var pointPos = [];
+  // Signature of the last chips render (models + selection) — used to avoid
+  // re-rendering chips when nothing about them changed (preserves focus).
+  var chipsSig = '';
 
   // Chart geometry (viewBox units; the SVG scales responsively).
   var M = { left: 84, right: 28, top: 44, bottom: 66 };
@@ -152,7 +157,7 @@
         var k = headerKey(h);
         if (k) row[k] = cells[i] || '';
       });
-      row.local = /^lmstudio/i.test(row.model || '');
+      row.local = /local/i.test(section) || /^lmstudio/i.test(row.model || '');
       row.tokensN = toInt(row.tokens);
       row.turnsN = toInt(row.turns);
       row.limitN = toInt(row.limit);
@@ -223,11 +228,21 @@
       '</div>' +
       '<div class="tip__tag">' + (r.local ? 'Local' : 'Provider') + ' · ' + esc(r.date || '—') + '</div>';
     if (r.notes) {
-      html +=
-        '<div class="tip__notes">' +
-        '<span class="tip__notes-label">Notes</span>' +
-        '<p class="tip__notes-text">' + esc(r.notes) + '</p>' +
-        '</div>';
+      var items = String(r.notes)
+        .split(',')
+        .map(function (s) { return s.trim(); })
+        .filter(function (s) { return s.length > 0; });
+      if (items.length) {
+        html +=
+          '<div class="tip__notes">' +
+          '<span class="tip__notes-label">Notes</span>' +
+          '<div class="tip__notes-list">' +
+          items.map(function (item) {
+            return '<span class="tip__chip">' + esc(item) + '</span>';
+          }).join('') +
+          '</div>' +
+          '</div>';
+      }
     }
     html +=
       '<dl class="tip__grid">' +
@@ -254,14 +269,25 @@
   }
 
   function hideTooltip() {
-    if (pinned === -1) tooltipEl.classList.add('is-hidden');
+    if (pinned === null) tooltipEl.classList.add('is-hidden');
   }
 
+  // Finds the current index of the pinned row (or -1 if it was filtered out)
+  // and reflects the pin in the DOM + tooltip. Identity-based, so a pin never
+  // jumps to a different run after a re-draw; a pin whose row disappears is
+  // dropped entirely (no ghost tooltip).
   function updatePin() {
+    var pinnedIdx = -1;
+    if (pinned) {
+      for (var i = 0; i < pointPos.length; i++) {
+        if (pointPos[i].row === pinned) { pinnedIdx = i; break; }
+      }
+      if (pinnedIdx === -1) pinned = null; // row no longer visible — drop the pin
+    }
     Array.prototype.forEach.call(chartEl.querySelectorAll('.pt'), function (g) {
-      g.classList.toggle('pt--pinned', +g.getAttribute('data-idx') === pinned);
+      g.classList.toggle('pt--pinned', +g.getAttribute('data-idx') === pinnedIdx);
     });
-    if (pinned !== -1) showTooltip(pinned);
+    if (pinnedIdx !== -1) showTooltip(pinnedIdx);
     else hideTooltip();
   }
 
@@ -364,7 +390,10 @@
     if (!rows.length) {
       chartEl.innerHTML = '';
       tooltipEl.classList.add('is-hidden');
-      if (summaryEl) summaryEl.textContent = '';
+      pinned = null;
+      if (summaryEl) summaryEl.textContent = 'No runs match the current filters.';
+      syncControls();
+      renderChips();
       return;
     }
 
@@ -391,7 +420,7 @@
 
     // --- SVG wrapper -------------------------------------------------
     out.push(
-      '<svg class="chart-svg" viewBox="0 0 ' + W + ' ' + H + '" role="img" ' +
+      '<svg class="chart-svg" viewBox="0 0 ' + W + ' ' + H + '" role="group" ' +
       'aria-label="Scatter plot of total context used against turns for successful evaluation runs">'
     );
 
@@ -440,8 +469,8 @@
       var c = modelColor(r.model);
       pointPos[i] = {
         row: r,
-        left: ((M.left + px) / W) * 100,
-        top: ((M.top + py) / H) * 100
+        left: (px / W) * 100,
+        top: (py / H) * 100
       };
       out.push(
         '<g class="pt" data-idx="' + i + '" tabindex="0" role="button" ' +
@@ -463,13 +492,21 @@
 
   function renderSummary(rows) {
     if (!summaryEl) return;
-    var total = allRows.filter(isSuccessful).length;
-    var modelCount = state.models ? state.models.split(',').length : modelOrder.length;
     var scope = state.source === 'all'
       ? 'all sources'
       : (state.source === 'Provider' ? 'provider runs' : 'local runs');
-    var text = 'Showing ' + rows.length + ' of ' + total + ' successful runs (' + scope;
-    if (state.models) text += ', ' + modelCount + ' of ' + modelOrder.length + ' models selected';
+    // Total successful runs within the current source scope (before the
+    // model selection and top-N limit) — so "of N" is not misleading.
+    var scopeTotal = allRows.filter(function (r) {
+      if (!isSuccessful(r)) return false;
+      if (r.local && state.source === 'Provider') return false;
+      if (!r.local && state.source === 'Local') return false;
+      return true;
+    }).length;
+    var selectedCount = state.models === 'NONE' ? 0 : (state.models ? state.models.split(',').length : modelOrder.length);
+    var text = 'Showing ' + rows.length + ' of ' + scopeTotal + ' successful runs (' + scope;
+    if (state.models === 'NONE') text += ', no models selected';
+    else if (state.models) text += ', ' + selectedCount + ' of ' + modelOrder.length + ' models selected';
     else text += ', all ' + modelOrder.length + ' models';
     text += ').';
     if (state.models === '' && state.top !== 'all') text += ' Ranked by context used.';
@@ -478,9 +515,15 @@
 
   // Model chips — one per model, rendered into the filter bar. Active chips
   // keep their colour; clicking toggles a model in/out of the selection.
+  // Re-renders only when the set of models or the selection changes, so
+  // keyboard focus on the chips survives unrelated re-draws.
   function renderChips() {
     if (!chipsEl) return;
-    var selected = state.models ? state.models.split(',') : [];
+    var sig = (state.models === '' ? '*' : state.models) + '|' + modelOrder.join(',');
+    if (sig === chipsSig) return;
+    chipsSig = sig;
+
+    var selected = state.models === '' || state.models === 'NONE' ? [] : state.models.split(',');
     var selectAll = state.models === '';
     var html = modelOrder.map(function (m) {
       var active = selectAll || selected.indexOf(m) !== -1;
@@ -498,11 +541,15 @@
     Array.prototype.forEach.call(chipsEl.querySelectorAll('.model-chip'), function (btn) {
       btn.addEventListener('click', function () {
         var m = btn.getAttribute('data-model');
-        var sel = state.models ? state.models.split(',') : modelOrder.slice();
+        // From "all": start from everything; from "none": start from nothing;
+        // otherwise start from the current explicit selection.
+        var sel = state.models === '' ? modelOrder.slice()
+          : (state.models === 'NONE' ? [] : state.models.split(','));
         var i = sel.indexOf(m);
         if (i === -1) sel.push(m);
         else sel.splice(i, 1);
-        state.models = sel.length === modelOrder.length ? '' : sel.join(',');
+        state.models = sel.length === modelOrder.length ? ''
+          : (sel.length === 0 ? 'NONE' : sel.join(','));
         syncControls();
         draw();
       });
@@ -516,14 +563,41 @@
   function bindPoints() {
     Array.prototype.forEach.call(chartEl.querySelectorAll('.pt'), function (g) {
       var idx = +g.getAttribute('data-idx');
+      var row = function () { return pointPos[idx] && pointPos[idx].row; };
       g.addEventListener('mouseenter', function () { showTooltip(idx); });
       g.addEventListener('mouseleave', function () { hideTooltip(); });
       g.addEventListener('focus', function () { showTooltip(idx); });
       g.addEventListener('blur', function () { hideTooltip(); });
       g.addEventListener('click', function () {
-        pinned = pinned === idx ? -1 : idx;
+        if (!row()) return;
+        pinned = pinned === row() ? null : row();
         updatePin();
       });
+      g.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        if (!row()) return;
+        pinned = pinned === row() ? null : row();
+        updatePin();
+      });
+    });
+  }
+
+  // Escape unpins the currently pinned point.
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && pinned) {
+      pinned = null;
+      updatePin();
+    }
+  });
+
+  // Original option labels for the runs-to-show select, restored when the
+  // control is re-enabled. When models are selected the chart shows all runs
+  // of those models, so a stale "Top 25 by context" label would mislead.
+  var topOptionTexts = {};
+  if (topSel) {
+    Array.prototype.forEach.call(topSel.querySelectorAll('option'), function (o) {
+      topOptionTexts[o.value] = o.textContent;
     });
   }
 
@@ -533,8 +607,13 @@
       btn.classList.toggle('is-active', btn.getAttribute('data-source') === state.source);
     });
     if (topSel) {
-      topSel.disabled = state.models !== '';
+      var allMode = state.models === '';
+      topSel.disabled = !allMode;
       topSel.value = String(state.top);
+      var opt = topSel.selectedOptions[0];
+      if (opt && topOptionTexts[String(state.top)]) {
+        opt.textContent = allMode ? topOptionTexts[String(state.top)] : 'All runs (model filter active)';
+      }
     }
   }
 
@@ -583,6 +662,7 @@
   sourceBtns.forEach(function (btn) {
     btn.addEventListener('click', function () {
       state.source = btn.getAttribute('data-source');
+      syncControls();
       draw();
     });
   });
