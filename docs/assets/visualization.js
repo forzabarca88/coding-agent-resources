@@ -18,6 +18,9 @@
   var chipsEl = document.getElementById('model-chips');
   var modelsAllBtn = document.getElementById('models-all');
   var modelsNoneBtn = document.getElementById('models-none');
+  var searchInput = document.getElementById('model-search');
+  var searchCountEl = document.getElementById('model-search-count');
+  var searchClearEl = document.getElementById('model-search-clear');
 
   // Print-ink hues with strong separation, drawn from the site family (carbon
   // blue anchor, then chroma spread around the wheel). Models receive colours
@@ -40,6 +43,8 @@
   var state = {
     source: 'all',        // 'all' | 'Provider' | 'Local'
     models: '',           // '' = all models, else comma-separated selected names
+    search: '',           // active wildcard query — while non-empty it derives the model selection
+    searchSaved: null,    // the models value before the search began, restored on clear
     top: 25               // 'all' or a number
   };
 
@@ -189,9 +194,52 @@
     return r.code === '0' && isFinite(r.tokensN) && isFinite(r.turnsN) && r.tokensN > 0;
   }
 
+  /* ------------------------------------------------------------------ *
+   * Model selection — wildcard search derives the selection while a
+   * query is active; clearing the query restores the previous one.
+   * ------------------------------------------------------------------ */
+
+  // Turns a wildcard pattern into a RegExp against the full (lower-cased)
+  // model name. '*' matches any run of characters, '?' exactly one. Patterns
+  // are matched as substrings of the name, so both 'qwen3.6-27b' and
+  // 'openrouter/*' style patterns find what the user means.
+  function globToRegExp(pattern) {
+    var p = String(pattern).toLowerCase();
+    var re = '';
+    for (var i = 0; i < p.length; i++) {
+      var ch = p.charAt(i);
+      if (ch === '*') re += '.*';
+      else if (ch === '?') re += '.';
+      else re += ch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+    return new RegExp('^.*' + re + '.*$');
+  }
+
+  // Models matching the current query, in modelOrder order; null when no
+  // query is active.
+  function searchMatches() {
+    var q = state.search.trim();
+    if (!q) return null;
+    var re = globToRegExp(q);
+    return modelOrder.filter(function (m) {
+      return re.test(String(m).toLowerCase());
+    });
+  }
+
+  // The effective model selection: null = all models, array = explicit list.
+  // A non-empty wildcard query overrides the manual selection.
+  function effectiveSelection() {
+    var matches = searchMatches();
+    if (matches) return matches;
+    if (state.models === 'NONE') return [];
+    if (state.models === '') return null;
+    return state.models.split(',');
+  }
+
   function modelSelected(r) {
-    if (!state.models) return true;
-    return state.models.split(',').indexOf(r.model) !== -1;
+    var sel = effectiveSelection();
+    if (sel === null) return true;
+    return sel.indexOf(r.model) !== -1;
   }
 
   function visibleRows() {
@@ -207,7 +255,7 @@
     // applied only when every model is selected. (The ascending order also
     // gives label placement / hover priority to the least-context runs.)
     rows.sort(function (a, b) { return a.tokensN - b.tokensN; });
-    if (state.models === '' && state.top !== 'all') {
+    if (effectiveSelection() === null && state.top !== 'all') {
       rows = rows.slice(0, state.top);
     }
     return rows;
@@ -395,7 +443,13 @@
       chartEl.innerHTML = '';
       tooltipEl.classList.add('is-hidden');
       pinned = null;
-      if (summaryEl) summaryEl.textContent = 'No runs match the current filters.';
+      if (summaryEl) {
+        var q = state.search.trim();
+        var noneMatch = q && searchMatches() && searchMatches().length === 0;
+        summaryEl.textContent = noneMatch
+          ? 'No model matches search "' + q + '".'
+          : 'No runs match the current filters.';
+      }
       syncControls();
       renderChips();
       return;
@@ -523,30 +577,40 @@
       if (!r.local && state.source === 'Local') return false;
       return true;
     }).length;
-    var selectedCount = state.models === 'NONE' ? 0 : (state.models ? state.models.split(',').length : modelOrder.length);
+    var sel = effectiveSelection();
+    var selectedCount = sel === null ? modelOrder.length : sel.length;
+    var q = state.search.trim();
     var text = 'Showing ' + rows.length + ' of ' + scopeTotal + ' successful runs (' + scope;
-    if (state.models === 'NONE') text += '; no models selected';
+    if (q) text += '; ' + selectedCount + ' of ' + modelOrder.length + ' models match search "' + q + '"';
+    else if (state.models === 'NONE') text += '; no models selected';
     else if (state.models) text += '; ' + selectedCount + ' of ' + modelOrder.length + ' models';
     else text += '; all ' + modelOrder.length + ' models';
     text += ').';
-    if (state.models === '' && state.top !== 'all') text += ' Least context first.';
+    if (effectiveSelection() === null && state.top !== 'all') text += ' Least context first.';
     summaryEl.textContent = text;
   }
 
   // Model chips — one per model, rendered into the filter bar. Active chips
   // keep their colour; clicking toggles a model in/out of the selection.
-  // Re-renders only when the set of models or the selection changes, so
+  // While a wildcard search is active the strip narrows to the matching
+  // models (all selected by the search) and shows a match count. Re-renders
+  // only when the set of models, the selection, or the query changes, so
   // keyboard focus on the chips survives unrelated re-draws.
   function renderChips() {
     if (!chipsEl) return;
-    var sig = (state.models === '' ? '*' : state.models) + '|' + modelOrder.join(',');
+    var sel = effectiveSelection();
+    var selKey = sel === null ? '*' : sel.join(',');
+    var sig = state.search + '|' + selKey + '|' + modelOrder.join(',');
     if (sig === chipsSig) return;
     chipsSig = sig;
 
-    var selected = state.models === '' || state.models === 'NONE' ? [] : state.models.split(',');
-    var selectAll = state.models === '';
-    var html = modelOrder.map(function (m) {
-      var active = selectAll || selected.indexOf(m) !== -1;
+    var matches = searchMatches();
+    var bySearch = !!matches;
+    var list = bySearch ? matches : modelOrder.slice();
+    var isActive = function (m) { return sel === null || sel.indexOf(m) !== -1; };
+
+    var html = list.map(function (m) {
+      var active = isActive(m);
       return (
         '<button type="button" class="model-chip' + (active ? ' is-active' : '') + '" ' +
         'data-model="' + esc(m) + '" style="--modcol:' + modelColor(m) + '" ' +
@@ -558,9 +622,26 @@
     }).join('');
     chipsEl.innerHTML = html;
 
+    if (searchCountEl) {
+      var q = state.search.trim();
+      searchCountEl.textContent = bySearch
+        ? list.length + ' of ' + modelOrder.length + ' models match' + (q ? ' "' + q + '"' : '')
+        : '';
+    }
+    if (searchClearEl) searchClearEl.hidden = !bySearch;
+
     Array.prototype.forEach.call(chipsEl.querySelectorAll('.model-chip'), function (btn) {
       btn.addEventListener('click', function () {
         var m = btn.getAttribute('data-model');
+        // Clicking a chip exits search mode entirely and switches to an
+        // explicit pick of that model. Unconditionally cancel any pending
+        // debounce and clear leftover search text (state or un-applied), so
+        // a stale timer can't re-enter search mode and the input can't keep
+        // showing a query that no longer drives the chart.
+        clearTimeout(searchTimer);
+        state.search = '';
+        state.searchSaved = null;
+        if (searchInput) searchInput.value = '';
         // From "all": start from everything; from "none": start from nothing;
         // otherwise start from the current explicit selection.
         var sel = state.models === '' ? modelOrder.slice()
@@ -573,8 +654,12 @@
         syncControls();
         draw();
         // draw() re-renders the chip strip; restore keyboard focus to the
-        // chip just toggled so tabbing through models keeps working.
-        var el = chipsEl.querySelector('.model-chip[data-model="' + m.replace(/"/g, '\\"') + '"]');
+        // chip just toggled so tabbing through models keeps working. The
+        // lookup compares attribute values rather than building a CSS
+        // selector, so model names with special characters can't break it.
+        var el = Array.prototype.find.call(chipsEl.querySelectorAll('.model-chip'), function (b) {
+          return b.getAttribute('data-model') === m;
+        });
         if (el) el.focus();
       });
     });
@@ -637,7 +722,9 @@
       btn.classList.toggle('is-active', btn.getAttribute('data-source') === state.source);
     });
     if (topSel) {
-      var allMode = state.models === '';
+      // All models (no search, no explicit selection) is the only mode where
+      // the top-N limit applies.
+      var allMode = effectiveSelection() === null;
       topSel.disabled = !allMode;
       topSel.value = String(state.top);
       var opt = topSel.selectedOptions[0];
@@ -704,6 +791,13 @@
   }
   if (modelsAllBtn) {
     modelsAllBtn.addEventListener('click', function () {
+      // Activating Select all/Clear supersedes search mode and applies to
+      // the manual selection. Cancel a pending debounce first and drop any
+      // leftover query text so neither can override this click.
+      clearTimeout(searchTimer);
+      state.search = '';
+      state.searchSaved = null;
+      if (searchInput) searchInput.value = '';
       state.models = '';
       syncControls();
       draw();
@@ -711,9 +805,61 @@
   }
   if (modelsNoneBtn) {
     modelsNoneBtn.addEventListener('click', function () {
+      clearTimeout(searchTimer);
+      state.search = '';
+      state.searchSaved = null;
+      if (searchInput) searchInput.value = '';
       state.models = 'NONE';
       syncControls();
       draw();
+    });
+  }
+
+  // Wildcard search — live derivation: while a query is non-empty it selects
+  // every matching model; clearing the query restores the manual selection
+  // that was active when the search started.
+  var searchTimer = null;
+  if (searchInput) {
+    searchInput.addEventListener('input', function () {
+      var q = searchInput.value;
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(function () {
+        var before = state.search.trim();
+        var now = q.trim();
+        if (!before && now && state.searchSaved === null) state.searchSaved = state.models;
+        if (before && !now && state.searchSaved !== null) {
+          state.models = state.searchSaved;
+          state.searchSaved = null;
+        }
+        state.search = now;
+        syncControls();
+        draw();
+      }, 120);
+    });
+    // Safari fires only 'search' (not 'input') when its native clear button
+    // is used; re-run the same handling. Both firing is harmless — the
+    // transition logic above is idempotent.
+    searchInput.addEventListener('search', function () {
+      searchInput.dispatchEvent(new Event('input'));
+    });
+    searchInput.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape') return;
+      e.stopPropagation(); // don't also unpin a chart point
+      if (searchInput.value) {
+        searchInput.value = '';
+        searchInput.dispatchEvent(new Event('input'));
+      } else {
+        searchInput.blur();
+      }
+    });
+  }
+  if (searchClearEl) {
+    searchClearEl.addEventListener('click', function () {
+      if (!searchInput) return;
+      clearTimeout(searchTimer);
+      searchInput.value = '';
+      searchInput.dispatchEvent(new Event('input'));
+      searchInput.focus();
     });
   }
   if (retryEl) retryEl.addEventListener('click', load);

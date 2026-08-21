@@ -801,6 +801,47 @@ a:focus-visible {
 .chip-dot { width: 0.6rem; height: 0.6rem; border-radius: 50%; flex-shrink: 0; }
 .chip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+/* Wildcard search — narrows the model list and selects every match */
+.model-search-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-bottom: 0.35rem;
+}
+.model-search {
+  flex: 0 1 320px;
+  min-width: 0;
+  max-width: 100%;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--rule-strong);
+  border-radius: 2px;
+  padding: 0.4rem 0.7rem;
+}
+.model-search::placeholder { color: var(--mist); }
+.model-search:focus-visible { outline: 2px solid var(--carbon); outline-offset: 1px; }
+.model-search-count {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--mist);
+  white-space: nowrap;
+}
+.model-search-clear {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--carbon);
+  background: transparent;
+  border: 1px solid var(--rule-strong);
+  border-radius: 2px;
+  padding: 0.2rem 0.6rem;
+  cursor: pointer;
+}
+.model-search-clear:hover { background: var(--zebra); }
+.model-search-clear:focus-visible { outline: 2px solid var(--carbon); outline-offset: 2px; }
+
 /* ============================================================
    Responsive — evaluation chart page
    ============================================================ */
@@ -811,4 +852,5 @@ a:focus-visible {
   .viz-controls { flex-direction: column; align-items: stretch; }
   .select { max-width: 100%; }
   .viz-tooltip { min-width: 0; }
+  .model-search { flex: 1 1 100%; }
 }

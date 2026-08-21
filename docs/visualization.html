@@ -58,7 +58,9 @@
           cumulative context consumed during the run; Turns is the number of agent turns
           taken — the less of each, the better. The 25 runs with the least context are shown
           by default (ranked by context alone); use the filters above to change the
-          selection. Hover or click a point for its full record.
+          selection. The model search accepts <code>*</code> and <code>?</code> wildcards
+          (e.g. <code>*qwen*</code>, <code>openrouter/*</code>) to select every matching
+          model at once. Hover or click a point for its full record.
         </p>
 
         <!-- Controls -->
@@ -88,6 +90,14 @@
                 <button type="button" class="legend-btn" id="models-none">Clear</button>
               </span>
             </div>
+            <div class="model-search-row">
+              <input id="model-search" class="model-search" type="search"
+                placeholder="wildcard search — *qwen*, openrouter/*"
+                aria-label="Search models with wildcards * and ?; matches the full model name"
+                autocomplete="off" spellcheck="false">
+              <span id="model-search-count" class="model-search-count" aria-live="polite"></span>
+              <button type="button" id="model-search-clear" class="model-search-clear" hidden>Clear search</button>
+            </div>
             <div class="model-chips" id="model-chips" role="group" aria-labelledby="models-label"></div>
           </div>
         </div>
@@ -103,7 +113,7 @@
           <div id="viz-tooltip" class="viz-tooltip is-hidden" role="tooltip"></div>
         </div>
 
-        <p id="viz-summary" class="viz-summary"></p>
+        <p id="viz-summary" class="viz-summary" aria-live="polite"></p>
       </section>
 
       <!-- Methodology -->
