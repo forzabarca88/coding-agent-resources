@@ -8,7 +8,10 @@
 | openrouter/openai/gpt-5.6-luna | thinking: max | 11m 9s | 81130 | 59 | 131000 | No | 0 | 247 | 0 | 2026-08-21 23:06 |
 | openrouter/deepseek/deepseek-v4-flash-0731 | thinking: xhigh | 24m 45s | 103218 | 60 | 128000 | No | 0 | 247 | 0 | 2026-08-05 22:59 |
 | openrouter/deepseek/deepseek-v4-flash | version: 0423, thinking: xhigh | 12m 54s | 106855 | 43 | 128000 | No | 0 | 247 | 0 | 2026-08-03 17:01 |
+| openrouter/deepseek/deepseek-v4-flash-0731 | thinking: high, wasted turns after passing tests | 25m 56s | 132715 | 97 | 131000 | Yes | 2 | 247 | 0 | 2026-08-21 23:47 |
+| openrouter/deepseek/deepseek-v4-flash-0731 | thinking: xhigh, vitest failed | 27m 45s | 131052 | 98 | 131000 | Yes | 1 | 238 | 9 | 2026-08-21 23:17 |
 | mistral/mistral-medium-latest | interrupted, vitest failed | 41m 3s | 128266 | 216 | 128000 | Yes | 1 | 238 | 9 | 2026-08-03 18:25 |
+
 
 # Evaluation Results (Local)
 
@@ -46,5 +49,3 @@
 | lmstudio-jdc-ws/unsloth/laguna-s-2.1 | quant: Q4_K_XL, KV quant: Q8_0, vitest failed, thinking hit output limit | 208m 53s | 104868 | 8 | 128000 | No | 1 | 13 | 10 | 2026-08-18 12:14 |
 | lmstudio-jdc-ws/unsloth/gemma-4-31b-it-qat | quant: Q4_K_XL, KV quant: Q4_0, vitest failed, tool call formatting issues | 21m 56s | 44128 | 20 | 131000 | No | 1 | 19 | 0 | 2026-08-20 19:08 |
 | lmstudio-jdcmedia/unsloth/gemma-4-12b-it-qat | quant: Q4_K_XL, KV quant: Q8_0, vitest failed, tool call formatting issues | 2m 55s | 37761 | 16 | 128000 | No | 1 | ? | ? | 2026-08-04 11:13 |
-| openrouter/deepseek/deepseek-v4-flash-0731 | thinking: xhigh, vitest failed | 27m 45s | 131052 | 98 | 131000 | Yes | 1 | 238 | 9 | 2026-08-21 23:17 |
-| openrouter/deepseek/deepseek-v4-flash-0731 | thinking: high | 25m 56s | 132715 | 97 | 131000 | Yes | 2 | 247 | 0 | 2026-08-21 23:47 |
