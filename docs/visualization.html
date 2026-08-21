@@ -31,7 +31,7 @@
       <nav class="site-nav" aria-label="Site pages">
         <a class="site-nav__link" data-page-link="index" href="index.html">Index</a>
         <a class="site-nav__link" data-page-link="results" href="evaluation-results.html">Evaluation results</a>
-        <a class="site-nav__link" data-page-link="viz" href="visualization.html">Chart</a>
+        <a class="site-nav__link" data-page-link="viz" href="visualization.html">Evaluation Chart</a>
       </nav>
     </header>
 
@@ -125,8 +125,10 @@
         <p>
           Total Context Used is the cumulative context the agent consumed during the run;
           Turns is the number of agent turns taken to complete the task. Only runs that
-          exited cleanly (exit code 0) are plotted. The tint in the bottom-left corner marks
-          the best region — least context and fewest turns.
+          exited cleanly (exit code 0) are plotted. The dashed lines split the plot into
+          four quadrants at the axis midpoints: the bottom-left (least context, fewest
+          turns) is shaded strongest as the best region, the two adjacent quadrants step
+          down, and the top-right (most context, most turns) is left faintest.
         </p>
         <p>
           Cloud results are labelled <em>Provider</em>; runs on the local test machines are
@@ -142,7 +144,7 @@
       <nav class="page-footer__nav" aria-label="Footer pages">
         <a href="index.html">Index</a>
         <a href="evaluation-results.html">Evaluation results</a>
-        <a href="visualization.html">Chart</a>
+        <a href="visualization.html">Evaluation Chart</a>
       </nav>
     </footer>
   </div>

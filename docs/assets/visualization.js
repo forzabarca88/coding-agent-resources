@@ -482,21 +482,33 @@
       'aria-label="Scatter plot of total context used against turns for successful evaluation runs">'
     );
 
-    // --- Best-area tint: soft diagonal fade emphasising the bottom-left
-    // (least context, fewest turns) without hard edges. Drawn before the
-    // grid so the ruled lines stay visible on top. Purely decorative. ---
-    out.push(
-      '<defs>' +
-      '<linearGradient id="viz-best" x1="0" y1="1" x2="0.55" y2="0.45">' +
-      '<stop offset="0" stop-color="#5D6B82" stop-opacity="0.15"/>' +
-      '<stop offset="1" stop-color="#5D6B82" stop-opacity="0"/>' +
-      '</linearGradient>' +
-      '</defs>'
-    );
-    out.push(
-      '<rect class="best-area" x="' + M.left + '" y="' + M.top + '" width="' + plotW + '" height="' + plotH + '" ' +
-      'fill="url(#viz-best)" pointer-events="none" aria-hidden="true" focusable="false"/>'
-    );
+    // --- Best-quadrant tint: the plot splits into four quadrants at the
+    // midpoints of both axes. The bottom-left quadrant (least context AND
+    // fewest turns) is shaded strongest; the two adjacent quadrants step down;
+    // the top-right (most context, most turns) is faintest. Hard, crisp edges
+    // at each dashed quadrant boundary replace the old diagonal fade, so the
+    // best region reads unambiguously. Drawn before the grid. ---
+    var best = '#5D6B82';
+    var midX = M.left + plotW / 2;
+    var midY = M.top + plotH / 2;
+    // [x, y, w, h, opacity]
+    var quadrants = [
+      [M.left, midY,  plotW / 2, plotH / 2, 0.14], // bottom-left:  least context, fewest turns (BEST)
+      [midX,   midY,  plotW / 2, plotH / 2, 0.07], // bottom-right: least context, many turns
+      [M.left, M.top, plotW / 2, plotH / 2, 0.07], // top-left:     much context, fewest turns
+      [midX,   M.top, plotW / 2, plotH / 2, 0.03]  // top-right:    much context, many turns (worst)
+    ];
+    quadrants.forEach(function (q) {
+      out.push(
+        '<rect x="' + q[0] + '" y="' + q[1] + '" width="' + q[2] + '" height="' + q[3] + '" ' +
+        'fill="' + best + '" fill-opacity="' + q[4] + '" ' +
+        'pointer-events="none" aria-hidden="true" focusable="false"/>'
+      );
+    });
+    // Dashed quadrant boundary lines (distinct from the solid grid lines) so
+    // the best-region edges are explicit.
+    out.push('<line class="quad-bound" x1="' + midX + '" y1="' + M.top + '" x2="' + midX + '" y2="' + (M.top + plotH) + '"/>');
+    out.push('<line class="quad-bound" x1="' + M.left + '" y1="' + midY + '" x2="' + (M.left + plotW) + '" y2="' + midY + '"/>');
 
     // --- Vertical grid + X labels ------------------------------------
     xs.forEach(function (v) {
@@ -554,6 +566,13 @@
         '</g>'
       );
     });
+
+    // --- Best-region marker: drawn after the points but non-interactive, so
+    // it stays legible without ever blocking hover/click on a data point.
+    out.push(
+      '<text class="best-label" x="' + (M.left + 12) + '" y="' + (M.top + plotH - 12) + '" ' +
+      'pointer-events="none" aria-hidden="true" focusable="false">best region</text>'
+    );
 
     out.push('</svg>');
 

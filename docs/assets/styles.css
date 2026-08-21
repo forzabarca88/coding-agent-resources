@@ -616,6 +616,17 @@ a:focus-visible {
 .chart-svg .grid-v,
 .chart-svg .grid-h { stroke: var(--rule); stroke-width: 1; }
 .chart-svg .grid-frame { stroke: var(--rule-strong); stroke-width: 1; }
+.chart-svg .quad-bound { stroke: var(--rule); stroke-width: 1; stroke-dasharray: 5 4; }
+.chart-svg .best-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  fill: var(--carbon-soft);
+  paint-order: stroke;
+  stroke: var(--paper);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
 .chart-svg .axis-label {
   font-family: var(--font-mono);
   font-size: 12px;
