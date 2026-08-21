@@ -57,8 +57,8 @@
           Each point is one successful run (exit code 0). Total Context Used is the
           cumulative context consumed during the run; Turns is the number of agent turns
           taken. The 25 runs that used the most context are shown by default; use the
-          filters below to change the selection. Model labels are drawn directly on the
-          chart where space allows; hover or click a point for the full record.
+          filters above to change the selection. Hover or click a point for its full
+          record.
         </p>
 
         <!-- Controls -->
@@ -80,6 +80,16 @@
               <option value="all">All</option>
             </select>
           </label>
+          <div class="viz-control viz-control--models">
+            <div class="viz-control__head">
+              <span class="viz-control__label" id="models-label">Models</span>
+              <span class="legend-actions">
+                <button type="button" class="legend-btn" id="models-all">Select all</button>
+                <button type="button" class="legend-btn" id="models-none">Clear</button>
+              </span>
+            </div>
+            <div class="model-chips" id="model-chips" role="group" aria-labelledby="models-label"></div>
+          </div>
         </div>
 
         <p id="viz-status" class="results-status" role="status" aria-live="polite">
@@ -94,9 +104,6 @@
         </div>
 
         <p id="viz-summary" class="viz-summary"></p>
-
-        <!-- Legend -->
-        <div class="viz-legend" id="viz-legend" aria-label="Models"></div>
       </section>
 
       <!-- Methodology -->
@@ -113,16 +120,8 @@
         <p>
           Cloud results are labelled <em>Provider</em>; runs on the local test machines are
           labelled <em>Local</em> — see the machine specs on
-          <a href="evaluation-results.html">Evaluation results</a>. Points are coloured by
-          model. Select one or more models from the legend to filter the plot; each selected
-          model keeps its colour, and the runs-to-show limit applies only when every model is
-          selected.
-        </p>
-        <p>
-          Model labels are drawn beside their point where space allows; when several runs land
-          in the same spot, the group is marked with a <em>+N</em> tag instead. Hover, focus,
-          or click a point for its tooltip — notes first, then context used, turns, duration,
-          and the configured limit.
+          <a href="evaluation-results.html">Evaluation results</a>. Hover or click any point
+          for the full details of that run.
         </p>
       </section>
     </main>
