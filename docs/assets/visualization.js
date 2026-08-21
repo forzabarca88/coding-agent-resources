@@ -37,7 +37,7 @@
 
   var state = {
     source: 'all',        // 'all' | 'Provider' | 'Local'
-    models: '',           // '' = all, else comma-separated selected model names
+    models: '',           // '' = all models, else comma-separated selected names
     top: 25               // 'all' or a number
   };
 
@@ -233,10 +233,6 @@
       '<dt>Turns</dt><dd>' + fmt(r.turnsN) + '</dd>' +
       '<dt>Duration</dt><dd>' + esc(r.duration || '—') + '</dd>' +
       '<dt>Limit</dt><dd>' + fmt(r.limitN) + '</dd>' +
-      '<dt>Exceeded</dt><dd>' + esc(r.exceeded || '—') + '</dd>' +
-      '<dt>Exit</dt><dd>' + esc(r.code) + '</dd>' +
-      '<dt>Passed</dt><dd>' + fmt(r.passedN) + '</dd>' +
-      '<dt>Failed</dt><dd>' + fmt(r.failedN) + '</dd>' +
       '</dl>';
     return html;
   }
@@ -268,137 +264,92 @@
   }
 
   /* ------------------------------------------------------------------ *
-   * Label placement — deterministic, space permitting
+   * Label placement — greedy resolution in plot coordinates, deterministic.
+   * Points that land close together are grouped; the first row of a group
+   * gets a direct name label only when the anchor stays clear of neighbours.
    * ------------------------------------------------------------------ */
 
-  // Works on integer "key" coordinates: round each point to the nearest
-  // multiple of STEP and cluster anything in the same cell. Cells that stay
-  // alone become direct labels; crowded cells become a shared numeric tag.
-  var STEP = 25;
+  var LABEL_GAP_X = 64;  // min px between label starts
+  var LABEL_GAP_Y = 24;  // min px between label baselines
+  var LABEL_PAD = 18;    // keep labels inside the plot vertically
 
-  function makeKey(n) { return Math.round(n / STEP); }
-
-  // key -> { key, modelCounts, minV, maxV, h, v, rows: [] }
-  function buildKeyMap(rows, xF, yF) {
-    var map = {};
-    rows.forEach(function (r) {
-      var h = makeKey(xF(r.tokensN));
-      var v = makeKey(yF(r.turnsN));
-      var k = h + ':' + v;
-      if (!map[k]) {
-        map[k] = { key: k, h: h, v: v, minV: v, maxV: v, rows: [] };
-      }
-      map[k].rows.push(r);
-      if (v < map[k].minV) map[k].minV = v;
-      if (v > map[k].maxV) map[k].maxV = v;
-    });
-    return map;
+  function shortName(model) {
+    return model
+      .replace(/^lmstudio-(jdc-ws|jdcmedia)\//, '')
+      .replace(/^openrouter\//, '')
+      .replace(/^mistral\//, '');
   }
 
-  // Deterministic collision resolution: when two candidate labels land too
-  // close together, push the range(s) apart instead of dropping either one.
-  function resolveRanges(cells) {
-    var list = Object.keys(cells).map(function (k) { return cells[k]; });
-    list.sort(function (a, b) { return (a.h - b.h) || (a.v - b.v); });
-    for (var i = 0; i < list.length; i++) {
-      for (var j = i + 1; j < list.length; j++) {
-        var a = list[i];
-        var b = list[j];
-        if (Math.abs(a.h - b.h) > 1) continue;      // different columns
-        var aV = a.minV, bV = b.minV;
-        if (aV > bV) { var t = a; a = b; b = t; }    // sort by vertical start
-        if (bV - aV < 3) {                            // overlap
-          var overlap = 3 - (bV - aV);
-          var push = Math.ceil(overlap / 2);
-          a.maxV = Math.min(a.maxV + push, 9999);
-          b.minV = Math.max(b.minV - push, -9999);
+  function placeLabels(rows, xF, yF) {
+    var top = M.top + LABEL_PAD;
+    var bottom = M.top + plotH - LABEL_PAD;
+
+    // 1. Cluster rows landing within one grid cell (STEP chart units apart).
+    var STEP = 60;
+    function makeKey(n) { return Math.round(n / STEP); }
+
+    var cells = {};
+    rows.forEach(function (r) {
+      var k = makeKey(xF(r.tokensN)) + ':' + makeKey(yF(r.turnsN));
+      if (!cells[k]) cells[k] = [];
+      cells[k].push(r);
+    });
+
+    // 2. One anchor per cell: centroid position; name label if the cell holds
+    //    a single row, otherwise a shared "+N" tag.
+    var anchors = [];
+    Object.keys(cells).forEach(function (k) {
+      var group = cells[k];
+      var cx = 0;
+      var cy = 0;
+      group.forEach(function (r) {
+        cx += xF(r.tokensN);
+        cy += yF(r.turnsN);
+      });
+      cx /= group.length;
+      cy /= group.length;
+      anchors.push({
+        cx: cx,
+        cy: cy,
+        label: group[0].model,
+        short: shortName(group[0].model),
+        isLabel: group.length === 1,
+        count: group.length
+      });
+    });
+
+    // 3. Deterministically separate name labels that are too close. Iterate
+    //    over pairs, pushing apart vertically, clamped to the plot.
+    var names = anchors.filter(function (a) { return a.isLabel; });
+    names.sort(function (a, b) { return (a.cx - b.cx) || (a.cy - b.cy); });
+    var iterations = 24;
+    while (iterations--) {
+      var moved = false;
+      for (var i = 0; i < names.length; i++) {
+        for (var j = i + 1; j < names.length; j++) {
+          var a = names[i];
+          var b = names[j];
+          if (Math.abs(a.cx - b.cx) >= LABEL_GAP_X) continue;
+          if (Math.abs(a.cy - b.cy) >= LABEL_GAP_Y) continue;
+          var dir = a.cy <= b.cy ? -1 : 1;
+          var nextA = Math.min(bottom, Math.max(top, a.cy + dir * LABEL_GAP_Y));
+          var nextB = Math.min(bottom, Math.max(top, b.cy - dir * LABEL_GAP_Y));
+          if (nextA === a.cy && nextB === b.cy) continue; // no room — leave as-is
+          a.cy = nextA;
+          b.cy = nextB;
+          moved = true;
         }
       }
+      if (!moved) break;
     }
-  }
 
-  // Cell -> concrete label anchor (coordinates are chart units, scaled later).
-  function cellLabel(cell, rows, xF, yF) {
-    var minRow = null;
-    cell.rows.forEach(function (r) {
-      if (!minRow || yF(r.turnsN) < yF(minRow.turnsN)) minRow = r;
-    });
-    var cx = xF(minRow.tokensN);
-    return { cx: cx, cy: yF(minRow.turnsN), label: minRow.model, row: minRow };
-  }
-
-  function candidateAnchor(r, xF, yF) {
-    return { cx: xF(r.tokensN), cy: yF(r.turnsN), label: r.model, row: r };
-  }
-
-  // Tries to shorten where two labelled points sit close; keeps things tidy.
-  function shortNames(model) {
-    var s = model;
-    s = s.replace(/^lmstudio-(jdc-ws|jdcmedia)\//, '');
-    s = s.replace(/^openrouter\//, '');
-    s = s.replace(/^mistral\//, '');
-    return s;
-  }
-
-  // Returns [{ row, cx, cy, label, isLabel, count }]
-  function placeLabels(rows, xF, yF) {
-    if (!rows.length) return [];
-    var map = buildKeyMap(rows, xF, yF);
-    resolveRanges(map);
-
-    var cells = Object.keys(map).map(function (k) { return map[k]; });
-    var anchors = [];
-    var NO_LABEL = [];
-    var used = {};
-
-    cells.forEach(function (cell) {
-      var labelKey = cell.key;
-      var count = cell.rows.length;
-      if (used[labelKey]) {
-        // duplicate key (two cells resolved to the same anchor) — drop the label
-        var idx = anchors.indexOf(used[labelKey]);
-        if (idx !== -1) { anchors.splice(idx, 1); NO_LABEL.push(used[labelKey]); }
-        return;
-      }
-      var a = cellLabel(cell, rows, xF, yF);
-      if (count > 1) {
-        // too crowded for a direct label — shared numeric tag at the centroid
-        a.isLabel = false;
-        a.count = count;
-      } else {
-        a.isLabel = true;
-        a.count = 1;
-      }
-      a.short = shortNames(a.label);
-      anchors.push(a);
-      used[labelKey] = a;
-    });
-
-    // Dropped duplicate keys: place those rows' own labels if the space allows.
-    var point = { ptUsed: {} };
-    (function () { /* no-op, kept for parity */ })();
-
-    // Position candidate labels for the multi-row duplicate cells.
-    var dupRows = [];
-    cells.forEach(function (cell) {
-      if (NO_LABEL.indexOf(cell.key) !== -1) {
-        cell.rows.forEach(function (r) { dupRows.push(r); });
-      }
-    });
-
-    // Deterministic check: assign labels to the dropped rows unless they
-    // collide with already-placed anchors. Simple greedy in rows order.
-    dupRows.forEach(function (r) {
-      var a = candidateAnchor(r, xF, yF);
-      var collides = anchors.some(function (o) {
-        return Math.abs(o.cx - a.cx) < 30 && Math.abs(o.cy - a.cy) < 26;
-      });
-      if (!collides) {
-        a.isLabel = true;
-        a.count = 1;
-        a.short = shortNames(a.label);
-        anchors.push(a);
-      }
+    // 4. Move name labels beside their point so leader lines stay short; keep
+    //    them inside the plot horizontally too.
+    names.forEach(function (a) {
+      var w = a.short.length * 6.4 + 10;
+      if (a.cx + 12 + w > M.left + plotW) a.anchorEnd = true;   // flip left of point
+      if (a.cy > bottom) a.cy = bottom;
+      if (a.cy < top) a.cy = top;
     });
 
     return anchors;
@@ -474,22 +425,23 @@
       'transform="rotate(-90 26 ' + (M.top + plotH / 2) + ')" text-anchor="middle">Turns</text>'
     );
 
-    // --- Labels (behind points so points stay readable) ---------------
+    // --- Labels (drawn before points so points stay readable) ---------
     anchors.forEach(function (a) {
-      var fill = modelColor(a.label);
-      if (a.isLabel) {
+      if (!a.isLabel) { // crowded cell — shared "+N" tag
         out.push(
-          '<text class="pt-label pt-label--name" x="' + (a.cx + 10) + '" y="' + a.cy + '" ' +
-          'fill="' + fill + '">' + esc(a.short) + '</text>'
-        );
-      } else if (a.count > 1) {
-        out.push(
-          '<g class="pt-tag" data-count="' + a.count + '">' +
-          '<rect x="' + (a.cx - 13) + '" y="' + (a.cy - 11) + '" width="26" height="22" rx="11"/>' +
+          '<g class="pt-tag">' +
+          '<rect x="' + (a.cx - 14) + '" y="' + (a.cy - 11) + '" width="28" height="22" rx="11"/>' +
           '<text x="' + a.cx + '" y="' + (a.cy + 4) + '" text-anchor="middle">+' + a.count + '</text>' +
           '</g>'
         );
+        return;
       }
+      var fill = modelColor(a.label);
+      var tx = a.anchorEnd ? a.cx - 12 : a.cx + 12;
+      out.push(
+        '<text class="pt-label" x="' + tx + '" y="' + a.cy + '" fill="' + fill + '" ' +
+        (a.anchorEnd ? 'text-anchor="end"' : '') + '>' + esc(a.short) + '</text>'
+      );
     });
 
     // --- Points ---------------------------------------------------------
@@ -532,7 +484,6 @@
     else text += ', all ' + modelOrder.length + ' models';
     text += ').';
     if (state.models === '' && state.top !== 'all') text += ' Ranked by context used.';
-    text += ' Model labels are placed where space allows.';
     summaryEl.textContent = text;
   }
 
@@ -541,21 +492,19 @@
     var selected = state.models ? state.models.split(',') : [];
     var html =
       '<div class="legend-head">' +
-      '<span class="legend-head__label">Models — click to toggle</span>' +
+      '<span class="legend-head__label">Models \u2014 click to toggle</span>' +
       '<span class="legend-actions">' +
-      '<button type="button" class="legend-btn" id="legend-all">All</button>' +
-      '<button type="button" class="legend-btn" id="legend-none">None</button>' +
+      '<button type="button" class="legend-btn" id="legend-all">Select all</button>' +
+      '<button type="button" class="legend-btn" id="legend-none">Clear</button>' +
       '</span>' +
-      '</div>';
-
-    html += '<div class="legend-items">' +
+      '</div>' +
+      '<div class="legend-items">' +
       modelOrder.map(function (m) {
         var active = !state.models || selected.indexOf(m) !== -1;
-        var visible = active; // visibility is derived at draw time
-        var cls = 'legend-item' + (active ? ' is-active' : '') + (visible ? '' : ' is-dim');
         return (
-          '<button type="button" class="' + cls + '" data-model="' + esc(m) + '" ' +
-          'style="--modcol:' + modelColor(m) + '">' +
+          '<button type="button" class="legend-item' + (active ? ' is-active' : '') + '" ' +
+          'data-model="' + esc(m) + '" style="--modcol:' + modelColor(m) + '" ' +
+          'aria-pressed="' + String(active) + '">' +
           '<span class="legend-swatch" style="background:' + modelColor(m) + '"></span>' +
           '<span class="legend-name">' + esc(m) + '</span>' +
           '</button>'
