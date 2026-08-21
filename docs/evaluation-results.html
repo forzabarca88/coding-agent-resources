@@ -58,6 +58,9 @@
           it performed — how long it took, how much context it consumed, and whether its work
           passed the test suite. The default output token limit was set to 64000 unless specified otherwise.
         </p>
+        <p class="intro__note">
+          <strong>Note on Total Context Used</strong> (observed 2026-08-22): per-turn totals are prompt + completion as reported by the provider, so a decrease is only possible if the provider under-reports the prompt. As of this date, OpenRouter's <code>gpt-5.6-luna</code> drops the previous assistant completion from the next turn's usage (13 per-turn drops in one 98-turn session), while <code>deepseek-v4-flash</code> reports the full prompt every turn (0 drops; totals strictly increasing). Treat the column as provider-reported and not directly comparable across providers — re-verify this behaviour before cross-provider token comparisons, as it may change.
+        </p>
         <div class="specs">
           <h3 class="specs__heading">
             <span class="chip">Hardware</span>

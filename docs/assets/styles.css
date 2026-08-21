@@ -198,6 +198,17 @@ a:focus-visible {
   border-radius: 2px;
   color: var(--carbon);
 }
+.intro .intro__note {
+  max-width: 62ch;
+  margin-bottom: 0.75rem;
+  padding: 0.9rem 1.1rem;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--carbon);
+  border-radius: 2px;
+  background: var(--zebra);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
 
 /* ============================================================
    Specs — test machine card in the introduction
