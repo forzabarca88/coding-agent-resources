@@ -50,18 +50,24 @@
       <!-- Chart -->
       <section class="viz" aria-labelledby="viz-heading">
         <h2 id="viz-heading" class="intro__heading">
-          <span class="chip">Plot</span>
-          Context vs Turns
+          <span class="chip">Read</span>
+          Reading the chart
         </h2>
         <p class="viz__note">
           Each point is one successful run (exit code 0). Total Context Used is the
           cumulative context consumed during the run; Turns is the number of agent turns
-          taken — the less of each, the better. The 25 runs with the least context are shown
-          by default (ranked by context alone); use the filters above to change the
-          selection. The search accepts <code>*</code> and <code>?</code> wildcards
-          (e.g. <code>*qwen*</code>, <code>openrouter/*</code>) to select every matching
-          model at once, and also matches each model's Notes — type <code>Q4</code> to
-          select every model whose notes mention Q4, for instance. Hover or click a point
+          taken — the less of each, the better. The dashed lines split the plot into four
+          quadrants at the axis midpoints: the bottom-left (least context, fewest turns) is
+          shaded strongest as the best region, the two adjacent quadrants step down, and
+          the top-right (most context, most turns) is left faintest. The 25 runs with the
+          least context are shown by default (ranked by context alone); use the filters
+          above to change the selection. The search accepts <code>*</code> and
+          <code>?</code> wildcards (e.g. <code>*qwen*</code>, <code>openrouter/*</code>) to
+          select every matching model at once, and also matches each model's Notes — type
+          <code>Q4</code> to select every model whose notes mention Q4, for instance.
+          Cloud results are labelled <em>Provider</em>; runs on the local test machines are
+          labelled <em>Local</em> — see the machine specs on
+          <a href="evaluation-results.html">Evaluation results</a>. Hover or click a point
           for its full record.
         </p>
 
@@ -118,27 +124,6 @@
         <p id="viz-summary" class="viz-summary" aria-live="polite"></p>
       </section>
 
-      <!-- Methodology -->
-      <section class="intro" aria-labelledby="method-heading">
-        <h2 id="method-heading" class="intro__heading">
-          <span class="chip">Method</span>
-          Reading the chart
-        </h2>
-        <p>
-          Total Context Used is the cumulative context the agent consumed during the run;
-          Turns is the number of agent turns taken to complete the task. Only runs that
-          exited cleanly (exit code 0) are plotted. The dashed lines split the plot into
-          four quadrants at the axis midpoints: the bottom-left (least context, fewest
-          turns) is shaded strongest as the best region, the two adjacent quadrants step
-          down, and the top-right (most context, most turns) is left faintest.
-        </p>
-        <p>
-          Cloud results are labelled <em>Provider</em>; runs on the local test machines are
-          labelled <em>Local</em> — see the machine specs on
-          <a href="evaluation-results.html">Evaluation results</a>. Hover or click any point
-          for the full details of that run.
-        </p>
-      </section>
     </main>
 
     <footer class="page-footer">
