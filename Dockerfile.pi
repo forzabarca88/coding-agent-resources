@@ -1,0 +1,19 @@
+FROM node:24-bookworm-slim
+
+ARG UV_VER=0.11.33
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends \
+     bash ca-certificates git ripgrep nano curl \
+  && rm -rf /var/lib/apt/lists/*
+
+RUN npm install -g --ignore-scripts @earendil-works/pi-coding-agent
+
+RUN curl -LsSf https://astral.sh/uv/${UV_VER}/install.sh | sh
+
+RUN git clone https://github.com/forzabarca88/coding-agent-resources \
+  && cd coding-agent-resources \
+  && ./install_for_pi.sh 
+
+WORKDIR /workspace
+ENTRYPOINT ["pi"]
