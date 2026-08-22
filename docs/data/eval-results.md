@@ -56,3 +56,4 @@
 | lmstudio-jdc-ws/unsloth/gemma-4-31b-it-qat | quant: Q4_K_XL, KV quant: Q4_0, vitest failed, tool call formatting issues | 21m 56s | 44128 | 20 | 131000 | No | 1 | 19 | 0 | 2026-08-20 19:08 |
 | lmstudio-jdcmedia/unsloth/gemma-4-12b-it-qat | quant: Q4_K_XL, KV quant: Q8_0, vitest failed, tool call formatting issues | 2m 55s | 37761 | 16 | 128000 | No | 1 | ? | ? | 2026-08-04 11:13 |
 | lmstudio-jdc-ws/unsloth/laguna-s-2.1 | quant: Q4_K_XL, KV quant: Q8_0, reasoning budget: 32k | 92m 30s | 83166 | 109 | 131000 | No | 0 | 247 | 0 | 2026-08-23 00:52 |
+| lmstudio-jdc-ws/unsloth/laguna-s-2.1 | quant: Q4_K_XL, KV quant: Q8_0, reasoning budget: 32k | 201m 8s | 117616 | 79 | 131000 | No | 0 | 247 | 0 | 2026-08-23 04:53 |
