@@ -15,7 +15,7 @@
   var state = {
     query: '',
     filter: 'all', // all | passed | failed | over
-    sort: 'newest'
+    sort: 'ranked' // ranked | newest | oldest | context-desc | ...
   };
 
   // One entry per rendered table: { el, heads:[], rows:[{tr,data,text}] }
@@ -120,20 +120,42 @@
   }
   function toNum(s) {
     var v = parseInt(s, 10);
-    return isNaN(v) ? -1 : v;
+    return isNaN(v) ? null : v; // null = missing/unknown, handled as "worst"
+  }
+
+  // Unknown values (non-numeric, e.g. '?') should sort to the bottom rather
+  // than claim the best slot, for every ranking key. For ascending keys the
+  // worst slot is the largest (least favourable), for descending keys it is
+  // the smallest, so each direction uses its own sentinel.
+  function numAsc(a, b, key) {
+    var av = toNum(a.data[key]);
+    var bv = toNum(b.data[key]);
+    return (av === null ? Number.POSITIVE_INFINITY : av) - (bv === null ? Number.POSITIVE_INFINITY : bv);
+  }
+  function numDesc(a, b, key) {
+    var av = toNum(a.data[key]);
+    var bv = toNum(b.data[key]);
+    return (bv === null ? Number.NEGATIVE_INFINITY : bv) - (av === null ? Number.NEGATIVE_INFINITY : av);
   }
 
   function sortCompare(a, b) {
-    function desc(key) { return toNum(b.data[key]) - toNum(a.data[key]); }
     switch (state.sort) {
       case 'oldest': return toDate(a.data[C.date]) - toDate(b.data[C.date]);
-      case 'context-desc': return desc(C.context);
-      case 'context-asc': return -desc(C.context);
+      case 'context-desc': return numDesc(a, b, C.context);
+      case 'context-asc': return numAsc(a, b, C.context);
       case 'duration-desc': return toMs(b.data[C.duration]) - toMs(a.data[C.duration]);
-      case 'duration-asc': return -toMs(b.data[C.duration]) + toMs(a.data[C.duration]);
-      case 'turns-desc': return desc(C.turns);
-      case 'passed-asc': return toNum(a.data[C.passed]) - toNum(b.data[C.passed]);
-      default: return toDate(b.data[C.date]) - toDate(a.data[C.date]); // newest
+      case 'duration-asc': return toMs(a.data[C.duration]) - toMs(b.data[C.duration]);
+      case 'turns-desc': return numDesc(a, b, C.turns);
+      case 'turns-asc': return numAsc(a, b, C.turns);
+      case 'newest': return toDate(b.data[C.date]) - toDate(a.data[C.date]);
+      default:
+        // ranked (approximates the source ranking): most tests passed first,
+        // then least context used, then fewest turns.
+        var byPassed = numDesc(a, b, C.passed);
+        if (byPassed) return byPassed;
+        var byContext = numAsc(a, b, C.context);
+        if (byContext) return byContext;
+        return numAsc(a, b, C.turns);
     }
   }
 
@@ -249,6 +271,7 @@
     sortSelect.className = 'results-select';
     sortSelect.setAttribute('aria-label', 'Sort evaluation runs');
     [
+      ['ranked', 'Default (passed, context, turns)'],
       ['newest', 'Newest first'],
       ['oldest', 'Oldest first'],
       ['context-desc', 'Context: high to low'],
@@ -256,7 +279,7 @@
       ['duration-desc', 'Duration: long to short'],
       ['duration-asc', 'Duration: short to long'],
       ['turns-desc', 'Turns: high to low'],
-      ['passed-asc', 'Passing: fewest']
+      ['turns-asc', 'Turns: low to high']
     ].forEach(function (o) {
       var opt = document.createElement('option');
       opt.value = o[0];
@@ -280,7 +303,7 @@
     clearBtn.addEventListener('click', function () {
       state.query = '';
       state.filter = 'all';
-      state.sort = 'newest';
+      state.sort = 'ranked';
       if (searchInput) searchInput.value = '';
       if (sortSelect) sortSelect.value = state.sort;
       segBtns.forEach(function (sb) {
