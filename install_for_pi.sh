@@ -20,9 +20,8 @@ REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 PI_DIR="$HOME/.pi/agent"
 
 if [ ! -d "$PI_DIR" ]; then
-  echo "Error: pi agent directory not found at $PI_DIR" >&2
-  echo "Make sure pi is installed before running this script." >&2
-  exit 1
+  echo "WARNING: pi agent directory not found at $PI_DIR"
+  mkdir -p "$PI_DIR"
 fi
 
 $DRY_RUN && echo "[dry-run] No changes will be made."
