@@ -120,7 +120,7 @@ Publish the site from the `docs/` folder: **Settings → Pages → Source: Deplo
 
 - **Index** — `index.html`; the landing page, listing all published pages.
 - **Evaluation Results** — `evaluation-results.html`; fetches `data/eval-results.md` at runtime and renders it as HTML (live data, no build step).
-- **Evaluation Chart** — `visualization.html`; fetches `data/eval-results.md` at runtime and plots successful runs (context used vs turns), coloured by model, with source, multi-select model filters, and a wildcard model search (`*`/`?`, e.g. `*qwen*`, `openrouter/*`). The model chips offered for filtering always match the selected source (Provider/Local/All) and the wildcard search is scoped to that source too.
+- **Evaluation Chart** — `visualization.html`; fetches `data/eval-results.md` at runtime and plots successful runs (context used vs turns), coloured by model, with source, multi-select model filters, and a wildcard search (`*`/`?`, e.g. `*qwen*`, `openrouter/*`) that matches model names and the Notes column (e.g. `Q4` selects every model whose notes mention Q4). Selecting a model shows all of its successful in-source runs. The model chips offered for filtering always match the selected source (Provider/Local/All) and the wildcard search is scoped to that source too.
 
 ## License
 

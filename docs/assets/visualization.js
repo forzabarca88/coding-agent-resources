@@ -234,9 +234,9 @@
    * ------------------------------------------------------------------ */
 
   // Turns a wildcard pattern into a RegExp against the full (lower-cased)
-  // model name. '*' matches any run of characters, '?' exactly one. Patterns
-  // are matched as substrings of the name, so both 'qwen3.6-27b' and
-  // 'openrouter/*' style patterns find what the user means.
+  // model name or note text. '*' matches any run of characters, '?' exactly
+  // one. Patterns are matched as substrings, so 'qwen3.6-27b', 'openrouter/*'
+  // and note fragments like 'Q4' all find what the user means.
   function globToRegExp(pattern) {
     var p = String(pattern).toLowerCase();
     var re = '';
@@ -250,14 +250,30 @@
   }
 
   // Models matching the current query, in source-scoped order; null when no
-  // query is active.
+  // query is active. A query matches a model when it matches the model's name
+  // OR the Notes of at least one of its successful runs in the current source
+  // (so searching "Q4" finds every model run at a Q4 quantisation).
+  // Memoized on (query, source) — searchMatches is consulted once per row in
+  // visibleRows() as well as by the summary and chips, so this avoids
+  // recomputing the same O(models×runs) scan on every draw.
+  var searchMemoKey = null;
+  var searchMemoVal = null;
   function searchMatches() {
     var q = state.search.trim();
     if (!q) return null;
+    var key = q + '\u0000' + state.source;
+    if (key === searchMemoKey) return searchMemoVal;
     var re = globToRegExp(q);
-    return sourceModels().filter(function (m) {
-      return re.test(String(m).toLowerCase());
+    var res = sourceModels().filter(function (m) {
+      if (re.test(String(m).toLowerCase())) return true;
+      return allRows.some(function (r) {
+        return r.model === m && isSuccessful(r) && inSource(r) &&
+          re.test(String(r.notes || '').toLowerCase());
+      });
     });
+    searchMemoKey = key;
+    searchMemoVal = res;
+    return res;
   }
 
   // The effective model selection: null = all models, array = explicit list.
@@ -479,7 +495,7 @@
         var q = state.search.trim();
         var matches = searchMatches();
         if (q && matches && matches.length === 0) {
-          summaryEl.textContent = 'No model matches search "' + q + '".';
+          summaryEl.textContent = 'No models or notes match search "' + q + '".';
         } else if (state.models === 'NONE') {
           summaryEl.textContent = 'No models selected.';
         } else if (state.models && state.models.split(',').filter(function (m) {
@@ -817,6 +833,10 @@
         allRows = [];
         modelOrder = [];
         parseMarkdown(md);
+        // Fresh data — drop any memoised search results computed against the
+        // previous file.
+        searchMemoKey = null;
+        searchMemoVal = null;
         // Model list: distinct names, in order of first successful appearance.
         allRows.forEach(function (r) {
           if (isSuccessful(r) && modelOrder.indexOf(r.model) === -1) modelOrder.push(r.model);

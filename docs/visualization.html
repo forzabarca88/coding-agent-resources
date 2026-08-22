@@ -58,9 +58,11 @@
           cumulative context consumed during the run; Turns is the number of agent turns
           taken — the less of each, the better. The 25 runs with the least context are shown
           by default (ranked by context alone); use the filters above to change the
-          selection. The model search accepts <code>*</code> and <code>?</code> wildcards
+          selection. The search accepts <code>*</code> and <code>?</code> wildcards
           (e.g. <code>*qwen*</code>, <code>openrouter/*</code>) to select every matching
-          model at once. Hover or click a point for its full record.
+          model at once, and also matches each model's Notes — type <code>Q4</code> to
+          select every model whose notes mention Q4, for instance. Hover or click a point
+          for its full record.
         </p>
 
         <!-- Controls -->
@@ -92,8 +94,8 @@
             </div>
             <div class="model-search-row">
               <input id="model-search" class="model-search" type="search"
-                placeholder="wildcard search — *qwen*, openrouter/*"
-                aria-label="Search models with wildcards * and ?; matches the full model name"
+                placeholder="wildcard search — *qwen*, openrouter/*, or a note like Q4"
+                aria-label="Search models and notes with wildcards * and ?; matches the full model name or note text"
                 autocomplete="off" spellcheck="false">
               <span id="model-search-count" class="model-search-count" aria-live="polite"></span>
               <button type="button" id="model-search-clear" class="model-search-clear" hidden>Clear search</button>
