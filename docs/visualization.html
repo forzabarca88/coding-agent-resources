@@ -61,10 +61,15 @@
           shaded strongest as the best region, the two adjacent quadrants step down, and
           the top-right (most context, most turns) is left faintest. The 25 runs with the
           least context are shown by default (ranked by context alone); use the filters
-          above to change the selection. The search accepts <code>*</code> and
-          <code>?</code> wildcards (e.g. <code>*qwen*</code>, <code>openrouter/*</code>) to
-          select every matching model at once, and also matches each model's Notes — type
-          <code>Q4</code> to select every model whose notes mention Q4, for instance.
+          above to change the selection — an active search or model selection shows all
+          matching runs, so the default 25-run limit no longer applies. The search accepts
+          <code>*</code> and <code>?</code> wildcards and filters to exactly the runs that
+          match — the
+          pattern is tested against each run's model name and Notes, so
+          <code>*qwen*</code> selects every qwen run, <code>openrouter/*</code> every
+          provider run, and a note fragment like <code>Q4</code> every run whose notes
+          mention Q4. Searching <code>Q2_K_XL</code> therefore returns only the runs
+          quantised at Q2_K_XL, not every run of the same model.
           Cloud results are labelled <em>Provider</em>; runs on the local test machines are
           labelled <em>Local</em> — see the machine specs on
           <a href="evaluation-results.html">Evaluation results</a>. Hover or click a point
@@ -100,8 +105,8 @@
             </div>
             <div class="model-search-row">
               <input id="model-search" class="model-search" type="search"
-                placeholder="wildcard search — *qwen*, openrouter/*, or a note like Q4"
-                aria-label="Search models and notes with wildcards * and ?; matches the full model name or note text"
+                placeholder="wildcard search — *qwen*, openrouter/*, or a note like Q4 — filters the runs"
+                aria-label="Filter runs with wildcards * and ?; matches each run's model name or its notes"
                 autocomplete="off" spellcheck="false">
               <span id="model-search-count" class="model-search-count" aria-live="polite"></span>
               <button type="button" id="model-search-clear" class="model-search-clear" hidden>Clear search</button>

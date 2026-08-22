@@ -250,12 +250,14 @@
   }
 
   // Models matching the current query, in source-scoped order; null when no
-  // query is active. A query matches a model when it matches the model's name
-  // OR the Notes of at least one of its successful runs in the current source
-  // (so searching "Q4" finds every model run at a Q4 quantisation).
-  // Memoized on (query, source) — searchMatches is consulted once per row in
-  // visibleRows() as well as by the summary and chips, so this avoids
-  // recomputing the same O(models×runs) scan on every draw.
+  // query is active. Used by the summary and the chip strip while a search is
+  // active: a model counts as matching when the query matches its name OR the
+  // Notes of at least one of its successful runs in the current source (so
+  // searching "Q4" finds every model with a run at a Q4 quantisation). The
+  // visible rows themselves are filtered individually in visibleRows().
+  // Memoized on (query, source) — searchMatches is consulted once per draw by
+  // the summary and chips, so this avoids recomputing the same O(models×runs)
+  // scan on every redraw.
   var searchMemoKey = null;
   var searchMemoVal = null;
   function searchMatches() {
@@ -293,8 +295,18 @@
   }
 
   function visibleRows() {
+    var searchQ = state.search.trim();
+    var searchRe = searchQ ? globToRegExp(searchQ) : null;
     var rows = allRows.filter(function (r) {
       if (!isSuccessful(r) || !inSource(r)) return false;
+      // A live wildcard search filters the rows themselves: a run is kept
+      // only when the pattern matches its own model name or its own Notes.
+      // This makes "Q2_K_XL" show just the single run quantised at Q2_K_XL
+      // instead of every run of the same model.
+      if (searchRe) {
+        if (searchRe.test(String(r.model || '').toLowerCase())) return true;
+        return searchRe.test(String(r.notes || '').toLowerCase());
+      }
       if (!modelSelected(r)) return false;
       return true;
     });
@@ -495,7 +507,7 @@
         var q = state.search.trim();
         var matches = searchMatches();
         if (q && matches && matches.length === 0) {
-          summaryEl.textContent = 'No models or notes match search "' + q + '".';
+          summaryEl.textContent = 'No runs match search "' + q + '".';
         } else if (state.models === 'NONE') {
           summaryEl.textContent = 'No models selected.';
         } else if (state.models && state.models.split(',').filter(function (m) {
@@ -658,7 +670,7 @@
     }).length;
     var q = state.search.trim();
     var text = 'Showing ' + rows.length + ' of ' + scopeTotal + ' successful runs (' + scope;
-    if (q) text += '; ' + selectedCount + ' of ' + models.length + ' models match search "' + q + '"';
+    if (q) text += '; ' + selectedCount + ' of ' + models.length + ' models have runs matching "' + q + '"';
     else if (state.models === 'NONE') text += '; no models selected';
     else if (state.models) text += '; ' + selectedCount + ' of ' + models.length + ' models';
     else text += '; all ' + models.length + ' models';
@@ -703,7 +715,7 @@
     if (searchCountEl) {
       var q = state.search.trim();
       searchCountEl.textContent = bySearch
-        ? list.length + ' of ' + models.length + ' models match' + (q ? ' "' + q + '"' : '')
+        ? list.length + ' of ' + models.length + ' models have matching runs' + (q ? ' "' + q + '"' : '')
         : '';
     }
     if (searchClearEl) searchClearEl.hidden = !bySearch;
@@ -711,26 +723,39 @@
     Array.prototype.forEach.call(chipsEl.querySelectorAll('.model-chip'), function (btn) {
       btn.addEventListener('click', function () {
         var m = btn.getAttribute('data-model');
-        // Clicking a chip exits search mode entirely and switches to an
-        // explicit pick of that model. Unconditionally cancel any pending
-        // debounce and clear leftover search text (state or un-applied), so
-        // a stale timer can't re-enter search mode and the input can't keep
-        // showing a query that no longer drives the chart.
+        var wasSearch = state.search !== '';
+        // Clicking a chip exits search mode and switches to an explicit model
+        // selection. Unconditionally cancel any pending debounce and clear
+        // leftover search text (state or un-applied), so a stale timer can't
+        // re-enter search mode and the input can't keep showing a query that
+        // no longer drives the chart.
         clearTimeout(searchTimer);
         state.search = '';
         state.searchSaved = null;
         if (searchInput) searchInput.value = '';
-        // From "all": start from the source's models; from "none": start from
-        // nothing; otherwise start from the current explicit selection, pruned
-        // to models that still exist in this source (a selection built in one
-        // source can stale-out once the source changes).
         var base = sourceModels();
-        var sel = state.models === '' ? base.slice()
-          : (state.models === 'NONE' ? []
-            : state.models.split(',').filter(function (x) { return base.indexOf(x) !== -1; }));
-        var i = sel.indexOf(m);
-        if (i === -1) sel.push(m);
-        else sel.splice(i, 1);
+        var sel;
+        if (wasSearch) {
+          // Every chip shown during a search is a match and renders pressed,
+          // but a notes-only match (e.g. "Q2_K_XL") shows only some of the
+          // model's runs. Toggling from that pressed state would invert the
+          // selection to "everything except this model" — the opposite of
+          // what the pressed chip implies — so pin the clicked model exactly;
+          // further clicks then work in normal toggle mode.
+          sel = [m];
+        } else {
+          // From "all": start from the source's models; from "none": start
+          // from nothing; otherwise start from the current explicit
+          // selection, pruned to models that still exist in this source (a
+          // selection built in one source can stale-out once the source
+          // changes).
+          sel = state.models === '' ? base.slice()
+            : (state.models === 'NONE' ? []
+              : state.models.split(',').filter(function (x) { return base.indexOf(x) !== -1; }));
+          var i = sel.indexOf(m);
+          if (i === -1) sel.push(m);
+          else sel.splice(i, 1);
+        }
         state.models = sel.length === base.length ? ''
           : (sel.length === 0 ? 'NONE' : sel.join(','));
         syncControls();
