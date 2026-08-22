@@ -194,6 +194,40 @@
     return r.code === '0' && isFinite(r.tokensN) && isFinite(r.turnsN) && r.tokensN > 0;
   }
 
+  // True when a row passes the current source filter ('all' includes both).
+  function inSource(r) {
+    if (!r.local && state.source === 'Local') return false;
+    if (r.local && state.source === 'Provider') return false;
+    return true;
+  }
+
+  // Distinct successful model names visible under the current source filter,
+  // in order of first appearance — exactly the models offered as filter
+  // chips, so the chip strip tracks the source (and vice versa).
+  function sourceModels() {
+    var out = [];
+    allRows.forEach(function (r) {
+      if (!isSuccessful(r) || !inSource(r)) return;
+      if (out.indexOf(r.model) === -1) out.push(r.model);
+    });
+    return out;
+  }
+
+  // Drop model names from the current explicit selection (state.models) that
+  // are not in the given model set, then collapse the list to its shortest
+  // form: '' when the pruned selection spans every source model (or none),
+  // otherwise the comma-joined subset. Explicit 'NONE' is left untouched.
+  // Used on source changes so a stale selection from another source can't
+  // silently hide runs or conflate counts.
+  function pruneSelection(models) {
+    if (state.models === 'NONE' || state.models === '') return;
+    var pruned = state.models.split(',').filter(function (m) {
+      return models.indexOf(m) !== -1;
+    });
+    if (pruned.length === 0 || pruned.length === models.length) state.models = '';
+    else state.models = pruned.join(',');
+  }
+
   /* ------------------------------------------------------------------ *
    * Model selection — wildcard search derives the selection while a
    * query is active; clearing the query restores the previous one.
@@ -215,13 +249,13 @@
     return new RegExp('^.*' + re + '.*$');
   }
 
-  // Models matching the current query, in modelOrder order; null when no
+  // Models matching the current query, in source-scoped order; null when no
   // query is active.
   function searchMatches() {
     var q = state.search.trim();
     if (!q) return null;
     var re = globToRegExp(q);
-    return modelOrder.filter(function (m) {
+    return sourceModels().filter(function (m) {
       return re.test(String(m).toLowerCase());
     });
   }
@@ -244,9 +278,7 @@
 
   function visibleRows() {
     var rows = allRows.filter(function (r) {
-      if (!isSuccessful(r)) return false;
-      if (r.local && state.source === 'Provider') return false;
-      if (!r.local && state.source === 'Local') return false;
+      if (!isSuccessful(r) || !inSource(r)) return false;
       if (!modelSelected(r)) return false;
       return true;
     });
@@ -445,10 +477,18 @@
       pinned = null;
       if (summaryEl) {
         var q = state.search.trim();
-        var noneMatch = q && searchMatches() && searchMatches().length === 0;
-        summaryEl.textContent = noneMatch
-          ? 'No model matches search "' + q + '".'
-          : 'No runs match the current filters.';
+        var matches = searchMatches();
+        if (q && matches && matches.length === 0) {
+          summaryEl.textContent = 'No model matches search "' + q + '".';
+        } else if (state.models === 'NONE') {
+          summaryEl.textContent = 'No models selected.';
+        } else if (state.models && state.models.split(',').filter(function (m) {
+          return sourceModels().indexOf(m) === -1;
+        }).length > 0) {
+          summaryEl.textContent = 'Selected models are not present in this source.';
+        } else {
+          summaryEl.textContent = 'No runs match the current filters.';
+        }
       }
       syncControls();
       renderChips();
@@ -591,19 +631,21 @@
     // Total successful runs within the current source scope (before the
     // model selection and top-N limit) — so "of N" is not misleading.
     var scopeTotal = allRows.filter(function (r) {
-      if (!isSuccessful(r)) return false;
-      if (r.local && state.source === 'Provider') return false;
-      if (!r.local && state.source === 'Local') return false;
-      return true;
+      return isSuccessful(r) && inSource(r);
     }).length;
+    var models = sourceModels();
     var sel = effectiveSelection();
-    var selectedCount = sel === null ? modelOrder.length : sel.length;
+    // Count selections among the models visible in this source, so a manual
+    // selection left over from another source doesn't inflate "of N".
+    var selectedCount = sel === null ? models.length : sel.filter(function (m) {
+      return models.indexOf(m) !== -1;
+    }).length;
     var q = state.search.trim();
     var text = 'Showing ' + rows.length + ' of ' + scopeTotal + ' successful runs (' + scope;
-    if (q) text += '; ' + selectedCount + ' of ' + modelOrder.length + ' models match search "' + q + '"';
+    if (q) text += '; ' + selectedCount + ' of ' + models.length + ' models match search "' + q + '"';
     else if (state.models === 'NONE') text += '; no models selected';
-    else if (state.models) text += '; ' + selectedCount + ' of ' + modelOrder.length + ' models';
-    else text += '; all ' + modelOrder.length + ' models';
+    else if (state.models) text += '; ' + selectedCount + ' of ' + models.length + ' models';
+    else text += '; all ' + models.length + ' models';
     text += ').';
     if (effectiveSelection() === null && state.top !== 'all') text += ' Least context first.';
     summaryEl.textContent = text;
@@ -617,15 +659,16 @@
   // keyboard focus on the chips survives unrelated re-draws.
   function renderChips() {
     if (!chipsEl) return;
+    var models = sourceModels();
     var sel = effectiveSelection();
     var selKey = sel === null ? '*' : sel.join(',');
-    var sig = state.search + '|' + selKey + '|' + modelOrder.join(',');
+    var sig = state.search + '|' + selKey + '|' + models.join(',');
     if (sig === chipsSig) return;
     chipsSig = sig;
 
     var matches = searchMatches();
     var bySearch = !!matches;
-    var list = bySearch ? matches : modelOrder.slice();
+    var list = bySearch ? matches : models.slice();
     var isActive = function (m) { return sel === null || sel.indexOf(m) !== -1; };
 
     var html = list.map(function (m) {
@@ -644,7 +687,7 @@
     if (searchCountEl) {
       var q = state.search.trim();
       searchCountEl.textContent = bySearch
-        ? list.length + ' of ' + modelOrder.length + ' models match' + (q ? ' "' + q + '"' : '')
+        ? list.length + ' of ' + models.length + ' models match' + (q ? ' "' + q + '"' : '')
         : '';
     }
     if (searchClearEl) searchClearEl.hidden = !bySearch;
@@ -661,14 +704,18 @@
         state.search = '';
         state.searchSaved = null;
         if (searchInput) searchInput.value = '';
-        // From "all": start from everything; from "none": start from nothing;
-        // otherwise start from the current explicit selection.
-        var sel = state.models === '' ? modelOrder.slice()
-          : (state.models === 'NONE' ? [] : state.models.split(','));
+        // From "all": start from the source's models; from "none": start from
+        // nothing; otherwise start from the current explicit selection, pruned
+        // to models that still exist in this source (a selection built in one
+        // source can stale-out once the source changes).
+        var base = sourceModels();
+        var sel = state.models === '' ? base.slice()
+          : (state.models === 'NONE' ? []
+            : state.models.split(',').filter(function (x) { return base.indexOf(x) !== -1; }));
         var i = sel.indexOf(m);
         if (i === -1) sel.push(m);
         else sel.splice(i, 1);
-        state.models = sel.length === modelOrder.length ? ''
+        state.models = sel.length === base.length ? ''
           : (sel.length === 0 ? 'NONE' : sel.join(','));
         syncControls();
         draw();
@@ -798,6 +845,10 @@
   sourceBtns.forEach(function (btn) {
     btn.addEventListener('click', function () {
       state.source = btn.getAttribute('data-source');
+      // Drop any explicit selection that doesn't exist in the new source, so
+      // a stale pick from another source can't leave the chart blank or skew
+      // counts. (A live wildcard search overrides selection anyway.)
+      if (!state.search) pruneSelection(sourceModels());
       syncControls();
       draw();
     });
