@@ -1,13 +1,44 @@
 (function () {
   'use strict';
 
-  // Loads data/eval-results.md and renders it as HTML. Used by
-  // evaluation-results.html only.
+  // Loads data/eval-results.md and renders it as HTML. Also adds a filter
+  // bar (search, status filter, sort) so the growing results stay easy to
+  // search. Used by evaluation-results.html only.
   var RESULTS_PATH = 'data/eval-results.md';
 
   var statusEl = document.getElementById('results-status');
   var contentEl = document.getElementById('results-content');
   var retryEl = document.getElementById('results-retry');
+  var controlsEl = document.getElementById('results-controls');
+
+  // Filter/sort state, rebuilt fresh on every load.
+  var state = {
+    query: '',
+    filter: 'all', // all | passed | failed | over
+    sort: 'newest'
+  };
+
+  // One entry per rendered table: { el, heads:[], rows:[{tr,data,text}] }
+  var sets = [];
+
+  // Normalized column keys (lowercase, punctuation/space stripped).
+  var C = {
+    model: 'model',
+    notes: 'notes',
+    date: 'date',
+    duration: 'duration',
+    context: 'totalcontextused',
+    turns: 'turns',
+    limit: 'limit',
+    exceeded: 'exceeded',
+    exit: 'exit',
+    passed: 'passedtests',
+    failed: 'failedtests'
+  };
+
+  function normKey(s) {
+    return String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  }
 
   function setStatus(text) {
     if (!statusEl) return;
@@ -39,9 +70,6 @@
         if (/exceeded/i.test(th.textContent) && td.textContent.trim().toLowerCase() === 'yes') {
           td.classList.add('over');
         }
-        // Exit code is success only when it is exactly 0; any other value
-        // (non-zero integer, signal number, or an unknown marker like ?)
-        // counts as failure. Empty cells are left alone.
         if (/^exit/i.test(th.textContent) && td.textContent.trim() !== '') {
           td.classList.add(td.textContent.trim() === '0' ? 'exit-ok' : 'exit-fail');
         }
@@ -55,6 +83,221 @@
     });
   }
 
+  // Parse each rendered table into structured rows for filtering/sorting.
+  function buildSets() {
+    sets = [];
+    Array.prototype.forEach.call(contentEl.querySelectorAll('table'), function (table) {
+      var heads = Array.prototype.map.call(table.querySelectorAll('thead th'), function (th) {
+        return th.textContent.trim();
+      });
+      var rows = [];
+      Array.prototype.forEach.call(table.querySelectorAll('tbody tr'), function (tr) {
+        var data = {};
+        var text = '';
+        Array.prototype.forEach.call(tr.querySelectorAll('td'), function (td, i) {
+          var name = heads[i];
+          if (!name) return;
+          var key = normKey(name);
+          data[key] = td.textContent.trim();
+          text += ' ' + td.textContent.trim();
+        });
+        rows.push({ tr: tr, data: data, text: text.toLowerCase() });
+      });
+      sets.push({ heads: heads, rows: rows });
+    });
+  }
+
+  // --- Sorting ---------------------------------------------------------
+  function toDate(s) {
+    var m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);
+    if (!m) return 0;
+    return Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]);
+  }
+  function toMs(s) {
+    var mt = String(s || '').match(/(\d+)m/);
+    var st = String(s || '').match(/(\d+)s/);
+    return (+(mt ? mt[1] : 0)) * 60000 + (+(st ? st[1] : 0)) * 1000;
+  }
+  function toNum(s) {
+    var v = parseInt(s, 10);
+    return isNaN(v) ? -1 : v;
+  }
+
+  function sortCompare(a, b) {
+    function desc(key) { return toNum(b.data[key]) - toNum(a.data[key]); }
+    switch (state.sort) {
+      case 'oldest': return toDate(a.data[C.date]) - toDate(b.data[C.date]);
+      case 'context-desc': return desc(C.context);
+      case 'context-asc': return -desc(C.context);
+      case 'duration-desc': return toMs(b.data[C.duration]) - toMs(a.data[C.duration]);
+      case 'duration-asc': return -toMs(b.data[C.duration]) + toMs(a.data[C.duration]);
+      case 'turns-desc': return desc(C.turns);
+      case 'passed-asc': return toNum(a.data[C.passed]) - toNum(b.data[C.passed]);
+      default: return toDate(b.data[C.date]) - toDate(a.data[C.date]); // newest
+    }
+  }
+
+  function applySort() {
+    sets.forEach(function (set) {
+      if (!set.rows.length) return;
+      var tbody = set.rows[0].tr.parentNode;
+      var order = set.rows.map(function (_, i) { return i; });
+      order.sort(function (i, j) {
+        var diff = sortCompare(set.rows[i], set.rows[j]);
+        return diff !== 0 ? diff : i - j; // stable for equal keys
+      });
+      order.forEach(function (i) { tbody.appendChild(set.rows[i].tr); });
+    });
+  }
+
+  // --- Filtering ---------------------------------------------------------
+  function rowVisible(row) {
+    if (state.query && row.text.indexOf(state.query) === -1) return false;
+    var passed = row.data[C.exit] === '0' && row.data[C.failed] === '0';
+    switch (state.filter) {
+      case 'passed': return passed;
+      case 'failed': return !passed;
+      case 'over': return /yes/i.test(row.data[C.exceeded] || '');
+      default: return true;
+    }
+  }
+
+  function apply() {
+    var total = 0, shown = 0;
+    sets.forEach(function (set) {
+      set.rows.forEach(function (row) {
+        total++;
+        var on = rowVisible(row);
+        row.tr.style.display = on ? '' : 'none';
+        if (on) shown++;
+      });
+    });
+    if (shown === 0 && total > 0) {
+      setStatus('No runs match your filters \u2014 clear or adjust them to see all ' + total + '.');
+    } else {
+      setStatus(shown + ' of ' + total + ' runs shown');
+    }
+  }
+
+  // --- Controls ---------------------------------------------------------
+  var searchInput, sortSelect, clearBtn, segBtns = [];
+
+  function buildControls(el) {
+    // Search
+    var searchWrap = document.createElement('label');
+    searchWrap.className = 'results-field';
+    var searchLabel = document.createElement('span');
+    searchLabel.className = 'results-field__label';
+    searchLabel.textContent = 'Search';
+    searchLabel.setAttribute('aria-hidden', 'true');
+    searchWrap.appendChild(searchLabel);
+    searchInput = document.createElement('input');
+    searchInput.type = 'search';
+    searchInput.className = 'results-search';
+    searchInput.placeholder = 'Model, notes, date\u2026';
+    searchInput.setAttribute('aria-label', 'Search evaluation runs');
+    searchWrap.appendChild(searchInput);
+    el.appendChild(searchWrap);
+
+    // Status filter (segmented)
+    var filterWrap = document.createElement('div');
+    filterWrap.className = 'results-field';
+    var filterLabel = document.createElement('span');
+    filterLabel.className = 'results-field__label';
+    filterLabel.textContent = 'Status';
+    filterLabel.setAttribute('aria-hidden', 'true');
+    filterWrap.appendChild(filterLabel);
+    var seg = document.createElement('div');
+    seg.className = 'seg';
+    seg.setAttribute('role', 'group');
+    seg.setAttribute('aria-label', 'Filter by run status');
+    [
+      ['all', 'All'],
+      ['passed', 'Passed'],
+      ['failed', 'Failed'],
+      ['over', 'Over limit']
+    ].forEach(function (opt) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'seg-btn';
+      b.textContent = opt[1];
+      b.setAttribute('aria-pressed', opt[0] === state.filter ? 'true' : 'false');
+      if (opt[0] === state.filter) b.classList.add('is-active');
+      b.addEventListener('click', function () {
+        state.filter = opt[0];
+        segBtns.forEach(function (sb) {
+          sb.btn.setAttribute('aria-pressed', String(sb.id === state.filter));
+          sb.btn.classList.toggle('is-active', sb.id === state.filter);
+        });
+        apply();
+      });
+      segBtns.push({ id: opt[0], btn: b });
+      seg.appendChild(b);
+    });
+    filterWrap.appendChild(seg);
+    el.appendChild(filterWrap);
+
+    // Sort
+    var sortWrap = document.createElement('label');
+    sortWrap.className = 'results-field';
+    var sortLabel = document.createElement('span');
+    sortLabel.className = 'results-field__label';
+    sortLabel.textContent = 'Sort';
+    sortLabel.setAttribute('aria-hidden', 'true');
+    sortWrap.appendChild(sortLabel);
+    sortSelect = document.createElement('select');
+    sortSelect.className = 'results-select';
+    sortSelect.setAttribute('aria-label', 'Sort evaluation runs');
+    [
+      ['newest', 'Newest first'],
+      ['oldest', 'Oldest first'],
+      ['context-desc', 'Context: high to low'],
+      ['context-asc', 'Context: low to high'],
+      ['duration-desc', 'Duration: long to short'],
+      ['duration-asc', 'Duration: short to long'],
+      ['turns-desc', 'Turns: high to low'],
+      ['passed-asc', 'Passing: fewest']
+    ].forEach(function (o) {
+      var opt = document.createElement('option');
+      opt.value = o[0];
+      opt.textContent = o[1];
+      sortSelect.appendChild(opt);
+    });
+    sortSelect.value = state.sort;
+    sortSelect.addEventListener('change', function () {
+      state.sort = sortSelect.value;
+      applySort();
+      apply();
+    });
+    sortWrap.appendChild(sortSelect);
+    el.appendChild(sortWrap);
+
+    // Clear
+    clearBtn = document.createElement('button');
+    clearBtn.type = 'button';
+    clearBtn.className = 'results-clear';
+    clearBtn.textContent = 'Clear filters';
+    clearBtn.addEventListener('click', function () {
+      state.query = '';
+      state.filter = 'all';
+      state.sort = 'newest';
+      if (searchInput) searchInput.value = '';
+      if (sortSelect) sortSelect.value = state.sort;
+      segBtns.forEach(function (sb) {
+        sb.btn.setAttribute('aria-pressed', String(sb.id === 'all'));
+        sb.btn.classList.toggle('is-active', sb.id === 'all');
+      });
+      applySort();
+      apply();
+    });
+    el.appendChild(clearBtn);
+
+    searchInput.addEventListener('input', function () {
+      state.query = searchInput.value.trim().toLowerCase();
+      apply();
+    });
+  }
+
   function render(md) {
     if (typeof marked === 'undefined') {
       showError('The markdown renderer failed to load. Check your connection and reload the page.');
@@ -62,13 +305,20 @@
     }
     contentEl.innerHTML = marked.parse(md);
     Array.prototype.forEach.call(contentEl.querySelectorAll('table'), polishTable);
-    var runs = contentEl.querySelectorAll('tbody tr').length;
-    setStatus('Loaded ' + runs + (runs === 1 ? ' run' : ' runs') + ' from data/eval-results.md.');
+    buildSets();
+    if (controlsEl) {
+      controlsEl.innerHTML = '';
+      buildControls(controlsEl);
+      controlsEl.hidden = false;
+    }
+    applySort();
+    apply();
   }
 
   function load() {
-    setStatus('Loading data/eval-results.md…');
+    setStatus('Loading data/eval-results.md\u2026');
     if (retryEl) retryEl.hidden = true;
+    if (controlsEl) controlsEl.hidden = true;
     fetch(RESULTS_PATH, { cache: 'no-store' })
       .then(function (res) {
         if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -78,7 +328,7 @@
       .catch(function () {
         showError(
           'Couldn\u2019t load the results file (data/eval-results.md). ' +
-          'It is generated by agent-evaluation/run-eval.sh — run an evaluation first, then reload.'
+          'It is generated by agent-evaluation/run-eval.sh \u2014 run an evaluation first, then reload.'
         );
       });
   }

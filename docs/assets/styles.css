@@ -422,6 +422,71 @@ a:focus-visible {
 .retry:hover { background: var(--carbon); color: #fff; }
 .retry:focus-visible { outline: 2px solid var(--carbon); outline-offset: 2px; }
 
+.results-controls[hidden] { display: none; }
+
+/* Filter/search bar above the results tables */
+.results-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.5rem 1.5rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--carbon);
+  background: var(--zebra);
+  border-radius: 2px;
+  margin: 0 0 1.25rem;
+}
+.results-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.results-field__label {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--carbon-soft);
+}
+.results-search {
+  width: 240px;
+  max-width: 100%;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--rule-strong);
+  border-radius: 2px;
+  padding: 0.45rem 0.7rem;
+}
+.results-search::placeholder { color: var(--mist); }
+.results-search:focus-visible { outline: 2px solid var(--carbon); outline-offset: 1px; }
+.results-select {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--rule-strong);
+  border-radius: 2px;
+  padding: 0.45rem 2rem 0.45rem 0.7rem;
+  max-width: min(320px, 60vw);
+}
+.results-select:focus-visible { outline: 2px solid var(--carbon); outline-offset: 1px; }
+.results-clear {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--carbon);
+  background: transparent;
+  border: 1px solid var(--rule-strong);
+  border-radius: 2px;
+  padding: 0.3rem 0.7rem;
+  cursor: pointer;
+  align-self: flex-end;
+}
+.results-clear:hover { background: var(--zebra); }
+.results-clear:focus-visible { outline: 2px solid var(--carbon); outline-offset: 2px; }
+
 /* ============================================================
    Rendered markdown
    ============================================================ */
@@ -546,6 +611,8 @@ a:focus-visible {
   .specs { padding: 1.25rem 1.25rem 1.5rem; }
   .specs__grid { grid-template-columns: 1fr; }
   .page-footer { flex-direction: column; }
+  .results-controls { flex-direction: column; align-items: stretch; }
+  .results-search, .results-select { width: 100%; }
 }
 /* ============================================================
    Visualisation — evaluation chart page
