@@ -30,6 +30,9 @@ coding-agent-resources/
 
 Run the installation script to symlink all resources into pi's agent directory:
 
+The script creates `~/.pi/agent` (and each `agents/`, `extensions/`, `prompts/`,
+`skills/` category directory) if missing, so it works on a fresh pi install.
+
 ```bash
 ./install_for_pi.sh
 ```

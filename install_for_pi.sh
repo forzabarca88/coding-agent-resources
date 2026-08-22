@@ -3,6 +3,8 @@ set -euo pipefail
 
 # install_for_pi.sh
 # Symlinks agents, extensions, prompts, and skills from this repo into pi (~/.pi/agent).
+# Creates ~/.pi/agent and each category directory if they don't already exist,
+# so the script works on a fresh pi install.
 # Removes any existing file/dir at the destination that would conflict.
 #
 # Works with any contents — new files or directories added to the repo are
@@ -39,7 +41,12 @@ install_item() {
   local category="$2"  # e.g. "agents", "extensions", "prompts", "skills"
   local name="$3"      # basename of the item (file or directory)
 
-  local dest="$PI_DIR/$category/$name"
+  local dest_dir="$PI_DIR/$category"
+  if [ ! -d "$dest_dir" ]; then
+    $DRY_RUN && echo "  [mkdir]  $dest_dir" || mkdir -p "$dest_dir"
+  fi
+
+  local dest="$dest_dir/$name"
 
   if [ -e "$dest" ] || [ -L "$dest" ]; then
     $DRY_RUN && echo "  [remove] $dest" || rm -rf "$dest"
