@@ -162,6 +162,9 @@ a:focus-visible {
   color: var(--mist);
   max-width: 62ch;
 }
+.masthead__subhead p { margin: 1em 0; }
+.masthead__subhead p:first-child { margin-top: 0; }
+.masthead__subhead p:last-child { margin-bottom: 0; }
 .masthead__subhead a { color: var(--carbon); }
 
 /* ============================================================
@@ -198,9 +201,10 @@ a:focus-visible {
   border-radius: 2px;
   color: var(--carbon);
 }
-.intro .intro__note {
+/* Intro content — paragraphs and callout notes rendered from content/evaluation-results/intro.md */
+.intro__md > blockquote {
   max-width: 62ch;
-  margin-bottom: 0.75rem;
+  margin: 0 0 0.75rem;
   padding: 0.9rem 1.1rem;
   border: 1px solid var(--rule);
   border-left: 3px solid var(--carbon);
@@ -208,6 +212,10 @@ a:focus-visible {
   background: var(--zebra);
   font-size: 0.9375rem;
   line-height: 1.6;
+}
+.intro__md > blockquote p {
+  margin: 0;
+  max-width: none;
 }
 
 /* ============================================================
@@ -233,7 +241,15 @@ a:focus-visible {
   letter-spacing: 0.06em;
   margin-bottom: 1rem;
 }
-.specs__machine {
+/* Specs content — rendered from content/evaluation-results/specs.md: intro note, one
+   ### machine heading + two-column Spec/Value table each, then the run command. */
+.specs__md p {
+  max-width: 62ch;
+  margin-bottom: 1.25rem;
+  font-size: 1rem;
+  line-height: 1.65;
+}
+.specs__md h3, .specs__md h4 {
   font-family: var(--font-mono);
   font-size: 0.6875rem;
   font-weight: 400;
@@ -242,51 +258,40 @@ a:focus-visible {
   letter-spacing: 0.1em;
   margin: 1.25rem 0 0.5rem;
 }
-.specs__machine:first-of-type { margin-top: 0; }
-.specs .specs__note {
-  max-width: 62ch;
-  margin-bottom: 1.25rem;
-  font-size: 1rem;
-  line-height: 1.65;
-}
-.specs .specs__note--run { margin-bottom: 0.75rem; }
-.specs__grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1px;
-  background: var(--rule);
+.specs__md h3:first-of-type, .specs__md h4:first-of-type { margin-top: 0; }
+.specs__md table {
+  width: 100%;
+  border-collapse: collapse;
   border: 1px solid var(--rule);
   margin-bottom: 1.5rem;
 }
-.specs__cell {
-  background: var(--paper);
+.specs__md thead { display: none; } /* the two-column table is a label/value grid, like the old <dl> */
+.specs__md tbody td {
   padding: 0.9rem 1.1rem;
+  border: 0;
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  color: var(--ink);
+  vertical-align: top;
 }
-.specs__cell dt {
+.specs__md tbody tr:not(:last-child) td { border-bottom: 1px solid var(--rule); }
+.specs__md tbody td:first-child {
   font-family: var(--font-mono);
   font-size: 0.625rem;
   font-weight: 400;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--carbon-soft);
-  margin-bottom: 0.35rem;
+  white-space: nowrap;
+  border-right: 1px solid var(--rule); /* vertical divider between label and value columns */
 }
-.specs__cell dd {
-  font-family: var(--font-mono);
-  font-size: 0.875rem;
-  color: var(--ink);
-}
-.specs__detail {
-  color: var(--mist);
-  font-size: 0.8125em;
-}
-.specs__cell dd code {
+.specs__md tbody td code {
   color: var(--carbon);
   background: var(--zebra);
   padding: 0.05em 0.35em;
   border-radius: 2px;
 }
-.specs__command {
+.specs__md pre {
   font-family: var(--font-mono);
   font-size: 0.8125rem;
   line-height: 1.5;
@@ -294,10 +299,11 @@ a:focus-visible {
   background: var(--ink);
   padding: 0.9rem 1.1rem;
   border-radius: 2px;
-  white-space: nowrap;
+  white-space: pre;
   overflow-x: auto;
+  margin: 0.75rem 0 0;
 }
-.specs__command::before {
+.specs__md pre::before {
   content: "$ ";
   color: var(--carbon-bright);
 }
@@ -391,6 +397,13 @@ a:focus-visible {
   background: transparent;
   color: var(--mist);
   border: 1px solid var(--rule-strong);
+}
+
+/* Inline content loading failures (missing/renamed content file) */
+.content-error {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--red);
 }
 
 /* ============================================================
@@ -609,7 +622,7 @@ a:focus-visible {
   .page-index__meta { justify-self: start; }
   .md thead th, .md tbody td { padding: 0.4rem 0.5rem; font-size: 0.75rem; }
   .specs { padding: 1.25rem 1.25rem 1.5rem; }
-  .specs__grid { grid-template-columns: 1fr; }
+  .specs__md tbody td { padding: 0.7rem 0.75rem; }
   .page-footer { flex-direction: column; }
   .results-controls { flex-direction: column; align-items: stretch; }
   .results-search, .results-select { width: 100%; }
@@ -621,7 +634,7 @@ a:focus-visible {
   padding: 2.25rem 0;
   border-bottom: 1px solid var(--rule);
 }
-.viz__note {
+.viz__md p {
   max-width: 72ch;
   margin-bottom: 1.5rem;
   color: var(--mist);
@@ -931,9 +944,6 @@ a:focus-visible {
 .model-search-clear:hover { background: var(--zebra); }
 .model-search-clear:focus-visible { outline: 2px solid var(--carbon); outline-offset: 2px; }
 
-/* ============================================================
-   Responsive — evaluation chart page
-   ============================================================ */
 /* ============================================================
    Responsive — evaluation chart page
    ============================================================ */

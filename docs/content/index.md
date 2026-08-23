@@ -1,0 +1,1 @@
+Data for pi coding agent, published in `docs/` as standalone pages within [https://github.com/forzabarca88/coding-agent-resources](https://github.com/forzabarca88/coding-agent-resources).
