@@ -30,14 +30,23 @@ coding-agent-resources/
 │   ├── scout.md              # Performs fast codebase reconnaissance and returns compressed context
 │   └── worker.md             # Executes implementation tasks with full tool access
 ├── docs/
-│   ├── index.html            # Documentation site landing page (index of pages)
-│   ├── evaluation-results.html # Evaluation results page (fetches data live)
+│   ├── AGENTS.md             # Content-editing pattern for the docs site (markdown content files)
+│   ├── index.html            # Docs landing page shell (prose loaded from content/)
+│   ├── evaluation-results.html # Eval results page shell (renders data/eval-results.md live)
+│   ├── visualization.html    # Eval chart page shell (plots successful runs as a scatter chart)
+│   ├── content/              # Human-edited markdown — every block of written content (see AGENTS.md)
+│   │   ├── index.md          # Index page subtitle
+│   │   ├── pages.md          # Published-page registry rendered by index.html
+│   │   ├── evaluation-results/ # Results page content (masthead, intro, note, machine specs)
+│   │   └── visualization/    # Chart page content (masthead, reading-the-chart note)
 │   ├── data/
 │   │   └── eval-results.md   # Single canonical results file; run-eval.sh appends runs here
 │   └── assets/
 │       ├── styles.css        # Site stylesheet
+│       ├── content.js        # Fetches content/*.md into [data-content] slots and renders with marked
 │       ├── site.js           # Shared site behaviour (active page in nav)
-│       └── results.js        # Fetches data/eval-results.md and renders it as HTML
+│       ├── results.js        # Fetches data/eval-results.md and renders it as HTML
+│       └── visualization.js  # Renders eval results as an interactive scatter chart
 ├── extensions/
 │   ├── README.md             # Extensions overview
 │   ├── auto-recover.ts       # Detects unexecuted tool calls and prompts model to continue

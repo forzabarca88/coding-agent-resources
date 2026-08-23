@@ -13,6 +13,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Fragment+Mono:ital@0;1&family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/styles.css">
   <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js" defer></script>
+  <script src="assets/content.js" defer></script>
   <script src="assets/site.js" defer></script>
   <script src="assets/visualization.js" defer></script>
 </head>
@@ -36,45 +37,20 @@
     </header>
 
     <main id="main">
-      <!-- Masthead -->
+      <!-- Masthead (prose: content/visualization/masthead.md) -->
       <header class="masthead">
         <p class="eyebrow">Coding Agent Resources · Agent Evaluation</p>
         <h1 class="masthead__title">Evaluation chart</h1>
-        <p class="masthead__subhead">
-          Every successful evaluation run plotted as a point — total context used
-          against turns — coloured by model. Rendered live from
-          <a href="data/eval-results.md">data/eval-results.md</a>.
-        </p>
+        <div class="masthead__subhead" data-content="content/visualization/masthead.md"></div>
       </header>
 
-      <!-- Chart -->
+      <!-- Chart (prose: content/visualization/note.md) -->
       <section class="viz" aria-labelledby="viz-heading">
         <h2 id="viz-heading" class="intro__heading">
           <span class="chip">Read</span>
           Reading the chart
         </h2>
-        <p class="viz__note">
-          Each point is one successful run (exit code 0). Total Context Used is the
-          cumulative context consumed during the run; Turns is the number of agent turns
-          taken — the less of each, the better. The dashed lines split the plot into four
-          quadrants at the axis midpoints: the bottom-left (least context, fewest turns) is
-          shaded strongest as the best region, the two adjacent quadrants step down, and
-          the top-right (most context, most turns) is left faintest. The 25 runs with the
-          least context are shown by default (ranked by context alone); use the filters
-          above to change the selection — an active search or model selection shows all
-          matching runs, so the default 25-run limit no longer applies. The search accepts
-          <code>*</code> and <code>?</code> wildcards and filters to exactly the runs that
-          match — the
-          pattern is tested against each run's model name and Notes, so
-          <code>*qwen*</code> selects every qwen run, <code>openrouter/*</code> every
-          provider run, and a note fragment like <code>Q4</code> every run whose notes
-          mention Q4. Searching <code>Q2_K_XL</code> therefore returns only the runs
-          quantised at Q2_K_XL, not every run of the same model.
-          Cloud results are labelled <em>Provider</em>; runs on the local test machines are
-          labelled <em>Local</em> — see the machine specs on
-          <a href="evaluation-results.html">Evaluation results</a>. Hover or click a point
-          for its full record.
-        </p>
+        <div class="viz__md" data-content="content/visualization/note.md"></div>
 
         <!-- Controls -->
         <div class="viz-controls" role="group" aria-label="Chart filters">

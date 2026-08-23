@@ -13,6 +13,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Fragment+Mono:ital@0;1&family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/styles.css">
   <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js" defer></script>
+  <script src="assets/content.js" defer></script>
   <script src="assets/site.js" defer></script>
   <script src="assets/results.js" defer></script>
 </head>
@@ -36,114 +37,27 @@
     </header>
 
     <main id="main">
-      <!-- Masthead -->
+      <!-- Masthead (prose: content/evaluation-results/masthead.md) -->
       <header class="masthead">
         <p class="eyebrow">Coding Agent Resources · Agent Evaluation</p>
         <h1 class="masthead__title">Evaluation results</h1>
-        <p class="masthead__subhead">
-          Rendered live from <a href="data/eval-results.md">data/eval-results.md</a>.
-          
-        </p>
+        <div class="masthead__subhead" data-content="content/evaluation-results/masthead.md"></div>
       </header>
 
-      <!-- Introduction -->
+      <!-- Introduction (prose: content/evaluation-results/intro.md) -->
       <section class="intro" aria-labelledby="intro-heading">
         <h2 id="intro-heading" class="intro__heading">
           <span class="chip">Data</span>
           Introduction
         </h2>
-        <p>
-          This page publishes the results of the evaluation harness in
-          <code>agent-evaluation/</code>. The harness sends a coding agent at a task within <a href="https://github.com/forzabarca88/coding-agent-resources/tree/main/agent-evaluation">https://github.com/forzabarca88/coding-agent-resources/tree/main/agent-evaluation</a> and logs how
-          it performed — how long it took, how much context it consumed, and whether its work
-          passed the test suite. The default output token limit was set to 64000 unless specified otherwise.
-        </p>
-        <p class="intro__note">
-          <strong>Note on Total Context Used</strong> (observed 2026-08-22): per-turn totals are prompt + completion as reported by the provider, so a decrease is only possible if the provider under-reports the prompt. As of this date, OpenRouter's <code>gpt-5.6-luna</code> drops the previous assistant completion from the next turn's usage (13 per-turn drops in one 98-turn session), while <code>deepseek-v4-flash</code> reports the full prompt every turn (0 drops; totals strictly increasing). Treat the column as provider-reported and not directly comparable across providers — re-verify this behaviour before cross-provider token comparisons, as it may change.
-        </p>
+        <div class="intro__md" data-content="content/evaluation-results/intro.md"></div>
+        <!-- Machine specs (prose: content/evaluation-results/specs.md) -->
         <div class="specs">
           <h3 class="specs__heading">
             <span class="chip">Hardware</span>
             Test machines
           </h3>
-          <p class="specs__note">
-            The results contain some cloud model (Openrouter, Mistral, etc) evaluation results for reference. For the local models, the test machines have the following specs. Each machine is identified by the model reference prefix used in the results table (e.g. <code>lmstudio-jdcmedia/ornith-1.0-35b</code>).
-          </p>
-          <h4 class="specs__machine">Machine 1</h4>
-          <dl class="specs__grid">
-            <div class="specs__cell">
-              <dt>Model reference</dt>
-              <dd><code>lmstudio-jdcmedia</code></dd>
-            </div>
-            <div class="specs__cell">
-              <dt>CPU</dt>
-              <dd>Intel Core i7-4770</dd>
-            </div>
-            <div class="specs__cell">
-              <dt>RAM</dt>
-              <dd>16 GB DDR3</dd>
-            </div>
-            <div class="specs__cell">
-              <dt>GPU</dt>
-              <dd>AMD Radeon RX 9060 XT (16GB)</dd>
-            </div>
-            <div class="specs__cell">
-              <dt>Backend</dt>
-              <dd>ROCm</dd>
-            </div>
-            <div class="specs__cell">
-              <dt>OS</dt>
-              <dd>Windows 10</dd>
-            </div>
-            <div class="specs__cell">
-              <dt>Harness</dt>
-              <dd>pi running in WSL</dd>
-            </div>
-            <div class="specs__cell">
-              <dt>API Server</dt>
-              <dd>LM Studio</dd>
-            </div>
-          </dl>
-          <h4 class="specs__machine">Machine 2</h4>
-          <dl class="specs__grid">
-            <div class="specs__cell">
-              <dt>Model reference</dt>
-              <dd><code>lmstudio-jdc-ws</code></dd>
-            </div>
-            <div class="specs__cell">
-              <dt>CPU</dt>
-              <dd>Xeon W-2235</dd>
-            </div>
-            <div class="specs__cell">
-              <dt>RAM</dt>
-              <dd>128 GB DDR4 (quad-channel)</dd>
-            </div>
-            <div class="specs__cell">
-              <dt>GPU</dt>
-              <dd>AMD Radeon RX 9060 XT (16GB) + Nvidia RTX 3060 TI (8GB)</dd>
-            </div>
-            <div class="specs__cell">
-              <dt>Backend</dt>
-              <dd>Vulkan</dd>
-            </div>
-            <div class="specs__cell">
-              <dt>OS</dt>
-              <dd>Windows 11 Pro</dd>
-            </div>
-            <div class="specs__cell">
-              <dt>Harness</dt>
-              <dd>pi running in WSL</dd>
-            </div>
-            <div class="specs__cell">
-              <dt>API Server</dt>
-              <dd>LM Studio</dd>
-            </div>
-          </dl>
-          <p class="specs__note specs__note--run">
-            If you wish to run the evaluation yourself to compare results, simply clone
-            <a href="https://github.com/forzabarca88/coding-agent-resources">the repo</a> and run the following after updating your pi "models.json" file:
-          </p>
-          <pre class="specs__command">cd agent-evaluation; ./run-eval.sh --model &lt;pi provider name&gt;/&lt;pi model name&gt;</pre>
+          <div class="specs__md" data-content="content/evaluation-results/specs.md"></div>
         </div>
       </section>
 

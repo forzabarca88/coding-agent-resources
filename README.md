@@ -99,11 +99,17 @@ Skills are automatically available when symlinked. Reference them by name in age
 
 ## Documentation Site
 
-The `docs/` directory contains a static documentation site — plain HTML/CSS/JS with no build step. It is organised as an index page (`index.html`) that lists every published page as a ledger-style entry; each page lives in its own HTML file at the root of `docs/`. To add a page: create the HTML file, add one entry to the index list, and add the page to the site nav and footer (the small link lists shared by every page).
+The `docs/` directory contains a static documentation site — plain HTML/CSS/JS with no build step, publishable straight from the `docs/` folder on GitHub Pages. The HTML files are thin shells: every block of written content (paragraphs, notes, machine specs, the index's page blurbs) lives as markdown under `docs/content/`, one file per block. Pages fetch their content files at runtime and render them with `marked` (loaded from a CDN), so a wording change is just an edit to a `.md` file — nothing to build, nothing to redeploy.
 
-`docs/data/eval-results.md` is the **single canonical results file**. `agent-evaluation/run-eval.sh` appends each run to it directly — there is no other copy anywhere.
+How it works:
 
-Shared styling lives in `assets/styles.css`; `assets/site.js` handles common behaviour (marking the current page in the site nav), while page-specific scripts such as `assets/results.js` are loaded only on the page that needs them.
+- A content slot is any element with a `data-content="content/<path>.md"` attribute; `assets/content.js` fetches the file and replaces the slot's contents with the rendered markdown.
+- `index.html`'s published-page list is generated from `content/pages.md` (via `data-content-mode="page-index"`), where each page is a `## [Title](page.html)` heading followed by one description paragraph.
+- HTML holds only structure and UI chrome — head metadata, nav/footer links, section headings and chips, filter controls. See `docs/AGENTS.md` for the full pattern.
+
+To change any wording, edit the matching file under `content/`; paths mirror the pages (`content/evaluation-results/specs.md`, `content/visualization/note.md`, …). To add a page: create the HTML shell with its `data-content` slots, add the content files, add the page to the site nav and footer on every page, and register it in `content/pages.md`.
+
+`docs/data/eval-results.md` is the **single canonical results file**. `agent-evaluation/run-eval.sh` appends each run to it directly — there is no other copy anywhere, and it is generated data, not prose, so it is never edited by hand.
 
 Serve it locally from the `docs/` folder (or the repository root — either works):
 
