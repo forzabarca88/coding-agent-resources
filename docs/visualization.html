@@ -46,8 +46,9 @@
 
       <!-- Compact sticky filter bar — shared by both charts. Stays pinned to
            the top of the viewport but stays slim (one row), so it never
-           blankets the charts: Source seg + a Models dropdown (search/chips
-           live in a dismissible popover) + the Runs select. -->
+           blankets the charts: a Source seg + a Models dropdown (search/chips
+           live in a dismissible popover). The Runs limit is chart-specific, so
+           it lives in a caption attached to the scatter section below, not here. -->
       <div class="viz-controls" role="group" aria-label="Chart filters">
         <div class="viz-bar">
           <span class="viz-bar__tag">Filters</span>
@@ -82,15 +83,6 @@
               <div class="model-chips" id="model-chips" role="group" aria-labelledby="models-label"></div>
             </div>
           </div>
-          <label class="viz-control viz-control--runs" for="top-filter">
-            <span class="viz-control__label">Runs</span>
-            <select id="top-filter" class="select">
-              <option value="25" selected>25 with least context</option>
-              <option value="15">15 with least context</option>
-              <option value="10">10 with least context</option>
-              <option value="all">All runs</option>
-            </select>
-          </label>
         </div>
       </div>
 
@@ -106,6 +98,24 @@
           Loading data/eval-results.md…
         </p>
         <button id="viz-retry" type="button" class="retry" hidden>Reload results</button>
+
+        <!-- Runs caption: the run limit belongs to the scatter chart only. It sits in a
+             caption band attached to this figure — not in the shared sticky filter bar — so it
+             is visibly specific to the first chart; the model breakdown below always shows every
+             matchable run and takes no limit. -->
+        <div class="viz-cap" aria-label="Scatter run limit">
+          <span class="viz-cap__tag" aria-hidden="true">Scatter</span>
+          <label class="viz-cap__field" for="top-filter">
+            <span class="viz-cap__label">show</span>
+            <select id="top-filter" class="select">
+              <option value="25" selected>25 with least context</option>
+              <option value="15">15 with least context</option>
+              <option value="10">10 with least context</option>
+              <option value="all">All runs</option>
+            </select>
+          </label>
+          <span class="viz-cap__scope">this chart only — the breakdown ignores this limit</span>
+        </div>
 
         <!-- Plot -->
         <div class="viz-plot">

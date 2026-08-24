@@ -770,6 +770,42 @@ a:focus-visible {
   padding-right: 0.2rem;
 }
 
+/* Runs caption — bands to the scatter figure (first chart) so the chart-specific run
+   limit is visibly attached to that plot rather than to the shared sticky filter
+   bar. The model breakdown below never applies this limit, so no such control lives
+   over there. */
+.viz-cap {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin: 0.6rem 0 0.5rem;
+}
+.viz-cap__tag {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--carbon-soft);
+}
+.viz-cap__field {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.viz-cap__label {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--carbon-soft);
+}
+.viz-cap__scope {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  color: var(--mist);
+}
+
 
 .viz-plot {
   position: relative;
