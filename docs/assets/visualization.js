@@ -115,20 +115,22 @@
     return n.toLocaleString('en-US');
   }
 
-  function niceStep(range, target) {
-    if (range <= 0) return 1;
-    var raw = range / target;
+  // Axis scale fitted to the data: pick a 1/2/5×10^n tick step for about
+  // `target` ticks across the data max, then set the axis end to the next
+  // multiple of that step. The last tick therefore always lands exactly on
+  // the axis boundary, and the scale sits as tight to the data as the step
+  // allows (e.g. data max 257, 4 target ticks -> step 100, end 300 — not
+  // end 500 with the last tick stranded at 400).
+  function niceAxis(max, target) {
+    if (!isFinite(max) || max <= 0) return { max: 1, step: 1 };
+    var raw = max / target;
     var mag = Math.pow(10, Math.floor(Math.log(raw) / Math.LN10));
     var norm = raw / mag;
-    return (norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10) * mag;
-  }
-
-  function niceCeil(max) {
-    if (!isFinite(max) || max <= 0) return 1;
-    var mag = Math.pow(10, Math.floor(Math.log(max) / Math.LN10));
-    var norm = max / mag;
-    var ceil = norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10;
-    return ceil * mag;
+    var step = (norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10) * mag;
+    // 1e-9 guard: absorb float error when max is already an exact multiple
+    // of step, so the end doesn't creep up one step past the data.
+    var top = Math.ceil(max / step - 1e-9) * step;
+    return { max: top, step: step };
   }
 
   function tickValues(max, step) {
@@ -138,6 +140,9 @@
   }
 
   function formatTick(v) {
+    // Round off float-accumulation artifacts from sub-unit tick steps
+    // (e.g. 0.4 + 0.2 -> 0.6000000000000001) before rendering.
+    v = Math.round(v * 1e6) / 1e6;
     if (v >= 1000) {
       var k = v / 1000;
       return (k % 1 === 0 ? String(k) : k.toFixed(1)) + 'k';
@@ -549,10 +554,12 @@
       if (r.turnsN > maxTurns) maxTurns = r.turnsN;
     });
 
-    var xMax = niceCeil(maxTokens);
-    var yMax = niceCeil(maxTurns);
-    var stepX = niceStep(xMax, 6);
-    var stepY = niceStep(yMax, 5);
+    var xAxis = niceAxis(maxTokens, 6);
+    var yAxis = niceAxis(maxTurns, 5);
+    var xMax = xAxis.max;
+    var stepX = xAxis.step;
+    var yMax = yAxis.max;
+    var stepY = yAxis.step;
     var xs = tickValues(xMax, stepX);
     var ys = tickValues(yMax, stepY);
 
@@ -601,7 +608,9 @@
     xs.forEach(function (v) {
       var px = x(v);
       out.push('<line class="grid-v" x1="' + px + '" y1="' + M.top + '" x2="' + px + '" y2="' + (M.top + plotH) + '"/>');
-      out.push('<text class="axis-label" x="' + px + '" y="' + (M.top + plotH + 24) + '">' + formatTick(v) + '</text>');
+      // Middle-anchored (like the breakdown axis) so the last tick — which
+      // always sits on the right plot edge — can't overrun the viewBox.
+      out.push('<text class="axis-label" x="' + px + '" y="' + (M.top + plotH + 24) + '" text-anchor="middle">' + formatTick(v) + '</text>');
     });
     // --- Horizontal grid + Y labels ----------------------------------
     ys.forEach(function (v) {
@@ -1132,8 +1141,9 @@
     });
     renderBreakdownLegend(shown);
 
-    var xMax = niceCeil(maxv);
-    var xStep = niceStep(xMax, 4);
+    var xAxis = niceAxis(maxv, 4);
+    var xMax = xAxis.max;
+    var xStep = xAxis.step;
     var xs = tickValues(xMax, xStep);
 
     var W = 980;
