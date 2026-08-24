@@ -884,8 +884,20 @@
   var BRK_ROW = 34;            // height of each model row
   var BRK_AXH = 34;            // height of the pinned metric axis
 
-  // Glyph shapes for weight-quant values (assigned in sorted order).
-  var BRK_SHAPES = ['circle', 'diamond', 'tri-up', 'tri-down', 'pentagon', 'hexagon'];
+  // Glyph shapes for weight-quant values. Every distinct quant value gets a
+  // distinct, stable symbol: distribution steps through this ordered pool
+  // (never wrapping), so two quants can't share a mark - IQ3_XXS and Q8_0 no
+  // longer collide as they did for the old six-shape pool that wrapped via
+  // modulo. The pool is ordered by visual distinction: compact polygons
+  // first, then pointed polygons and spiked stars. brkShape() falls back past
+  // the pool to generated higher-order polygons, so a quant value new in a
+  // future results file still takes an unused symbol.
+  var BRK_SHAPES = [
+    'circle', 'square', 'diamond',
+    'tri-up', 'tri-down', 'tri-left', 'tri-right',
+    'gon5', 'gon6', 'gon7', 'gon8', 'gon9', 'gon10',
+    'star4', 'star5', 'star6', 'star8', 'star10'
+  ];
   var BRK_QUANTS = [];
   function brkQuant(r) {
     var m = String(r.notes || '').match(/quant:\s*([^,\s]+)/);
@@ -901,7 +913,11 @@
   }
   function brkShape(q) {
     var i = BRK_QUANTS.indexOf(q);
-    return BRK_SHAPES[(i < 0 ? 0 : i) % BRK_SHAPES.length];
+    if (i < 0) i = 0;
+    if (i < BRK_SHAPES.length) return BRK_SHAPES[i];
+    // Beyond the hand-picked pool: generating distinct high-vertex polygons
+    // keeps a jam of new quants from ever reusing a symbol in use.
+    return 'gon' + (11 + (i - BRK_SHAPES.length));
   }
 
   // Actual KV cache value → stroke ("ring") colour, so the axis legend and the
@@ -933,29 +949,50 @@
     return true;
   }
 
+  // Vertex lists for the regular-polygon and spiked-star glyphs.
+  function polyPts(cx, cy, r, n, rot) {
+    var pts = [];
+    for (var i = 0; i < n; i++) {
+      var a = (rot + i * 360 / n) * Math.PI / 180;
+      pts.push((cx + r * Math.cos(a)).toFixed(1) + ' ' + (cy + r * Math.sin(a)).toFixed(1));
+    }
+    return pts;
+  }
+  // Spiked star: 2n vertices alternating between an outer and inner radius.
+  function starPts(cx, cy, rO, rI, n, rot) {
+    var pts = [];
+    for (var i = 0; i < 2 * n; i++) {
+      var a = (rot + i * 180 / n) * Math.PI / 180;
+      var rr = i % 2 === 0 ? rO : rI;
+      pts.push((cx + rr * Math.cos(a)).toFixed(1) + ' ' + (cy + rr * Math.sin(a)).toFixed(1));
+    }
+    return pts;
+  }
+
   // One SVG run-mark for the breakdown: fill carries status, stroke carries KV
-  // value, shape carries weight quant.
+  // value, shape carries quant weight. Any BRK_SHAPES entry (or a generated
+  // gon-N fallback) renders here.
   function brkMark(shape, cx, cy, r2, fill, kv, dash) {
     var s = 'fill="' + fill + '" stroke="' + kv + '" stroke-width="2.5"' +
       (dash ? ' stroke-dasharray="3.6 1.4"' : '');
-    if (shape === 'square') {
-      return '<rect x="' + (cx - r2) + '" y="' + (cy - r2) + '" width="' + (2 * r2) + '" height="' + (2 * r2) + '" ' + s + '/>';
+    var pts, n = 0, rot = 0;
+    var star = shape.match(/^star(\d+)$/);
+    if (star) {
+      pts = starPts(cx, cy, r2, r2 * 0.45, +star[1], -90);
+      return '<polygon points="' + pts.join(' ') + '" ' + s + '/>';
     }
-    if (shape === 'diamond') {
-      return '<path d="M' + cx + ' ' + (cy - r2) + ' L' + (cx + r2) + ' ' + cy + ' L' + cx + ' ' + (cy + r2) + ' L' + (cx - r2) + ' ' + cy + ' Z" ' + s + '/>';
+    var gon = shape.match(/^gon(\d+)$/);
+    if (gon) {
+      pts = polyPts(cx, cy, r2, +gon[1], -90);
+      return '<polygon points="' + pts.join(' ') + '" ' + s + '/>';
     }
-    if (shape === 'tri-up') {
-      return '<path d="M' + cx + ' ' + (cy - r2) + ' L' + (cx + r2) + ' ' + (cy + r2) + ' L' + (cx - r2) + ' ' + (cy + r2) + ' Z" ' + s + '/>';
-    }
-    if (shape === 'tri-down') {
-      return '<path d="M' + cx + ' ' + (cy + r2) + ' L' + (cx + r2) + ' ' + (cy - r2) + ' L' + (cx - r2) + ' ' + (cy - r2) + ' Z" ' + s + '/>';
-    }
-    if (shape === 'pentagon' || shape === 'hexagon') {
-      var n = shape === 'hexagon' ? 6 : 5, pts = [];
-      for (var i = 0; i < n; i++) {
-        var a = -Math.PI / 2 + i * 2 * Math.PI / n;
-        pts.push((cx + r2 * Math.cos(a)).toFixed(1) + ' ' + (cy + r2 * Math.sin(a)).toFixed(1));
-      }
+    if (shape === 'square' || shape === 'diamond') { n = 4; rot = shape === 'diamond' ? 0 : 45; }
+    else if (shape === 'tri-up') { n = 3; rot = -90; }
+    else if (shape === 'tri-down') { n = 3; rot = 90; }
+    else if (shape === 'tri-left') { n = 3; rot = 180; }
+    else if (shape === 'tri-right') { n = 3; rot = 0; }
+    if (n) {
+      pts = polyPts(cx, cy, r2, n, rot);
       return '<polygon points="' + pts.join(' ') + '" ' + s + '/>';
     }
     return '<circle cx="' + cx + '" cy="' + cy + '" r="' + r2 + '" ' + s + '/>';
