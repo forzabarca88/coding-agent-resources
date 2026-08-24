@@ -63,19 +63,5 @@ coding-agent-resources/
 ├── references/
 │   └── README.md             # References overview
 └── skills/
-    ├── README.md             # Skills overview
-    └── codeberg-repo-management/
-        ├── README.md         # Codeberg repo management skill documentation
-        ├── SKILL.md          # Skill definition and configuration
-        ├── references/
-        │   ├── README.md     # Reference documentation overview
-        │   ├── agent-workflow-rules.md # Workflow rules for the agent
-        │   ├── codeberg-api-quirks.md # Codeberg API specific behaviors
-        │   ├── codeberg-merge-verification.md # Merge verification procedures
-        │   ├── codeberg-pr-branch-pitfalls.md # PR branch common issues
-        │   ├── pr-merge-sync.md # PR merge synchronization guide
-        │   └── swagger.v1.json # Forgejo API specification
-        └── scripts/
-            ├── README.md     # Scripts documentation
-            └── cb.py         # Codeberg API helper script
+    └── README.md             # Skills overview
 ```

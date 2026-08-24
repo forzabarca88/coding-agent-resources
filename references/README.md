@@ -49,7 +49,3 @@ When adding reference materials:
 - [Prompts](../prompts/README.md) - Prompt templates
 - [Skills](../skills/README.md) - Skill packages
 - [Main README](../README.md) - Repository overview
-
-## See Also
-
-- [Codeberg API References](../skills/codeberg-repo-management/references/README.md) - API documentation for the Codeberg skill

@@ -8,19 +8,7 @@ Skills provide domain-specific knowledge and capabilities that can be used by ag
 
 ## Available Skills
 
-### [codeberg-repo-management/](./codeberg-repo-management/README.md)
-- **Description**: Manage Codeberg repositories via the Forgejo REST API
-- **Capabilities**:
-  - Repository management (create, update, delete, fork)
-  - File operations (read, write, update, delete, batch)
-  - Branch management (list, create, delete)
-  - Pull request management (list, create, merge, verify)
-  - Issue management (list, create, label)
-  - Release management
-  - Webhook management
-  - Collaborator management
-  - Tag management
-- **Requirements**: Python 3.6+, network access to codeberg.org, `$CODEBERG_TOKEN` environment variable
+There are currently no skills in this repository.
 
 ## Skill Structure
 
@@ -44,7 +32,7 @@ skill-name/
 Skills are automatically available when symlinked into pi's skills directory. Reference them by name in agent tasks:
 
 ```
-Use the codeberg-repo-management skill to create a new repository.
+Use the <skill-name> skill to ...
 ```
 
 Or invoke them programmatically:
@@ -52,7 +40,7 @@ Or invoke them programmatically:
 ```javascript
 subagent({
   agent: "worker",
-  task: "Use codeberg-repo-management skill to fork the repository"
+  task: "Use the <skill-name> skill to ..."
 })
 ```
 
@@ -115,5 +103,4 @@ Skills integrate with pi through:
 
 ## See Also
 
-- [Codeberg Repo Management Skill](./codeberg-repo-management/README.md) - Detailed documentation for the Codeberg skill
 - [Main README](../README.md) - Repository overview

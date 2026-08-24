@@ -17,10 +17,7 @@ coding-agent-resources/
 │   └── subagent/     # Subagent extension
 ├── prompts/          # Pre-defined prompt templates (ralph-loop)
 ├── references/       # Reference documentation (currently empty)
-├── skills/           # Skill packages
-│   └── codeberg-repo-management/  # Codeberg/Forgejo API management
-│       ├── references/             # API documentation and guides
-│       └── scripts/                # Helper scripts (cb.py)
+├── skills/           # Skill packages (currently empty)
 ├── install_for_pi.sh # Installation script
 ├── AGENTS.md        # Core principles and project guidelines
 └── LICENSE          # MIT License
@@ -72,12 +69,7 @@ Pre-defined prompt templates for common workflows:
 
 ### Skills
 
-Specialized skill packages for specific domains:
-
-- **codeberg-repo-management** - Manage Codeberg repositories via Forgejo REST API
-  - Full API coverage for repos, files, branches, PRs, issues, releases, etc.
-  - Helper script (`cb.py`) for API interactions
-  - Comprehensive reference documentation
+Specialized skill packages for specific domains. There are currently no skills in this repository.
 
 ## Usage
 
