@@ -49,7 +49,7 @@ coding-agent-resources/
 │       └── visualization.js  # Renders eval results as an interactive scatter chart
 ├── extensions/
 │   ├── README.md             # Extensions overview
-│   ├── auto-recover.ts       # Detects unexecuted tool calls and prompts model to continue
+│   ├── auto-recover.ts       # Detects interrupted turns (unexecuted tool call or blank completion) and prompts model to continue
 │   ├── followup.ts           # Registers /followup command for queuing messages after current turn
 │   ├── provider-health-check.ts # Monitors LLM provider health
 │   ├── success-tone.ts       # Adjusts model tone for successful completions

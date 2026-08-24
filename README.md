@@ -58,7 +58,7 @@ Pre-configured agent definitions with specific roles:
 
 Pi extensions that add new functionality:
 
-- **auto-recover.ts** - Detects unexecuted tool calls and prompts the model to continue
+- **auto-recover.ts** - Detects interrupted turns (unexecuted tool calls or blank completions) and prompts the model to continue
 - **followup.ts** - Registers `/followup` command for queuing messages after current turn
 - **provider-health-check.ts** - Monitors LLM provider health
 - **success-tone.ts** - Adjusts model tone for successful completions
