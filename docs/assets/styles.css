@@ -642,16 +642,22 @@ a:focus-visible {
   line-height: 1.6;
 }
 .viz-controls {
+  position: sticky;
+  top: 0.6rem;
+  z-index: 40;
+  max-height: 46vh;
+  overflow: auto;
   display: flex;
   flex-wrap: wrap;
   gap: 1rem 2rem;
   align-items: flex-end;
-  padding: 1.25rem 1.5rem;
+  padding: 1.1rem 1.4rem;
   border: 1px solid var(--rule);
   border-left: 3px solid var(--carbon);
-  background: var(--zebra);
+  background: var(--paper);
   border-radius: 2px;
-  margin-bottom: 1.5rem;
+  box-shadow: 0 14px 34px rgba(22, 32, 46, 0.18);
+  margin: 0 0 1.5rem;
 }
 .viz-control {
   display: flex;
@@ -967,6 +973,9 @@ a:focus-visible {
   color: var(--carbon);
 }
 
+/* Metric toggle — one rail at a time (Context Used | Turns) */
+.brk-metric { justify-self: start; margin: 0.25rem 0 0.9rem; }
+
 /* Legend — decoded live from the runs actually shown, so it always matches. */
 .brk-legend {
   display: flex;
@@ -996,132 +1005,77 @@ a:focus-visible {
   height: 0.8rem;
   flex-shrink: 0;
 }
-.legend-key .lg-row { display: none; } /* spacer for status keys rendered as filled squares */
 
-.brk-chart { margin: 0 0 0.5rem; }
+.brk-chart {
+  display: block;
+  max-height: 420px;
+  overflow-y: auto;
+  border: 1px solid var(--rule);
+  border-left: 1px solid var(--rule-strong);
+  background: var(--paper);
+}
+.brk-plot { position: relative; }
 
-/* Chart geometry reused by both rails */
-.brk-svg {
+/* Pinned scale: sticks to the top of the rolling rows so the metric axis is
+   never scrolled out of view. */
+.brk-axis-stick {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--paper);
+  border-bottom: 1px solid var(--rule-strong);
+}
+.brk-axis-stick .brk-axis {
   display: block;
   width: 100%;
   height: auto;
 }
-.brk-svg .brk-row-bg { fill: var(--zebra); }
-.brk-svg .brk-grid { stroke: var(--rule); stroke-width: 1; }
-.brk-svg .brk-frame { stroke: var(--rule-strong); stroke-width: 1; }
-.brk-svg .brk-rail {
-  /* a run's range band */
-  fill: #E5E9F1;
-  rx: 2;
-}
-.brk-svg .brk-rail-end { fill: var(--mist); }
-.brk-svg .brk-model {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  fill: var(--ink);
-  font-weight: 400;
-}
-.brk-svg .brk-count {
-  font-family: var(--font-mono);
-  font-size: 9.5px;
-  fill: var(--mist);
-}
-.brk-svg .brk-axis {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  fill: var(--mist);
-}
-.brk-svg .brk-axis-title {
+.brk-axis-stick .brk-axis-col { fill: var(--zebra); }
+.brk-axis-stick .brk-axis-title {
   font-family: var(--font-mono);
   font-size: 12px;
   fill: var(--carbon-soft);
   letter-spacing: 0.04em;
 }
-
-.brk-g { cursor: pointer; }
-.brk-g > * { transition: stroke-width 0.12s ease; }
-.brk-g:hover > *,
-.brk-g:focus-visible > *,
-.brk-g.brk--pinned > * {
-  stroke: var(--ink);
-  stroke-width: 2;
+.brk-axis-stick .brk-tick { stroke: var(--rule-strong); stroke-width: 1; }
+.brk-axis-stick .brk-tick-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  fill: var(--mist);
 }
-.brk-g:focus-visible { outline: none; }
+
+/* One row per model — a full-width strip: label, pass/fail split, rail, marks */
+.brk-row {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.brk-row .brk-model {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  fill: var(--ink);
+}
+.brk-row .brk-count {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  fill: var(--mist);
+}
+.brk-row .brk-rail { fill: var(--carbon-soft); }
+
+.brk-mark { cursor: pointer; }
+.brk-mark > * { transition: stroke-width 0.12s ease; }
+.brk-mark:hover > *,
+.brk-mark:focus-visible > *,
+.brk-mark.brk--pinned > * {
+  stroke: var(--ink);
+  stroke-width: 2.2;
+}
+.brk-mark:focus-visible { outline: none; }
 
 @media (max-width: 640px) {
   .brk-legend { gap: 0.4rem 1rem; }
+  .brk-chart { max-height: 320px; }
 }
-
-/* Detail card for the hovered/pinned run in the breakdown chart */
-.brk-detail {
-  margin: 0.5rem 0 0.25rem;
-  border: 1px solid var(--rule);
-  border-left: 3px solid var(--carbon);
-  border-radius: 2px;
-  background: var(--zebra);
-  padding: 0.85rem 1rem 1rem;
-}
-.brk-detail.is-empty { display: none; }
-.brk-detail__head {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-.brk-detail__src {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  color: var(--ink);
-}
-.brk-detail__src .bd-status {
-  width: 0.6rem;
-  height: 0.6rem;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.brk-detail__tag {
-  font-family: var(--font-mono);
-  font-size: 0.625rem;
-  color: var(--carbon-soft);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-.brk-detail__notes {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.3rem;
-  align-items: center;
-  margin: 0.4rem 0 0;
-}
-.brk-detail__notes .tip__chip {
-  color: var(--ink);
-  background: var(--zebra);
-  border: 1px solid var(--rule);
-}
-.brk-detail__grid {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 0.15rem 1.1rem;
-  margin: 0 0 0.25rem;
-}
-.brk-detail__grid dt {
-  font-family: var(--font-mono);
-  font-size: 0.625rem;
-  color: var(--carbon-soft);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-.brk-detail__grid dd {
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  color: var(--ink);
-  text-align: right;
-}
-
-/* ============================================================
    Responsive — evaluation chart page
    ============================================================ */
 @media (max-width: 640px) {

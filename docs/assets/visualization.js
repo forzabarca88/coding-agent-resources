@@ -26,9 +26,11 @@
   var brkEl = document.getElementById('brk-chart');
   var brkStatusEl = document.getElementById('brk-status');
   var brkLegendEl = document.getElementById('brk-legend');
-  var brkDetailEl = document.getElementById('brk-detail');
-  // The run currently pinned in the breakdown, or null. Stores a row ref
-  // (validated by identity) so a pin survives re-draws.
+  var brkPlotEl = document.getElementById('brk-plot');
+  var brkTpt = document.getElementById('brk-tooltip');
+  var brkMetricBtns = Array.prototype.slice.call(document.querySelectorAll('[data-metric]'));
+  // The run currently pinned in the breakdown (click / Enter), or null. A
+  // pin keeps that run's tooltip open until Escape or a re-draw.
   var brkPinned = null;
 
   // Print-ink hues with strong separation, drawn from the site family (carbon
@@ -54,7 +56,8 @@
     models: '',           // '' = all models, else comma-separated selected names
     search: '',           // active wildcard query — while non-empty it derives the model selection
     searchSaved: null,    // the models value before the search began, restored on clear
-    top: 25               // 'all' or a number
+    top: 25,              // 'all' or a number — scatter only
+    metric: 'tokens'      // breakdown metric: 'tokens' (Context Used) | 'turns'
   };
 
   // Every parsed row from the markdown tables, in file order.
@@ -815,10 +818,10 @@
     });
   }
 
-  // Escape unpins the currently pinned point (scatter or breakdown).
+  // Escape clears the breakdown pin too (the scatter pin is handled below).
   document.addEventListener('keydown', function (e) {
     if (e.key !== 'Escape') return;
-    if (brkPinned) { brkPinned = null; setBrkPin(null); setBrkDetail(null); }
+    if (brkPinned) { brkPinned = null; markPinned(null); hideBrkTpt(); }
     if (pinned) { pinned = null; updatePin(); }
   });
 
@@ -851,29 +854,31 @@
   }
 
   /* ------------------------------------------------------------------ *
+/* ------------------------------------------------------------------ *
    * Model breakdown — a second chart on the same page.
    *
-   * Every run (passed or failed) grouped by model, one row per model. Each
-   * row carries two horizontal range rails (Context Used, Turns) whose length
-   * is the model's min—max spread; each of its runs sits as a mark along each
-   * rail at its own value. A run is encoded three ways at once — fill colour
-   * (status: carbon = success, red = failed), glyph (quant note), and outline
-   * (solid = KV quant set, dashed = KV quantity None) — so run points stay
-   * distinguishable even when two stress/turn values land close together.
-   * Props same source / model / search state as the scatter.
+   * One row per model, one metric at a time (Context Used or Turns, toggled
+   * by the metric control). Each row spans the model's smallest to largest
+   * value on a shared metric axis; every mark sits at its own run. A run is
+   * encoded three ways at once: fill is its status (carbon = success, red =
+   * failed), outline colour is its actual KV quant value (Q4_0, Q8_0, None…),
+   * and glyph shape is its weight quant (Q4_K_XL, Q8_0…). The metric axis is
+   * pinned above the rows so it never scrolls out of sight, and every mark
+   * opens the same tooltip as the scatter on hover or focus. Props shared
+   * with the scatter (source / model / search).
    * ------------------------------------------------------------------ */
 
-  // Status fill colours and the outline ink used to separate runs.
-  var BRK_OK = '#2E4A7A';
-  var BRK_FAIL = '#B42318';
+  var BRK_OK = '#2E4A7A';      // success fill
+  var BRK_FAIL = '#B42318';    // failed fill
   var BRK_INK = '#16202E';
+  var outMarks = {};           // data-brk id -> row, for tooltip binding
+  var BRK_LABEL = 258;         // model-name column width
+  var BRK_ROW = 30;            // height of each model row
+  var BRK_AXH = 34;            // height of the pinned metric axis
+  var BRK_MAXH = 460;          // viewport cap (px) for the scrollable rows
 
-  // Row geometry.
-  var BRK_LABEL = 208;  // label-column width (model name + pass/fail split)
-  var BRK_ROW = 56;     // height of each model row
-  var BRK_TOP = 58;     // space for the pane titles
-
-  // Quant notes → glyph, ordered once so a quantisation never changes shape.
+  // Glyph shapes for weight-quant values (assigned in sorted order).
+  var BRK_SHAPES = ['circle', 'diamond', 'tri-up', 'tri-down', 'pentagon', 'hexagon'];
   var BRK_QUANTS = [];
   function brkQuant(r) {
     var m = String(r.notes || '').match(/quant:\s*([^,\s]+)/);
@@ -887,17 +892,27 @@
     });
     BRK_QUANTS.sort();
   }
-  function brkGlyph(q) {
-    var shapes = ['circle', 'square', 'triangle', 'diamond', 'pentagon'];
+  function brkShape(q) {
     var i = BRK_QUANTS.indexOf(q);
-    return shapes[(i < 0 ? 0 : i) % shapes.length];
-  }
-  function kvSet(r) {
-    return !/KV quant:\s*None/i.test(String(r.notes || ''));
+    return BRK_SHAPES[(i < 0 ? 0 : i) % BRK_SHAPES.length];
   }
 
-  // A run belongs in the breakdown when it passes source + model selection +
-  // live search. Unlike the scatter it keeps failed runs.
+  // Actual KV cache value → stroke ("ring") colour, so the axis legend and the
+  // marks tell Q4_0 from Q8_0 from None apart instead of only "set" vs "none".
+  var BRK_KVCOL = {
+    'Q4_0': '#0E7A7B',
+    'Q8_0': '#A86A2B',
+    'None': '#7A4A6B',
+    '':     '#9AA7B5'
+  };
+  function brkKV(r) {
+    var m = String(r.notes || '').match(/KV quant:\s*([^,\s]+)/);
+    return m ? m[1].trim() : '';
+  }
+  function brkKVColor(kv) {
+    return BRK_KVCOL[kv] !== undefined ? BRK_KVCOL[kv] : '#1F6F8F';
+  }
+
   function brkRow(r) {
     if (!inSource(r)) return false;
     var sel = effectiveSelection();
@@ -911,41 +926,41 @@
     return true;
   }
 
-  // SVG glyph for one run-mark shape.
-  function brkGlyphInner(shape, cx, cy, r2, fill, stroke, sw, dash) {
-    var d = dash ? ' stroke-dasharray="2.5 1.1"' : '';
-    var s = ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"' + d;
+  // One SVG run-mark for the breakdown: fill carries status, stroke carries KV
+  // value, shape carries weight quant.
+  function brkMark(shape, cx, cy, r2, fill, kv, dash) {
+    var s = 'fill="' + fill + '" stroke="' + kv + '" stroke-width="1.4"' +
+      (dash ? ' stroke-dasharray="2.5 1.1"' : '');
     if (shape === 'square') {
-      return '<rect x="' + (cx - r2) + '" y="' + (cy - r2) + '" width="' + (2 * r2) + '" height="' + (2 * r2) + '"' + s + '/>';
-    }
-    if (shape === 'triangle') {
-      return '<path d="M' + cx + ' ' + (cy - r2) + ' L' + (cx + r2) + ' ' + (cy + r2) + ' L' + (cx - r2) + ' ' + (cy + r2) + ' Z"' + s + '/>';
+      return '<rect x="' + (cx - r2) + '" y="' + (cy - r2) + '" width="' + (2 * r2) + '" height="' + (2 * r2) + '" ' + s + '/>';
     }
     if (shape === 'diamond') {
-      return '<path d="M' + cx + ' ' + (cy - r2) + ' L' + (cx + r2) + ' ' + cy + ' L' + cx + ' ' + (cy + r2) + ' L' + (cx - r2) + ' ' + cy + ' Z"' + s + '/>';
+      return '<path d="M' + cx + ' ' + (cy - r2) + ' L' + (cx + r2) + ' ' + cy + ' L' + cx + ' ' + (cy + r2) + ' L' + (cx - r2) + ' ' + cy + ' Z" ' + s + '/>';
     }
-    if (shape === 'pentagon') {
-      var pts = [];
-      for (var i5 = 0; i5 < 5; i5++) {
-        var a = -Math.PI / 2 + i5 * 2 * Math.PI / 5;
+    if (shape === 'tri-up') {
+      return '<path d="M' + cx + ' ' + (cy - r2) + ' L' + (cx + r2) + ' ' + (cy + r2) + ' L' + (cx - r2) + ' ' + (cy + r2) + ' Z" ' + s + '/>';
+    }
+    if (shape === 'tri-down') {
+      return '<path d="M' + cx + ' ' + (cy + r2) + ' L' + (cx + r2) + ' ' + (cy - r2) + ' L' + (cx - r2) + ' ' + (cy - r2) + ' Z" ' + s + '/>';
+    }
+    if (shape === 'pentagon' || shape === 'hexagon') {
+      var n = shape === 'hexagon' ? 6 : 5, pts = [];
+      for (var i = 0; i < n; i++) {
+        var a = -Math.PI / 2 + i * 2 * Math.PI / n;
         pts.push((cx + r2 * Math.cos(a)).toFixed(1) + ' ' + (cy + r2 * Math.sin(a)).toFixed(1));
       }
-      return '<polygon points="' + pts.join(' ') + '"' + s + '/>';
+      return '<polygon points="' + pts.join(' ') + '" ' + s + '/>';
     }
-    return '<circle cx="' + cx + '" cy="' + cy + '" r="' + r2 + '"' + s + '/>';
+    return '<circle cx="' + cx + '" cy="' + cy + '" r="' + r2 + '" ' + s + '/>';
   }
 
   function brkTruncate(text, width) {
     var s = String(text || '');
-    if (s.length * 6.2 + 2 <= width) return s;
-    while (s.length > 2 && s.length * 6.2 + 2 > width - 13) s = s.slice(0, -1);
-    return s + '…';
+    if (s.length * 6.1 + 2 <= width) return s;
+    while (s.length > 2 && s.length * 6.1 + 2 > width - 13) s = s.slice(0, -1);
+    return s + '\u2026';
   }
 
-  // Short on-plot name for a model: the fewest trailing path segments that are
-  // unambiguous among the models shown (like the scatter's direct labels), so
-  // "qwen/qwen3.8-27b" vs "unsloth/qwen3.8-27b@q2_k_xl" stay distinct even
-  // when the full identifier would be clipped.
   function brkLabel(m, width, models) {
     var clean = String(m).replace(/^lmstudio-/, '').replace(/^openrouter\//, '').replace(/^mistral\//, '');
     var parts = clean.split('/');
@@ -960,83 +975,96 @@
       n++;
     }
     var label = parts.slice(parts.length - n).join('/');
-    if (label.length * 6.2 + 2 <= width) return label;
-    return brkTruncate(label, width);
+    return label.length * 6.1 + 2 <= width ? label : brkTruncate(label, width);
   }
 
-  function setBrkDetail(r) {
-    if (!brkDetailEl) return;
-    if (!r) { brkDetailEl.classList.add('is-empty'); brkDetailEl.innerHTML = ''; return; }
-    var ok = r.code === '0';
-    var color = ok ? BRK_OK : BRK_FAIL;
-    var html =
-      '<div class="brk-detail__head">' +
-      '<span class="bd-status" style="background:' + color + '"></span>' +
-      '<span class="brk-detail__src">' + esc(r.model) + '</span>' +
-      '<span class="brk-detail__tag">' + (ok ? 'Success' : 'Failed') +
-      ' · ' + (r.local ? 'Local' : 'Provider') + ' · ' + esc(r.date || '—') + '</span>' +
-      '</div>';
-    if (r.notes) {
-      var items = String(r.notes).split(',').map(function (s) { return s.trim(); })
-        .filter(function (s) { return s.length > 0; });
-      if (items.length) {
-        html += '<div class="brk-detail__notes">' + items.map(function (it) {
-          return '<span class="tip__chip">' + esc(it) + '</span>';
-        }).join('') + '</div>';
-      }
-    }
-    html +=
-      '<dl class="brk-detail__grid">' +
-      '<dt>Context used</dt><dd>' + fmt(r.tokensN) + ' tokens</dd>' +
-      '<dt>Turns</dt><dd>' + fmt(r.turnsN) + '</dd>' +
-      '<dt>Duration</dt><dd>' + esc(r.duration || '—') + '</dd>' +
-      '<dt>Limit</dt><dd>' + fmt(r.limitN) + '</dd>' +
-      '<dt>Passed / failed tests</dt><dd>' + fmt(r.passedN) + ' / ' + fmt(r.failedN) + '</dd>' +
-      '</dl>';
-    brkDetailEl.innerHTML = html;
-    brkDetailEl.classList.remove('is-empty');
+  function brkLegendLabel(kv) {
+    if (kv === '') return 'unrecorded';
+    if (kv === 'None') return 'None';
+    return kv;
   }
 
-  function renderBreakdownLegend(rows) {
+  function renderBreakdownLegend(shown) {
     if (!brkLegendEl) return;
     var parts = [];
     parts.push('<span class="legend-label">Status</span>');
     parts.push('<span class="legend-key"><span class="lg" style="background:' + BRK_OK + '"></span>success</span>');
     parts.push('<span class="legend-key"><span class="lg" style="background:' + BRK_FAIL + '"></span>failed</span>');
-    var used = [];
-    rows.forEach(function (r) {
+
+    var quants = [];
+    shown.forEach(function (r) {
       var q = brkQuant(r);
-      if (q && used.indexOf(q) === -1) used.push(q);
+      if (q && quants.indexOf(q) === -1 && BRK_QUANTS.indexOf(q) !== -1) quants.push(q);
     });
-    if (used.length) {
-      parts.push('<span class="legend-label">Quant (glyph)</span>');
-      // Emit in the same sorted order as brkGlyph() assigns shapes, so a
-      // legend swatch always matches the marker a run carries.
+    if (quants.length) {
+      parts.push('<span class="legend-label">Quant</span>');
       BRK_QUANTS.forEach(function (q) {
-        if (used.indexOf(q) === -1) return;
-        var g = brkGlyph(q);
+        if (quants.indexOf(q) === -1) return;
+        var sh = brkShape(q);
         parts.push('<span class="legend-key"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">' +
-          brkGlyphInner(g, 8, 8, 5.5, BRK_OK, BRK_INK, 1.1, false) + '</svg>' + esc(q) + '</span>');
+          brkMark(sh, 8, 8, 5.4, BRK_OK, BRK_INK, false) + '</svg>' + esc(q) + '</span>');
       });
     }
-    parts.push('<span class="legend-label">KV quant (outline)</span>');
-    parts.push('<span class="legend-key"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="' + BRK_OK + '" stroke="' + BRK_INK + '" stroke-width="1.1"/></svg>set</span>');
-    parts.push('<span class="legend-key"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="' + BRK_OK + '" stroke="' + BRK_INK + '" stroke-width="1.1" stroke-dasharray="2.5 1.1"/></svg>none</span>');
+
+    var kvs = [];
+    shown.forEach(function (r) {
+      var kv = brkKV(r);
+      if (kvs.indexOf(kv) === -1) kvs.push(kv);
+    });
+    // stable order: recorded values (sorted), then None, then unrecorded.
+    kvs.sort(function (a, b) {
+      function rank(x) { return x === '' ? 2 : x === 'None' ? 1 : 0; }
+      return (rank(a) - rank(b)) || String(a).localeCompare(String(b));
+    });
+    if (kvs.length) {
+      parts.push('<span class="legend-label">KV quant</span>');
+      kvs.forEach(function (kv) {
+        var c = kv === '' ? BRK_KVCOL[''] : kv === 'None' ? BRK_KVCOL['None'] : brkKVColor(kv);
+        parts.push('<span class="legend-key"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">' +
+          '<circle cx="8" cy="8" r="6" fill="' + BRK_OK + '" stroke="' + c + '" stroke-width="1.4" ' +
+          (kv === 'None' ? 'stroke-dasharray="2.5 1.1"' : '') + '/></svg>' +
+          esc(brkLegendLabel(kv)) + '</span>');
+      });
+    }
     brkLegendEl.innerHTML = parts.join('');
+  }
+
+  function showBrkTpt(g, r) {
+    if (!brkTpt || !brkPlotEl) return;
+    brkTpt.innerHTML = tooltipHTML(r);
+    var pr = brkPlotEl.getBoundingClientRect();
+    var gr = g.getBoundingClientRect();
+    if (!pr.width || !pr.height) return;
+    var cx = ((gr.left + gr.right) / 2 - pr.left) / pr.width * 100;
+    var cy = (gr.top - pr.top) / pr.height * 100;
+    if (cy < 0) cy = 0;
+    if (cx < 8) cx = 8;
+    if (cx > 92) cx = 92;
+    var below = cy < 18;
+    var flip = cx > 72;   // card would spill past the right edge — align right
+    brkTpt.classList.toggle('tip--flip', flip);
+    brkTpt.classList.toggle('tip--down', below);
+    brkTpt.style.left = cx + '%';
+    brkTpt.style.top = (below ? cy + 9 : cy) + '%';
+    brkTpt.classList.remove('is-hidden');
+  }
+  function hideBrkTpt() {
+    if (!brkTpt) return;
+    if (brkPinned) return;   // a pinned mark keeps its card open
+    brkTpt.classList.add('is-hidden');
   }
 
   function drawBreakdown() {
     if (!brkEl) return;
-    brkPinned = null;
-
-    // Derive glyph order from the runs actually present so it stays yoked to
-    // the data (a run whose notes lack a quant falls back to the first glyph).
     buildQuantOrder();
+    outMarks = {};
+    hideBrkTpt();
 
-    // Group the runs (under current filters, keeping failures) by model, in
-    // order of first appearance so rows stay stable.
-    var byModel = {};
-    var order = [];
+    var metric = state.metric === 'turns' ? 'turns' : 'tokens';
+    var mKey = metric === 'turns' ? 'turnsN' : 'tokensN';
+    var mLabel = metric === 'turns' ? 'Turns' : 'Context Used (tokens)';
+
+    var byModel = {}, order = [];
     allRows.forEach(function (r) {
       if (!brkRow(r)) return;
       if (!byModel[r.model]) { byModel[r.model] = []; order.push(r.model); }
@@ -1046,178 +1074,121 @@
     if (!order.length) {
       brkEl.innerHTML = '';
       if (brkLegendEl) brkLegendEl.innerHTML = '';
-      setBrkDetail(null);
+      hideBrkTpt();
       if (brkStatusEl) brkStatusEl.textContent = '';
       return;
     }
 
-    // Flatten every shown run for the legend + shared scales.
-    var shown = [];
-    var maxTokens = 0, maxTurns = 0;
+    var shown = [], maxv = 0;
     order.forEach(function (m) {
       byModel[m].forEach(function (r) {
         shown.push(r);
-        if (isFinite(r.tokensN) && r.tokensN > maxTokens) maxTokens = r.tokensN;
-        if (isFinite(r.turnsN) && r.turnsN > maxTurns) maxTurns = r.turnsN;
+        if (isFinite(r[mKey]) && r[mKey] > maxv) maxv = r[mKey];
       });
     });
     renderBreakdownLegend(shown);
 
-    var xMax = niceCeil(maxTokens);
-    var yMax = niceCeil(maxTurns);
-    var xStep = niceStep(xMax, 6);
-    var yStep = niceStep(yMax, 5);
+    var xMax = niceCeil(maxv);
+    var xStep = niceStep(xMax, 4);
     var xs = tickValues(xMax, xStep);
-    var ys = tickValues(yMax, yStep);
 
     var W = 980;
-    var H = BRK_TOP + order.length * BRK_ROW + 64;
-    var col = BRK_LABEL;
-    var cX = col + 18;                 // context pane left
-    var tX = 588;                      // turns pane left
-    var cW = tX - 24 - cX;             // context pane width
-    var tW = W - 12 - tX;              // turns pane width
+    var valRight = W - 32;   // right margin sized for the widest tick label
+    function sx(v) { return BRK_LABEL + (v / xMax) * (valRight - BRK_LABEL); }
 
-    function sx(v) { return cX + (v / xMax) * cW; }
-    function sx2(v) { return tX + (v / yMax) * tW; }
-
-    var out = [];
-    var groupIdx = 0;
-    var brkPos = [];
-
-    out.push('<svg class="brk-svg" viewBox="0 0 ' + W + ' ' + H + '" role="group" pointer-events="none" ' +
-      'aria-label="Model breakdown: per-model range of context used and turns, with pass/fail marks">');
-
-    // Pane headers.
-    out.push('<text class="brk-axis-title" x="' + (cX + cW / 2) + '" y="24" text-anchor="middle" pointer-events="none">Context Used (tokens)</text>');
-    out.push('<text class="brk-axis-title" x="' + (tX + tW / 2) + '" y="24" text-anchor="middle" pointer-events="none">Turns</text>');
-    out.push('<text class="brk-axis-title" x="12" y="24" pointer-events="none">model</text>');
-
-    var bodyTop = BRK_TOP;
-    var bodyBottom = BRK_TOP + order.length * BRK_ROW;
-
-    // Row backgrounds (zebra) + a light frame.
-    order.forEach(function (m, i) {
-      var top = bodyTop + i * BRK_ROW;
-      out.push('<rect class="brk-row-bg" x="0" y="' + top + '" width="' + W + '" height="' + BRK_ROW + '" pointer-events="none"/>');
-      if (i === order.length - 1) {
-        out.push('<line class="brk-frame" x1="0" y1="' + (top + BRK_ROW) + '" x2="' + W + '" y2="' + (top + BRK_ROW) + '" pointer-events="none"/>');
-      }
-      if (i === 0) {
-        out.push('<line class="brk-frame" x1="0" y1="' + top + '" x2="' + W + '" y2="' + top + '" pointer-events="none"/>');
-      }
-    });
-    out.push('<line class="brk-frame" x1="0" y1="' + bodyTop + '" x2="0" y2="' + bodyBottom + '" pointer-events="none"/>');
-
-    // Vertical grids + tick labels for both metrics, once (below the last row).
-    var labelY = bodyBottom + 22;
+    // Pinned scale (axis + ticks) — sticks to the top of the rolling rows.
+    var axis = [];
+    axis.push('<svg class="brk-axis" viewBox="0 0 ' + W + ' ' + BRK_AXH + '" role="img" ' +
+      'aria-label="' + esc(mLabel + ' scale — 0 to ' + formatTick(xMax)) + '" pointer-events="none">');
+    axis.push('<rect class="brk-axis-col" x="0" y="0" width="' + BRK_LABEL + '" height="' + BRK_AXH + '" pointer-events="none"/>');
+    axis.push('<text class="brk-axis-title" x="10" y="20" pointer-events="none">' + esc(mLabel) + '</text>');
     xs.forEach(function (v) {
       var px = sx(v);
-      out.push('<line class="brk-grid" x1="' + px + '" y1="' + bodyTop + '" x2="' + px + '" y2="' + bodyBottom + '" pointer-events="none"/>');
-      out.push('<text class="brk-axis" x="' + px + '" y="' + labelY + '" text-anchor="middle" pointer-events="none">' + formatTick(v) + '</text>');
+      axis.push('<line class="brk-tick" x1="' + px + '" y1="' + (BRK_AXH - 6) + '" x2="' + px + '" y2="' + BRK_AXH + '" pointer-events="none"/>');
+      axis.push('<text class="brk-tick-label" x="' + px + '" y="' + (BRK_AXH - 10) + '" text-anchor="middle" pointer-events="none">' + formatTick(v) + '</text>');
     });
-    ys.forEach(function (v) {
-      var px = sx(v);
-      out.push('<line class="brk-grid" x1="' + px + '" y1="' + bodyTop + '" x2="' + px + '" y2="' + bodyBottom + '" pointer-events="none"/>');
-      out.push('<text class="brk-axis" x="' + px + '" y="' + labelY + '" text-anchor="middle" pointer-events="none">' + formatTick(v) + '</text>');
-    });
+    axis.push('</svg>');
 
-    // One row per model.
+    var body = [];
     order.forEach(function (m, i) {
       var runs = byModel[m];
-      var top = bodyTop + i * BRK_ROW;
-      var mid = top + BRK_ROW / 2;
       var ok = 0, fail = 0;
       runs.forEach(function (r) { if (r.code === '0') ok++; else fail++; });
       var tot = ok + fail;
+      var mid = BRK_ROW / 2;
 
-      // Model label + pass/fail split.
-      out.push('<text class="brk-model" x="12" y="' + (mid - 6) + '" pointer-events="none">' + esc(brkLabel(m, BRK_LABEL - 14, order)) + '</text>');
-      var splitX0 = 10, splitW = 56;
-      var okW = tot ? Math.round((ok / tot) * splitW) : 0;
-      var failW = tot ? splitW - okW : 0;
-      if (okW) out.push('<rect x="' + splitX0 + '" y="' + (mid + 2) + '" width="' + okW + '" height="6" fill="' + BRK_OK + '" pointer-events="none"/>');
-      if (failW) out.push('<rect x="' + (splitX0 + okW) + '" y="' + (mid + 2) + '" width="' + failW + '" height="6" fill="' + BRK_FAIL + '" pointer-events="none"/>');
-      out.push('<text class="brk-count" x="' + (splitX0 + splitW + 6) + '" y="' + (mid + 8) + '" pointer-events="none">' + (ok + '/' + tot) + '</text>');
+      body.push('<svg class="brk-row" viewBox="0 0 ' + W + ' ' + BRK_ROW + '">');
 
-      // Each rail: min—max band for the model's runs, then a mark per run.
-      var minC = Infinity, maxC = 0, minT = Infinity, maxT = 0;
-      runs.forEach(function (r) {
-        if (isFinite(r.tokensN)) { if (r.tokensN < minC) minC = r.tokensN; if (r.tokensN > maxC) maxC = r.tokensN; }
-        if (isFinite(r.turnsN)) { if (r.turnsN < minT) minT = r.turnsN; if (r.turnsN > maxT) maxT = r.turnsN; }
-      });
-      var x0 = isFinite(minC) ? sx(minC) : 0, x1 = isFinite(maxC) ? sx(maxC) : 0;
-      out.push('<rect class="brk-rail" x="' + x0 + '" y="' + (mid - 22) + '" width="' + Math.max(2, x1 - x0) + '" height="16" pointer-events="none"/>');
-      var y0 = isFinite(minT) ? sx2(minT) : 0, y1 = isFinite(maxT) ? sx2(maxT) : 0;
-      out.push('<rect class="brk-rail" x="' + y0 + '" y="' + (mid - 22) + '" width="' + Math.max(2, y1 - y0) + '" height="16" pointer-events="none"/>');
+      // model label
+      body.push('<text class="brk-model" x="8" y="' + (mid - 7) + '" pointer-events="none">' +
+        esc(brkLabel(m, BRK_LABEL - 20, order)) + '</text>');
 
-      // Rail end caps mark the min/max of each metric for the model.
-      out.push('<rect class="brk-rail-end" x="' + (x0 - 1.5) + '" y="' + (mid - 24) + '" width="3" height="20" pointer-events="none"/>');
-      out.push('<rect class="brk-rail-end" x="' + (x1 - 1.5) + '" y="' + (mid - 24) + '" width="3" height="20" pointer-events="none"/>');
-      out.push('<rect class="brk-rail-end" x="' + (y0 - 1.5) + '" y="' + (mid - 24) + '" width="3" height="20" pointer-events="none"/>');
-      out.push('<rect class="brk-rail-end" x="' + (y1 - 1.5) + '" y="' + (mid - 24) + '" width="3" height="20" pointer-events="none"/>');
+      // pass/fail split bar + count in the trailing label column
+      var bw = BRK_LABEL - 92;
+      var okw = Math.round((ok / (tot || 1)) * bw);
+      var fw = bw - okw;
+      if (okw) body.push('<rect x="90" y="' + (BRK_ROW - 8) + '" width="' + okw + '" height="6" fill="' + BRK_OK + '" pointer-events="none"/>');
+      if (fw) body.push('<rect x="' + (90 + okw) + '" y="' + (BRK_ROW - 8) + '" width="' + fw + '" height="6" fill="' + BRK_FAIL + '" pointer-events="none"/>');
+      body.push('<text class="brk-count" x="' + (BRK_LABEL - 10) + '" y="' + (BRK_ROW - 4) + '" text-anchor="end" pointer-events="none">' +
+        ok + ' / ' + tot + '</text>');
 
-      // One interactive group per run — a mark on each rail, paired so hover
-      // and pin highlight both ends of the same run at once.
-      runs.forEach(function (r) {
-        var gid = 'b' + groupIdx;
+      // rail spanning this model's value range on the active metric
+      var min = Infinity, max = 0;
+      runs.forEach(function (r) { if (isFinite(r[mKey])) { if (r[mKey] < min) min = r[mKey]; if (r[mKey] > max) max = r[mKey]; } });
+      var x0 = isFinite(min) ? sx(min) : valRight, x1 = isFinite(max) ? sx(max) : valRight;
+      body.push('<rect class="brk-rail" x="' + x0 + '" y="' + (mid - 1) + '" width="' + Math.max(2, x1 - x0) + '" height="2" pointer-events="none"/>');
+
+      // one interactive mark per run
+      runs.forEach(function (r, j) {
         var okk = r.code === '0';
-        var st = okk ? BRK_OK : BRK_FAIL;
-        var glyph = brkGlyph(brkQuant(r));
-        var dash = !kvSet(r);
-        var my = mid - 14; // the rail's centre-line for marks
-        var label = esc(r.model) + ': ' + (okk ? 'success' : 'failed') + ', ' +
-          fmt(r.tokensN) + ' tokens, ' + fmt(r.turnsN) + ' turns';
-        out.push(
-          '<g class="brk-g" data-brk="' + gid + '" tabindex="0" role="button" pointer-events="all" aria-label="' + label + '">' +
-          '<title>' + label + (r.notes ? ' — ' + esc(r.notes) : '') + '</title>' +
-          brkGlyphInner(glyph, sx(r.tokensN), my, 6.5, st, BRK_INK, 1.4, dash) +
-          brkGlyphInner(glyph, sx2(r.turnsN), my, 6.5, st, BRK_INK, 1.4, dash) +
-          '</g>'
-        );
-        brkPos[gid] = { row: r };
-        groupIdx++;
+        var fill = okk ? BRK_OK : BRK_FAIL;
+        var kv = brkKV(r);
+        var shape = brkShape(brkQuant(r));
+        var dash = kv === 'None';
+        var label = r.model + ': ' + (okk ? 'success' : 'failed') + ', ' + metricText(r) + '.';
+        var gid = i + '_' + j;
+        outMarks[gid] = r;
+        body.push('<g class="brk-mark" data-brk="' + gid + '" tabindex="0" role="button" pointer-events="bounding-box" aria-label="' + esc(label) + '">' +
+          brkMark(shape, sx(r[mKey]), mid, 6, fill, brkKVColor(kv), kv === 'None') + '</g>');
       });
+      body.push('</svg>');
     });
 
-    out.push('</svg>');
-    brkEl.innerHTML = out.join('');
-    bindBrk(brkPos);
+    // put the pinned axis above the rolling rows inside the scrollable chart
+    brkEl.innerHTML =
+      '<div class="brk-axis-stick">' + axis.join('') + '</div>' + body.join('');
+    syncMetricButtons();
+    bindBrkMarks();
+    brkPinned = null;
 
-    // Status line: how many runs/models, split by outcome.
     var fails = shown.filter(function (r) { return r.code !== '0'; }).length;
     if (brkStatusEl) {
       brkStatusEl.textContent = shown.length + ' run' + (shown.length === 1 ? '' : 's') +
         ' across ' + order.length + ' model' + (order.length === 1 ? '' : 's') +
-        ' (' + (shown.length - fails) + ' success, ' + fails + ' failed) — grouped by model.';
+        ' (' + (shown.length - fails) + ' success, ' + fails + ' failed) — ' + mLabel.toLowerCase() + '.';
     }
   }
 
-  // Hover/focus shows the run's record; click pins it until Escape or a
-  // re-draw (a re-draw clears the pin — filters changed, so it is stale).
-  function setBrkPin(g) {
-    Array.prototype.forEach.call(brkEl.querySelectorAll('.brk-g.brk--pinned'), function (o) {
-      o.classList.remove('brk--pinned');
-    });
-    if (g) g.classList.add('brk--pinned');
+  function metricText(r) {
+    if (state.metric === 'turns') return fmt(r.turnsN) + ' turns';
+    return fmt(r.tokensN) + ' tokens';
   }
 
-  function bindBrk(pos) {
-    var suppress = false;
-    Array.prototype.forEach.call(brkEl.querySelectorAll('.brk-g'), function (g) {
+  function bindBrkMarks() {
+    Array.prototype.forEach.call(brkEl.querySelectorAll('.brk-mark'), function (g) {
       var idx = g.getAttribute('data-brk');
-      var row = function () { return pos[idx] && pos[idx].row; };
-      g.addEventListener('mouseenter', function () { if (brkPinned === null) setBrkDetail(row()); });
-      g.addEventListener('mouseleave', function () { if (brkPinned === null) setBrkDetail(null); });
-      g.addEventListener('focus', function () { if (brkPinned === null) setBrkDetail(row()); });
-      g.addEventListener('blur', function () { if (brkPinned === null) setBrkDetail(null); });
+      var row = function () { return outMarks[idx]; };
+      g.addEventListener('mouseenter', function () { var r = row(); if (r) showBrkTpt(g, r); });
+      g.addEventListener('focus', function () { var r = row(); if (r) showBrkTpt(g, r); });
+      g.addEventListener('mouseleave', hideBrkTpt);
+      g.addEventListener('blur', hideBrkTpt);
       g.addEventListener('click', function () {
-        if (suppress) { suppress = false; return; }
         var r = row();
         if (!r) return;
         brkPinned = brkPinned === r ? null : r;
-        setBrkPin(brkPinned ? g : null);
-        setBrkDetail(brkPinned);
+        markPinned(brkPinned);
+        if (brkPinned) showBrkTpt(g, brkPinned);
+        else hideBrkTpt();
       });
       g.addEventListener('keydown', function (e) {
         if (e.key !== 'Enter' && e.key !== ' ') return;
@@ -1225,13 +1196,30 @@
         var r = row();
         if (!r) return;
         brkPinned = brkPinned === r ? null : r;
-        suppress = true;
-        setBrkPin(brkPinned ? g : null);
-        setBrkDetail(brkPinned);
+        markPinned(brkPinned);
+        if (brkPinned) showBrkTpt(g, brkPinned);
+        else hideBrkTpt();
       });
+    });
+    // A pinned mark keeps its card open even as the list scrolls; scrolling
+    // after a pin is the user's signal they are done with it.
+  }
+
+  // Highlights the pinned mark; clears the previous one.
+  function markPinned(pinnedRow) {
+    Array.prototype.forEach.call(brkEl.querySelectorAll('.brk-mark'), function (g) {
+      var on = pinnedRow && outMarks[g.getAttribute('data-brk')] === pinnedRow;
+      g.classList.toggle('brk--pinned', on);
     });
   }
 
+  function syncMetricButtons() {
+    brkMetricBtns.forEach(function (b) {
+      var on = b.getAttribute('data-metric') === state.metric;
+      b.classList.toggle('is-active', on);
+      b.setAttribute('aria-pressed', String(on));
+    });
+  }
   function load() {
     setStatus('Loading data/eval-results.md…');
     if (retryEl) retryEl.hidden = true;
@@ -1365,6 +1353,17 @@
     });
   }
   if (retryEl) retryEl.addEventListener('click', load);
+
+  // Breakdown metric toggle — redraws only the breakdown, not the scatter.
+  brkMetricBtns.forEach(function (b) {
+    b.addEventListener('click', function () {
+      var m = b.getAttribute('data-metric');
+      if (m === state.metric) return;
+      state.metric = m;
+      syncMetricButtons();
+      drawBreakdown();
+    });
+  });
 
   load();
 })();

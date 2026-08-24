@@ -44,6 +44,47 @@
         <div class="masthead__subhead" data-content="content/visualization/masthead.md"></div>
       </header>
 
+      <!-- Sticky filter bar — shared by both charts. Pinned to the top of the
+           viewport so the same filters stay available whether the scatter or
+           the model breakdown is on screen. -->
+      <div class="viz-controls" role="group" aria-label="Chart filters">
+        <div class="viz-control viz-control--source">
+          <span class="viz-control__label" id="source-label">Source</span>
+          <div class="seg" role="group" aria-labelledby="source-label">
+            <button type="button" class="seg-btn" data-source="all">All</button>
+            <button type="button" class="seg-btn" data-source="Provider">Provider</button>
+            <button type="button" class="seg-btn" data-source="Local">Local</button>
+          </div>
+        </div>
+        <label class="viz-control" for="top-filter">
+          <span class="viz-control__label">Runs to show</span>
+          <select id="top-filter" class="select">
+            <option value="25" selected>25 with least context</option>
+            <option value="15">15 with least context</option>
+            <option value="10">10 with least context</option>
+            <option value="all">All runs</option>
+          </select>
+        </label>
+        <div class="viz-control viz-control--models">
+          <div class="viz-control__head">
+            <span class="viz-control__label" id="models-label">Models</span>
+            <span class="legend-actions">
+              <button type="button" class="legend-btn" id="models-all">Select all</button>
+              <button type="button" class="legend-btn" id="models-none">Clear</button>
+            </span>
+          </div>
+          <div class="model-search-row">
+            <input id="model-search" class="model-search" type="search"
+              placeholder="wildcard search — *qwen*, openrouter/*, or a note like Q4 — filters the runs"
+              aria-label="Filter runs with wildcards * and ?; matches each run's model name or its notes"
+              autocomplete="off" spellcheck="false">
+            <span id="model-search-count" class="model-search-count" aria-live="polite"></span>
+            <button type="button" id="model-search-clear" class="model-search-clear" hidden>Clear search</button>
+          </div>
+          <div class="model-chips" id="model-chips" role="group" aria-labelledby="models-label"></div>
+        </div>
+      </div>
+
       <!-- Chart (prose: content/visualization/note.md) -->
       <section class="viz" aria-labelledby="viz-heading">
         <h2 id="viz-heading" class="intro__heading">
@@ -51,45 +92,6 @@
           Reading the chart
         </h2>
         <div class="viz__md" data-content="content/visualization/note.md"></div>
-
-        <!-- Controls -->
-        <div class="viz-controls" role="group" aria-label="Chart filters">
-          <div class="viz-control viz-control--source">
-            <span class="viz-control__label" id="source-label">Source</span>
-            <div class="seg" role="group" aria-labelledby="source-label">
-              <button type="button" class="seg-btn" data-source="all">All</button>
-              <button type="button" class="seg-btn" data-source="Provider">Provider</button>
-              <button type="button" class="seg-btn" data-source="Local">Local</button>
-            </div>
-          </div>
-          <label class="viz-control" for="top-filter">
-            <span class="viz-control__label">Runs to show</span>
-            <select id="top-filter" class="select">
-              <option value="25" selected>25 with least context</option>
-              <option value="15">15 with least context</option>
-              <option value="10">10 with least context</option>
-              <option value="all">All runs</option>
-            </select>
-          </label>
-          <div class="viz-control viz-control--models">
-            <div class="viz-control__head">
-              <span class="viz-control__label" id="models-label">Models</span>
-              <span class="legend-actions">
-                <button type="button" class="legend-btn" id="models-all">Select all</button>
-                <button type="button" class="legend-btn" id="models-none">Clear</button>
-              </span>
-            </div>
-            <div class="model-search-row">
-              <input id="model-search" class="model-search" type="search"
-                placeholder="wildcard search — *qwen*, openrouter/*, or a note like Q4 — filters the runs"
-                aria-label="Filter runs with wildcards * and ?; matches each run's model name or its notes"
-                autocomplete="off" spellcheck="false">
-              <span id="model-search-count" class="model-search-count" aria-live="polite"></span>
-              <button type="button" id="model-search-clear" class="model-search-clear" hidden>Clear search</button>
-            </div>
-            <div class="model-chips" id="model-chips" role="group" aria-labelledby="models-label"></div>
-          </div>
-        </div>
 
         <p id="viz-status" class="results-status" role="status" aria-live="polite">
           Loading data/eval-results.md…
@@ -113,9 +115,18 @@
           Model breakdown
         </h2>
         <div class="brk__md" data-content="content/visualization/breakdown.md"></div>
+
+        <!-- Metric toggle: Context Used / Turns (one rail at a time) -->
+        <div class="brk-metric seg" role="group" aria-label="Breakdown metric">
+          <button type="button" class="seg-btn" data-metric="tokens">Context Used</button>
+          <button type="button" class="seg-btn" data-metric="turns">Turns</button>
+        </div>
+
         <div class="brk-legend" id="brk-legend" role="group" aria-label="Model breakdown legend"></div>
-        <div class="brk-chart" id="brk-chart"></div>
-        <div id="brk-detail" class="brk-detail is-empty" aria-live="polite"></div>
+        <div class="brk-plot" id="brk-plot">
+          <div class="brk-chart" id="brk-chart"></div>
+          <div id="brk-tooltip" class="viz-tooltip is-hidden" role="tooltip"></div>
+        </div>
         <p id="brk-status" class="results-status" role="status" aria-live="polite"></p>
       </section>
 
