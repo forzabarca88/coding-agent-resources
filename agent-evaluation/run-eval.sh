@@ -749,7 +749,6 @@ STATS=$(jq -s '
             total_cost:        ($all | map(.usage.cost.total // 0) | add),
             turn_count:        ($all | length),
             last_input:        ((($lastValid | .usage) // {}) | .input // 0),
-            last_output:       ((($lastValid | .usage) // {}) | .output // 0),
             last_total:        ((($lastValid | .usage) // {}) | .totalTokens // 0),
             last_stop_reason:  ($all | last | (.stopReason // "")),
             last_error_message: ($all | last | (.errorMessage // "")),
@@ -768,7 +767,6 @@ if [ -n "$STATS" ]; then
     TOTAL_COST=$(echo "$STATS" | jq -r '.total_cost')
     TURN_COUNT=$(echo "$STATS" | jq -r '.turn_count')
     LAST_INPUT=$(echo "$STATS" | jq -r '.last_input')
-    LAST_OUTPUT=$(echo "$STATS" | jq -r '.last_output')
     LAST_TOTAL=$(echo "$STATS" | jq -r '.last_total')
     LAST_STOP_REASON=$(echo "$STATS" | jq -r '.last_stop_reason')
     LAST_ERROR_MESSAGE=$(echo "$STATS" | jq -r '.last_error_message // ""')
@@ -789,58 +787,6 @@ if [ -n "$STATS" ]; then
     else
         TOKENS_PER_SEC="N/A"
     fi
-
-    # Session message summary
-    echo ""
-    echo -e "${BOLD}Session Messages:${NC}"
-    echo ""
-
-    # Display each message with its full content
-    jq -r '
-        select(.type == "message") |
-        if .message.role == "assistant" then
-            "  [assistant] stopReason=" + (.message.stopReason // "?") +
-            "  in=" + ((.message.usage.input // 0)|tostring) +
-            " out=" + ((.message.usage.output // 0)|tostring) +
-            "  total=" + ((.message.usage.totalTokens // 0)|tostring) +
-            (if ((.message.errorMessage // null) != null) and ((.message.errorMessage | length) > 0) then
-                "  error: " + .message.errorMessage
-            else "" end) +
-            (if (.message.content | length) > 0 then
-                "\n" + (
-                    [.message.content[]? |
-                        if .type == "text" then "    text: " + .text
-                        elif .type == "thinking" then "    thinking: " + .thinking
-                        elif .type == "toolCall" then "    toolCall: " + .name + "(" + (.arguments | tostring) + ")"
-                        else "    " + .type
-                        end
-                    ] | join("\n")
-                )
-            else
-                "  (empty)"
-            end)
-        elif .message.role == "user" then
-            "  [user]\n" + (
-                [.message.content[]? |
-                    if .type == "text" then "    " + .text
-                    else "    " + .type
-                    end
-                ] | join("\n")
-            )
-        elif .message.role == "toolResult" then
-            "  [toolResult] " + (.message.toolName // "?") + " (" + (.message.toolCallId // "?") + ")\n" + (
-                [.message.content[]? |
-                    if .type == "text" then "    " + .text
-                    else "    " + .type
-                    end
-                ] | join("\n")
-            )
-        else
-            "  [" + .message.role + "]"
-        end
-    ' "$SESSION_FILE" 2>/dev/null | while IFS= read -r line; do
-        echo -e "${NC}${line}${NC}"
-    done
 
     # Performance metrics
     echo ""
