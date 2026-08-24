@@ -1452,12 +1452,15 @@
     modelsToggle.focus();
   });
 
-  // Summary in the popover toggle: all / N models / none — kept fresh.
+  // Summary in the popover toggle: all successful models / N models / no
+  // models — kept fresh. (The chip list only ever contains models with at
+  // least one successful run, so the unfiltered state means "all successful
+  // models", not literally every model in the data file.)
   function updateModelsSummary() {
 
     if (!modelsSummary) return;
     var sel = effectiveSelection();
-    if (sel === null) modelsSummary.textContent = 'all models';
+    if (sel === null) modelsSummary.textContent = 'all successful models';
     else if (!sel.length) modelsSummary.textContent = 'no models';
     else modelsSummary.textContent = sel.length + ' model' + (sel.length === 1 ? '' : 's');
   }
