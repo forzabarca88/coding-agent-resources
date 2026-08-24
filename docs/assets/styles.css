@@ -945,6 +945,183 @@ a:focus-visible {
 .model-search-clear:focus-visible { outline: 2px solid var(--carbon); outline-offset: 2px; }
 
 /* ============================================================
+   Model breakdown — evaluation chart page
+   ============================================================ */
+.brk {
+  padding: 2.25rem 0;
+  border-bottom: 1px solid var(--rule);
+}
+.brk__md p {
+  max-width: 72ch;
+  margin-bottom: 1.5rem;
+  color: var(--mist);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+.brk__md code {
+  font-family: var(--font-mono);
+  font-size: 0.8125em;
+  background: var(--zebra);
+  padding: 0.1em 0.4em;
+  border-radius: 2px;
+  color: var(--carbon);
+}
+
+/* Legend — decoded live from the runs actually shown, so it always matches. */
+.brk-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 2.2rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+.brk-legend .legend-label {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--carbon-soft);
+  margin-right: 0.2rem;
+}
+.legend-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  color: var(--mist);
+}
+.legend-key .lg {
+  width: 0.8rem;
+  height: 0.8rem;
+  flex-shrink: 0;
+}
+.legend-key .lg-row { display: none; } /* spacer for status keys rendered as filled squares */
+
+.brk-chart { margin: 0 0 0.5rem; }
+
+/* Chart geometry reused by both rails */
+.brk-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.brk-svg .brk-row-bg { fill: var(--zebra); }
+.brk-svg .brk-grid { stroke: var(--rule); stroke-width: 1; }
+.brk-svg .brk-frame { stroke: var(--rule-strong); stroke-width: 1; }
+.brk-svg .brk-rail {
+  /* a run's range band */
+  fill: #E5E9F1;
+  rx: 2;
+}
+.brk-svg .brk-rail-end { fill: var(--mist); }
+.brk-svg .brk-model {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  fill: var(--ink);
+  font-weight: 400;
+}
+.brk-svg .brk-count {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  fill: var(--mist);
+}
+.brk-svg .brk-axis {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  fill: var(--mist);
+}
+.brk-svg .brk-axis-title {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  fill: var(--carbon-soft);
+  letter-spacing: 0.04em;
+}
+
+.brk-g { cursor: pointer; }
+.brk-g > * { transition: stroke-width 0.12s ease; }
+.brk-g:hover > *,
+.brk-g:focus-visible > *,
+.brk-g.brk--pinned > * {
+  stroke: var(--ink);
+  stroke-width: 2;
+}
+.brk-g:focus-visible { outline: none; }
+
+@media (max-width: 640px) {
+  .brk-legend { gap: 0.4rem 1rem; }
+}
+
+/* Detail card for the hovered/pinned run in the breakdown chart */
+.brk-detail {
+  margin: 0.5rem 0 0.25rem;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--carbon);
+  border-radius: 2px;
+  background: var(--zebra);
+  padding: 0.85rem 1rem 1rem;
+}
+.brk-detail.is-empty { display: none; }
+.brk-detail__head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.brk-detail__src {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--ink);
+}
+.brk-detail__src .bd-status {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.brk-detail__tag {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  color: var(--carbon-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.brk-detail__notes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  align-items: center;
+  margin: 0.4rem 0 0;
+}
+.brk-detail__notes .tip__chip {
+  color: var(--ink);
+  background: var(--zebra);
+  border: 1px solid var(--rule);
+}
+.brk-detail__grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.15rem 1.1rem;
+  margin: 0 0 0.25rem;
+}
+.brk-detail__grid dt {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  color: var(--carbon-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.brk-detail__grid dd {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--ink);
+  text-align: right;
+}
+
+/* ============================================================
    Responsive — evaluation chart page
    ============================================================ */
 @media (max-width: 640px) {
