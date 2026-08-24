@@ -22,6 +22,12 @@
   var searchCountEl = document.getElementById('model-search-count');
   var searchClearEl = document.getElementById('model-search-clear');
 
+  // Models dropdown popover in the filter bar.
+  var modelsPop = document.getElementById('models-pop');
+  var modelsToggle = document.getElementById('models-toggle');
+  var modelsPanel = document.getElementById('models-panel');
+  var modelsSummary = document.getElementById('models-summary');
+
   // Model-breakdown panel (second chart on the page).
   var brkEl = document.getElementById('brk-chart');
   var brkStatusEl = document.getElementById('brk-status');
@@ -732,6 +738,7 @@
         : '';
     }
     if (searchClearEl) searchClearEl.hidden = !bySearch;
+    updateModelsSummary();
 
     Array.prototype.forEach.call(chipsEl.querySelectorAll('.model-chip'), function (btn) {
       btn.addEventListener('click', function () {
@@ -818,7 +825,8 @@
     });
   }
 
-  // Escape clears the breakdown pin too (the scatter pin is handled below).
+  // Escape clears both pinned marks (scatter and breakdown) in one pass, so
+  // a single keypress never leaves one chart's tooltip flashing.
   document.addEventListener('keydown', function (e) {
     if (e.key !== 'Escape') return;
     if (brkPinned) { brkPinned = null; markPinned(null); hideBrkTpt(); }
@@ -873,9 +881,8 @@
   var BRK_INK = '#16202E';
   var outMarks = {};           // data-brk id -> row, for tooltip binding
   var BRK_LABEL = 258;         // model-name column width
-  var BRK_ROW = 30;            // height of each model row
+  var BRK_ROW = 34;            // height of each model row
   var BRK_AXH = 34;            // height of the pinned metric axis
-  var BRK_MAXH = 460;          // viewport cap (px) for the scrollable rows
 
   // Glyph shapes for weight-quant values (assigned in sorted order).
   var BRK_SHAPES = ['circle', 'diamond', 'tri-up', 'tri-down', 'pentagon', 'hexagon'];
@@ -1123,14 +1130,18 @@
       body.push('<text class="brk-model" x="8" y="' + (mid - 7) + '" pointer-events="none">' +
         esc(brkLabel(m, BRK_LABEL - 20, order)) + '</text>');
 
-      // pass/fail split bar + count in the trailing label column
-      var bw = BRK_LABEL - 92;
+      // pass/fail split bar + reserved ok/total lane in the same trailing
+      // label column. The bar is capped at 118px (BRK_LABEL-140) from x=90,
+      // and the count is right-aligned at BRK_LABEL-8, so a bar can never
+      // overprint its number: these three positions are a fixed-width layout
+      // — if BRK_LABEL changes, keep the 32px+ guard between bar end and text.
+      var bw = BRK_LABEL - 140;          // bar lane width
       var okw = Math.round((ok / (tot || 1)) * bw);
       var fw = bw - okw;
-      if (okw) body.push('<rect x="90" y="' + (BRK_ROW - 8) + '" width="' + okw + '" height="6" fill="' + BRK_OK + '" pointer-events="none"/>');
-      if (fw) body.push('<rect x="' + (90 + okw) + '" y="' + (BRK_ROW - 8) + '" width="' + fw + '" height="6" fill="' + BRK_FAIL + '" pointer-events="none"/>');
-      body.push('<text class="brk-count" x="' + (BRK_LABEL - 10) + '" y="' + (BRK_ROW - 4) + '" text-anchor="end" pointer-events="none">' +
-        ok + ' / ' + tot + '</text>');
+      var barY = BRK_ROW - 12;              // bar sits low in the 34px row
+      if (okw) body.push('<rect class="brk-split" x="90" y="' + (barY - 2.5) + '" width="' + okw + '" height="5" fill="' + BRK_OK + '" pointer-events="none"/>');
+      body.push('<text class="brk-count" x="' + (BRK_LABEL - 8) + '" y="' + (barY + 3) + '" text-anchor="end" pointer-events="none">' + ok + ' / ' + tot + '</text>');
+      if (fw) body.push('<rect class="brk-fail" x="' + (90 + okw) + '" y="' + (barY - 2.5) + '" width="' + fw + '" height="5" fill="' + BRK_FAIL + '" pointer-events="none"/>');
 
       // rail spanning this model's value range on the active metric
       var min = Infinity, max = 0;
@@ -1341,6 +1352,12 @@
       } else {
         searchInput.blur();
       }
+      // Escape in the search field also dismisses the Models popover — the
+      // user is done filtering, not just done typing.
+      if (modelsPanel && !modelsPanel.hidden) {
+        modelsToggle.setAttribute('aria-expanded', 'false');
+        modelsPanel.hidden = true;
+      }
     });
   }
   if (searchClearEl) {
@@ -1364,6 +1381,39 @@
       drawBreakdown();
     });
   });
+
+  // Models popover: open on click, close on outside click / Escape+
+  modelsToggle.addEventListener('click', function (e) {
+    e.stopPropagation();
+    var open = modelsToggle.getAttribute('aria-expanded') === 'true';
+    modelsToggle.setAttribute('aria-expanded', String(!open));
+    modelsPanel.hidden = open;
+  });
+  // close on outside click
+  document.addEventListener('click', function (e) {
+    if (modelsPanel.hidden) return;
+    if (modelsPanel.contains(e.target) || modelsToggle.contains(e.target)) return;
+    modelsToggle.setAttribute('aria-expanded', 'false');
+    modelsPanel.hidden = true;
+  });
+  // Escape closes the panel too
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    if (modelsPanel.hidden) return;
+    modelsToggle.setAttribute('aria-expanded', 'false');
+    modelsPanel.hidden = true;
+    modelsToggle.focus();
+  });
+
+  // Summary in the popover toggle: all / N models / none — kept fresh.
+  function updateModelsSummary() {
+
+    if (!modelsSummary) return;
+    var sel = effectiveSelection();
+    if (sel === null) modelsSummary.textContent = 'all models';
+    else if (!sel.length) modelsSummary.textContent = 'no models';
+    else modelsSummary.textContent = sel.length + ' model' + (sel.length === 1 ? '' : 's');
+  }
 
   load();
 })();

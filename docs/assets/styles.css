@@ -21,7 +21,7 @@
   --mist: #5D6B82;
   --rule: rgba(46, 74, 122, 0.18);
   --rule-strong: rgba(46, 74, 122, 0.35);
-  --zebra: rgba(46, 74, 122, 0.04);
+  --zebra: rgba(46, 74, 122, 0.07);
   --carbon-bright: #8FA6CC; /* carbon lightened for use on ink */
   --font-display: "Bricolage Grotesque", "Arial Black", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Fragment Mono", "JetBrains Mono", ui-monospace, "SF Mono", "Cascadia Code", monospace;
@@ -641,23 +641,38 @@ a:focus-visible {
   font-size: 0.9375rem;
   line-height: 1.6;
 }
+/* Compact sticky filter bar — slim single row that stays pinned to the top
+   while the charts scroll beneath; the heavy model controls live in a
+   dismissible popover so the bar itself never blankets the page. */
 .viz-controls {
   position: sticky;
-  top: 0.6rem;
+  top: 0;
   z-index: 40;
-  max-height: 46vh;
-  overflow: auto;
+  margin: 0 0 1rem;
+}
+.viz-bar {
   display: flex;
   flex-wrap: wrap;
-  gap: 1rem 2rem;
-  align-items: flex-end;
-  padding: 1.1rem 1.4rem;
+  align-items: center;
+  gap: 0.55rem 1.25rem;
+  padding: 0.5rem 1rem;
   border: 1px solid var(--rule);
   border-left: 3px solid var(--carbon);
   background: var(--paper);
   border-radius: 2px;
-  box-shadow: 0 14px 34px rgba(22, 32, 46, 0.18);
-  margin: 0 0 1.5rem;
+  box-shadow: 0 4px 12px rgba(22, 32, 46, 0.1);
+}
+.viz-bar__tag {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--carbon-soft);
+}
+.viz-bar .viz-control {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
 }
 .viz-control {
   display: flex;
@@ -703,6 +718,58 @@ a:focus-visible {
 }
 .select:disabled { opacity: 0.5; }
 .select:focus-visible { outline: 2px solid var(--carbon); outline-offset: 1px; }
+
+/* Models dropdown — the toggle sits in the sticky bar; the panel is a
+   dismissible popover so it only ever overlays content while it is open. */
+.viz-pop { position: relative; }
+.viz-pop__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--rule-strong);
+  border-radius: 2px;
+  padding: 0.4rem 0.75rem;
+  cursor: pointer;
+}
+.viz-pop__toggle:hover { background: var(--zebra); }
+.viz-pop__toggle[aria-expanded="true"] {
+  border-color: var(--carbon);
+  background: var(--zebra);
+}
+.viz-pop__toggle:focus-visible { outline: 2px solid var(--carbon); outline-offset: 1px; }
+.viz-pop__name {
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--carbon-soft);
+}
+.viz-pop__summary { color: var(--ink); }
+.viz-pop__caret { color: var(--carbon-soft); transition: transform 0.15s; }
+.viz-pop__toggle[aria-expanded="true"] .viz-pop__caret { transform: rotate(180deg); }
+.viz-pop__panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 60;
+  width: min(420px, calc(100vw - 24px));
+  background: var(--paper);
+  border: 1px solid var(--rule-strong);
+  border-left: 3px solid var(--carbon);
+  border-radius: 2px;
+  box-shadow: 0 18px 44px rgba(22, 32, 46, 0.24);
+  padding: 0.85rem 1rem 1rem;
+}
+.viz-pop__panel[hidden] { display: none; }
+.viz-pop__panel .model-chips {
+  max-height: 32vh;
+  overflow-y: auto;
+  padding-right: 0.2rem;
+}
+
 
 .viz-plot {
   position: relative;
@@ -762,6 +829,8 @@ a:focus-visible {
   pointer-events: none;
   min-width: 230px;
   max-width: min(320px, 78vw);
+  max-height: calc(100vh - 3rem);
+  overflow-y: auto;
   background: var(--ink);
   color: var(--paper);
   border-radius: 3px;
@@ -854,8 +923,7 @@ a:focus-visible {
   margin-bottom: 1.5rem;
 }
 
-/* Model chips — in the filter bar, one chip per model */
-.viz-control--models { flex-basis: 100%; }
+/* Model chips — rendered inside the Models popover, one chip per model */
 .viz-control__head {
   display: flex;
   justify-content: space-between;
@@ -1008,7 +1076,7 @@ a:focus-visible {
 
 .brk-chart {
   display: block;
-  max-height: 420px;
+  max-height: 520px;
   overflow-y: auto;
   border: 1px solid var(--rule);
   border-left: 1px solid var(--rule-strong);
@@ -1050,6 +1118,7 @@ a:focus-visible {
   width: 100%;
   height: auto;
 }
+.brk-row:nth-of-type(even) { background: var(--zebra); }
 .brk-row .brk-model {
   font-family: var(--font-mono);
   font-size: 10px;
@@ -1058,7 +1127,11 @@ a:focus-visible {
 .brk-row .brk-count {
   font-family: var(--font-mono);
   font-size: 9px;
-  fill: var(--mist);
+  fill: var(--ink);
+  paint-order: stroke;
+  stroke: var(--paper);
+  stroke-width: 3px;
+  stroke-linejoin: round;
 }
 .brk-row .brk-rail { fill: var(--carbon-soft); }
 
@@ -1072,14 +1145,23 @@ a:focus-visible {
 }
 .brk-mark:focus-visible { outline: none; }
 
-@media (max-width: 640px) {
-  .brk-legend { gap: 0.4rem 1rem; }
-  .brk-chart { max-height: 320px; }
-}
+/* ============================================================
    Responsive — evaluation chart page
    ============================================================ */
 @media (max-width: 640px) {
-  .viz-controls { flex-direction: column; align-items: stretch; }
+  .brk-legend { gap: 0.4rem 1rem; }
+  .brk-chart { max-height: 320px; }
+  .viz-bar { gap: 0.5rem 0.75rem; }
+  .viz-bar__tag { display: none; }
+  .viz-pop__panel {
+    position: fixed;
+    top: 5.4rem;
+    left: 8px;
+    right: 8px;
+    width: auto;
+    min-width: 0;
+  }
+  .viz-controls { margin-bottom: 0.75rem; }
   .select { max-width: 100%; }
   .viz-tooltip { min-width: 0; }
   .model-search { flex: 1 1 100%; }
