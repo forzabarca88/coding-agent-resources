@@ -1141,7 +1141,7 @@ a:focus-visible {
 .brk-mark:focus-visible > *,
 .brk-mark.brk--pinned > * {
   stroke: var(--ink);
-  stroke-width: 2.2;
+  stroke-width: 3;
 }
 .brk-mark:focus-visible { outline: none; }
 

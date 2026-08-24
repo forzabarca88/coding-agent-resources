@@ -936,8 +936,8 @@
   // One SVG run-mark for the breakdown: fill carries status, stroke carries KV
   // value, shape carries weight quant.
   function brkMark(shape, cx, cy, r2, fill, kv, dash) {
-    var s = 'fill="' + fill + '" stroke="' + kv + '" stroke-width="1.4"' +
-      (dash ? ' stroke-dasharray="2.5 1.1"' : '');
+    var s = 'fill="' + fill + '" stroke="' + kv + '" stroke-width="2.5"' +
+      (dash ? ' stroke-dasharray="3.6 1.4"' : '');
     if (shape === 'square') {
       return '<rect x="' + (cx - r2) + '" y="' + (cy - r2) + '" width="' + (2 * r2) + '" height="' + (2 * r2) + '" ' + s + '/>';
     }
@@ -1028,8 +1028,8 @@
       kvs.forEach(function (kv) {
         var c = kv === '' ? BRK_KVCOL[''] : kv === 'None' ? BRK_KVCOL['None'] : brkKVColor(kv);
         parts.push('<span class="legend-key"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">' +
-          '<circle cx="8" cy="8" r="6" fill="' + BRK_OK + '" stroke="' + c + '" stroke-width="1.4" ' +
-          (kv === 'None' ? 'stroke-dasharray="2.5 1.1"' : '') + '/></svg>' +
+          '<circle cx="8" cy="8" r="6" fill="' + BRK_OK + '" stroke="' + c + '" stroke-width="2.6" ' +
+          (kv === 'None' ? 'stroke-dasharray="3.6 1.4"' : '') + '/></svg>' +
           esc(brkLegendLabel(kv)) + '</span>');
       });
     }
@@ -1160,7 +1160,7 @@
         var gid = i + '_' + j;
         outMarks[gid] = r;
         body.push('<g class="brk-mark" data-brk="' + gid + '" tabindex="0" role="button" pointer-events="bounding-box" aria-label="' + esc(label) + '">' +
-          brkMark(shape, sx(r[mKey]), mid, 6, fill, brkKVColor(kv), kv === 'None') + '</g>');
+          brkMark(shape, sx(r[mKey]), mid, 7, fill, brkKVColor(kv), kv === 'None') + '</g>');
       });
       body.push('</svg>');
     });
