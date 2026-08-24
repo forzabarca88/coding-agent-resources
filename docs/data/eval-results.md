@@ -4,6 +4,7 @@
 |---|---|---|---|---|---|---|---|---|---|---|
 | openrouter/openai/gpt-5.6-sol | thinking: medium | 2m 17s | 45496 | 19 | 128000 | No | 0 | 247 | 0 | 2026-08-08 13:37 |
 | openrouter/openai/gpt-5.6-luna | thinking: xhigh | 3m 55s | 52210 | 26 | 128000 | No | 0 | 247 | 0 | 2026-08-07 14:00 |
+| openrouter/xiaomi/mimo-v2.5 | thinking: high | 10m 50s | 67021 | 48 | 131000 | No | 0 | 247 | 0 | 2026-08-24 23:32 |
 | openrouter/xiaomi/mimo-v2.5-pro | thinking: high | 5m 49s | 67944 | 35 | 128000 | No | 0 | 247 | 0 | 2026-08-08 13:09 |
 | moonshotai/kimi-k3 | thinking: high | 32m 47s | 76437 | 41 | 131000 | No | 0 | 247 | 0 | 2026-08-22 13:04 |
 | openrouter/openai/gpt-5.6-luna | thinking: max | 11m 9s | 81130 | 59 | 131000 | No | 0 | 247 | 0 | 2026-08-21 23:06 |
@@ -63,4 +64,3 @@
 | lmstudio-jdc-ws/unsloth/gemma-4-31b-it-qat | quant: Q4_K_XL, KV quant: Q4_0, vitest failed, tool call formatting issues | 21m 56s | 44128 | 20 | 131000 | No | 1 | 19 | 0 | 2026-08-20 19:08 |
 | lmstudio-jdcmedia/unsloth/gemma-4-12b-it-qat | quant: Q4_K_XL, KV quant: Q8_0, vitest failed, tool call formatting issues | 2m 55s | 37761 | 16 | 128000 | No | 1 | ? | ? | 2026-08-04 11:13 |
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b | quant: Q2_K_XL, KV quant: None, thinking: medium, MTP, vitest failed, output EOS string prematurely  | 75m 56s | 79261 | 8 | 196000 | No | 1 | ? | ? | 2026-08-24 10:11 |
-| openrouter/xiaomi/mimo-v2.5 | thinking: high | 10m 50s | 67021 | 48 | 131000 | No | 0 | 247 | 0 | 2026-08-24 23:32 |
