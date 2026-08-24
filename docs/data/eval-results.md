@@ -53,7 +53,7 @@
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b | quant: Q2_K_XL, KV quant: Q8_0, thinking: medium, MTP, vitest failed | 121m 39s | 131148 | 32 | 131000 | Yes | 1 | 129 | 11 | 2026-08-22 20:30 |
 | lmstudio-jdcmedia/unsloth/qwen3.5-9b | quant: Q8_0, KV quant: Q8_0, vitest failed | 46m 14s | 124153 | 119 | 128000 | Yes | 1 | 128 | 119 | 2026-08-04 10:07 |
 | lmstudio-jdcmedia/unsloth/qwen3.6-27b | quant: Q3_K_S, KV quant: Q8_0, vitest failed | 37m 42s | 86454 | 25 | 80000 | Yes | 1 | 121 | 126 | 2026-08-03 21:25 |
-| lmstudio-jdc-ws/unsloth/muse-glimmer-30b | quant: Q4_K_XL, KV quant: Q8_0, thinking: xhigh, vitest failed, aborted due to tool call loop | 81m 10s | 126998 | 257 | 131000 | Yes | 1 | 109 | 247 | 2026-08-21 23:22 |
+| lmstudio-jdc-ws/unsloth/muse-glimmer-30b | quant: Q4_K_XL, KV quant: Q8_0, thinking: xhigh, vitest failed, aborted due to tool call loop | 81m 10s | 89689 | 192 | 131000 | Yes | 1 | 109 | 247 | 2026-08-21 23:22 |
 | lmstudio-jdc-ws/unsloth/laguna-s-2.1 | quant: Q4_K_XL, KV quant: Q8_0, thinking: off, vitest failed, tool hit output limit, sampling parameters incorrectly set | 266m 3s | 119010 | 25 | 128000 | No | 1 | 98 | 149 | 2026-08-18 16:00 |
 | lmstudio-jdcmedia/unsloth/gemma-4-31b-it | quant: IQ3_XXS, KV quant: Q4_0, vitest failed | 19m 28s | 55377 | 21 | 48000 | Yes | 1 | 67 | 149 | 2026-08-04 12:09 |
 | lmstudio-jdcmedia/unsloth/gemma-4-12b-it-qat | quant: Q4_K_XL, KV quant: Q8_0, vitest failed, tool call formatting issues | 2m 45s | 25421 | 14 | 128000 | No | 1 | 13 | 234 | 2026-08-04 11:55 |
