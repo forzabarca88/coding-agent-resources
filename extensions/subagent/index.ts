@@ -417,6 +417,15 @@ async function runSingleAgent(
                         });
                         let buffer = "";
 
+                        // pi's JSON mode emits `message_update` as delta-only events:
+                        // they carry `assistantMessageEvent` (with `contentIndex` and
+                        // `delta` fragments for thinking/text/tool-call) but NOT a
+                        // cumulative `message` field. Accumulate each content part per
+                        // contentIndex so live reasoning/text stay available to the
+                        // expanded panel until `message_end` finalizes the message.
+                        type LivePart = { type: "thinking" | "text"; value: string };
+                        const liveParts = new Map<number, LivePart>();
+
                         const processLine = (line: string) => {
                                 if (!line.trim()) return;
                                 let event: any;
@@ -426,23 +435,50 @@ async function runSingleAgent(
                                         return;
                                 }
 
-                                if (event.type === "message_update" && event.message) {
-                                        const msg = event.message as Message;
-                                        if (msg.role === "assistant") {
-                                                let thinking = "";
-                                                let text = "";
-                                                for (const part of msg.content) {
-                                                        if (part.type === "thinking" && part.thinking) thinking = part.thinking;
-                                                        else if (part.type === "text" && part.text) text += part.text;
-                                                }
-                                                if (thinking) currentResult.liveThinking = thinking;
-                                                if (text) currentResult.liveText = text;
-                                                if (thinking || text) {
-                                                        const now = Date.now();
-                                                        if (now - lastLiveEmit >= LIVE_THROTTLE_MS) {
-                                                                lastLiveEmit = now;
-                                                                emitUpdate();
-                                                        }
+                                if (event.type === "message_update" && event.assistantMessageEvent) {
+                                        const sse = event.assistantMessageEvent as {
+                                                type: string;
+                                                contentIndex?: number;
+                                                delta?: string;
+                                                content?: string;
+                                        };
+                                        const idx = sse.contentIndex ?? 0;
+                                        const apply = (kind: "thinking" | "text", value: string) => {
+                                                const part = liveParts.get(idx) ?? { type: kind, value: "" };
+                                                part.value += value;
+                                                part.type = kind;
+                                                liveParts.set(idx, part);
+                                        };
+                                        if (sse.type === "thinking_delta" && sse.delta) apply("thinking", sse.delta);
+                                        else if (sse.type === "text_delta" && sse.delta) apply("text", sse.delta);
+                                        else if (sse.type === "thinking_start") {
+                                                if (!liveParts.has(idx)) liveParts.set(idx, { type: "thinking", value: "" });
+                                        } else if (sse.type === "text_start") {
+                                                if (!liveParts.has(idx)) liveParts.set(idx, { type: "text", value: "" });
+                                        } else if (sse.type === "thinking_end" && sse.content) {
+                                                liveParts.set(idx, { type: "thinking", value: sse.content });
+                                        } else if (sse.type === "text_end" && sse.content) {
+                                                liveParts.set(idx, { type: "text", value: sse.content });
+                                        } else {
+                                                // non-streaming events (start/done/error) carry no new content
+                                                return;
+                                        }
+
+                                        const thinking = Array.from(liveParts.values())
+                                                .filter((p) => p.type === "thinking")
+                                                .map((p) => p.value)
+                                                .join("");
+                                        const text = Array.from(liveParts.values())
+                                                .filter((p) => p.type === "text")
+                                                .map((p) => p.value)
+                                                .join("");
+                                        if (thinking) currentResult.liveThinking = thinking;
+                                        if (text) currentResult.liveText = text;
+                                        if (thinking || text) {
+                                                const now = Date.now();
+                                                if (now - lastLiveEmit >= LIVE_THROTTLE_MS) {
+                                                        lastLiveEmit = now;
+                                                        emitUpdate();
                                                 }
                                         }
                                 }
@@ -452,6 +488,7 @@ async function runSingleAgent(
                                         currentResult.messages.push(msg);
                                         currentResult.liveThinking = undefined;
                                         currentResult.liveText = undefined;
+                                        liveParts.clear();
 
                                         if (msg.role === "assistant") {
                                                 currentResult.usage.turns++;
