@@ -49,6 +49,7 @@
 | lmstudio-jdc-ws/qwen/qwen3.8-27b | quant: Q4_K_M, KV quant: Q4_0, thinking: xhigh, MTP | 135m 0s | 144189 | 60 | 196000 | No | 0 | 247 | 0 | 2026-08-19 23:47 |
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b | quant: Q3_K_XL, KV quant: Q4_0, thinking: xhigh, MTP | 138m 6s | 156395 | 65 | 196000 | No | 0 | 247 | 0 | 2026-08-27 20:28 |
 | lmstudio-jdc-ws/ornith-ai/ornith-1.5-35b-a3b | quant: Q8_0, KV quant: Q8_0 | 162m 22s | 176816 | 157 | 262000 | No | 0 | 247 | 0 | 2026-08-22 13:44 |
+| lmstudio-jdc-ws/ornith-ai/ornith-1.5-9b | quant: Q8_0, KV quant: Q8_0, MTP | 151m 52s | 256466 | 308 | 262000 | No | 0 | 247 | 0 | 2026-08-28 21:33 |
 | lmstudio-jdc-ws/ornith-ai/ornith-1.5-9b | quant: Q4_K_M, KV quant: Q8_0, MTP | 135m 20s | 257974 | 258 | 262000 | No | 0 | 247 | 0 | 2026-08-28 19:18 |
 | lmstudio-jdc-ws/qwen/qwen3.8-27b | quant: Q4_K_M, KV quant: Q4_0, thinking: low, MTP, vitest failed | 111m 0s | 123925 | 51 | 128000 | Yes | 1 | 246 | 1 | 2026-08-17 21:46 |
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b | quant: Q4_K_XL, KV quant: Q4_0, thinking: low, MTP, vitest failed | 116m 50s | 126934 | 42 | 131000 | No | 1 | 246 | 1 | 2026-08-28 12:23 |
@@ -77,4 +78,3 @@
 | lmstudio-jdc-ws/unsloth/gemma-4-31b-it-qat | quant: Q4_K_XL, KV quant: Q4_0, vitest failed, tool call formatting issues | 21m 56s | 44128 | 20 | 131000 | No | 1 | 19 | 0 | 2026-08-20 19:08 |
 | lmstudio-jdcmedia/unsloth/gemma-4-12b-it-qat | quant: Q4_K_XL, KV quant: Q8_0, vitest failed, tool call formatting issues | 2m 55s | 37761 | 16 | 128000 | No | 1 | ? | ? | 2026-08-04 11:13 |
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b | quant: Q2_K_XL, KV quant: None, thinking: medium, MTP, vitest failed, output EOS string prematurely  | 75m 56s | 79261 | 8 | 196000 | No | 1 | ? | ? | 2026-08-24 10:11 |
-| lmstudio-jdc-ws/ornith-ai/ornith-1.5-9b@q8_0 | quant: Q8_0, KV quant: Q8_0, MTP | 151m 52s | 256466 | 308 | 262000 | No | 0 | 247 | 0 | 2026-08-28 21:33 |
