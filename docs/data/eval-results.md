@@ -8,6 +8,7 @@
 | openrouter/xiaomi/mimo-v2.5-pro | thinking: high | 5m 49s | 67944 | 35 | 128000 | No | 0 | 247 | 0 | 2026-08-08 13:09 |
 | openrouter/moonshotai/kimi-k3 | thinking: high | 32m 47s | 76437 | 41 | 131000 | No | 0 | 247 | 0 | 2026-08-22 13:04 |
 | openrouter/openai/gpt-5.6-luna | thinking: max | 11m 9s | 81130 | 59 | 131000 | No | 0 | 247 | 0 | 2026-08-21 23:06 |
+| openrouter/z-ai/glm-5.3-flash | thinking: medium | 12m 1s | 89913 | 40 | 262000 | No | 0 | 247 | 0 | 2026-08-29 22:07 |
 | openrouter/deepseek/deepseek-v4-flash-0731 | thinking: xhigh | 24m 45s | 103218 | 60 | 128000 | No | 0 | 247 | 0 | 2026-08-05 22:59 |
 | openrouter/deepseek/deepseek-v4-flash | version: 0423, thinking: xhigh | 12m 54s | 106855 | 43 | 128000 | No | 0 | 247 | 0 | 2026-08-03 17:01 |
 | openrouter/deepseek/deepseek-v4-flash-0731 | thinking: high, wasted turns after passing tests | 25m 56s | 132715 | 97 | 131000 | Yes | 0 | 247 | 0 | 2026-08-21 23:47 |
@@ -83,4 +84,3 @@
 | lmstudio-jdcmedia/unsloth/gemma-4-12b-it-qat | quant: Q4_K_XL, KV quant: Q8_0, vitest failed, tool call formatting issues | 2m 55s | 37761 | 16 | 128000 | No | 1 | ? | ? | 2026-08-04 11:13 |
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b | quant: Q2_K_XL, KV quant: None, thinking: medium, MTP, vitest failed, output EOS string prematurely  | 75m 56s | 79261 | 8 | 196000 | No | 1 | ? | ? | 2026-08-24 10:11 |
 | lmstudio-jdc-ws/deepreinforce-ai/ornith-1.0-35b | quant: Q4_K_M, KV quant: None | 55m 49s | 125661 | 133 | 163000 | No | 0 | 247 | 0 | 2026-08-29 19:13 |
-| openrouter/z-ai/glm-5.3-flash | thinking: medium | 12m 1s | 89913 | 40 | 262000 | No | 0 | 247 | 0 | 2026-08-29 22:07 |
