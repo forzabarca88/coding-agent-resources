@@ -47,7 +47,9 @@
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b | quant: Q3_K_XL, KV quant: Q8_0, thinking: xhigh, MTP | 122m 22s | 137006 | 60 | 196000 | No | 0 | 247 | 0 | 2026-08-28 10:15 |
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b | quant: Q2_K_XL, KV quant: Q8_0, thinking: xhigh, MTP | 141m 15s | 142883 | 54 | 196000 | No | 0 | 247 | 0 | 2026-08-22 16:36 |
 | lmstudio-jdc-ws/qwen/qwen3.8-27b | quant: Q4_K_M, KV quant: Q4_0, thinking: xhigh, MTP | 135m 0s | 144189 | 60 | 196000 | No | 0 | 247 | 0 | 2026-08-19 23:47 |
+| lmstudio-jdc-ws/deepreinforce-ai/ornith-1.0-35b | quant: Q4_k_M, KV quant: Q4_0 | 41m 14s | 151721 | 154 | 262000 | No | 0 | 247 | 0 | 2026-08-29 18:26 |
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b | quant: Q3_K_XL, KV quant: Q4_0, thinking: xhigh, MTP | 138m 6s | 156395 | 65 | 196000 | No | 0 | 247 | 0 | 2026-08-27 20:28 |
+| lmstudio-jdc-ws/deepreinforce-ai/ornith-1.0-35b | quant: Q4_K_M, KV quant: Q4_0 | 48m 21s | 161205 | 83 | 262000 | No | 0 | 247 | 0 | 2026-08-29 17:37 |
 | lmstudio-jdc-ws/ornith-ai/ornith-1.5-35b-a3b | quant: Q8_0, KV quant: Q8_0 | 162m 22s | 176816 | 157 | 262000 | No | 0 | 247 | 0 | 2026-08-22 13:44 |
 | lmstudio-jdc-ws/ornith-ai/ornith-1.5-9b | quant: Q8_0, KV quant: Q8_0, MTP | 151m 52s | 256466 | 308 | 262000 | No | 0 | 247 | 0 | 2026-08-28 21:33 |
 | lmstudio-jdc-ws/ornith-ai/ornith-1.5-9b | quant: Q4_K_M, KV quant: Q8_0, MTP | 135m 20s | 257974 | 258 | 262000 | No | 0 | 247 | 0 | 2026-08-28 19:18 |
@@ -78,5 +80,3 @@
 | lmstudio-jdc-ws/unsloth/gemma-4-31b-it-qat | quant: Q4_K_XL, KV quant: Q4_0, vitest failed, tool call formatting issues | 21m 56s | 44128 | 20 | 131000 | No | 1 | 19 | 0 | 2026-08-20 19:08 |
 | lmstudio-jdcmedia/unsloth/gemma-4-12b-it-qat | quant: Q4_K_XL, KV quant: Q8_0, vitest failed, tool call formatting issues | 2m 55s | 37761 | 16 | 128000 | No | 1 | ? | ? | 2026-08-04 11:13 |
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b | quant: Q2_K_XL, KV quant: None, thinking: medium, MTP, vitest failed, output EOS string prematurely  | 75m 56s | 79261 | 8 | 196000 | No | 1 | ? | ? | 2026-08-24 10:11 |
-| lmstudio-jdc-ws/deepreinforce-ai/ornith-1.0-35b | quant: Q4_K_M, KV quant: Q4_0 | 48m 21s | 161205 | 83 | 262000 | No | 0 | 247 | 0 | 2026-08-29 17:37 |
-| lmstudio-jdc-ws/deepreinforce-ai/ornith-1.0-35b | quant: Q4_k_M, KV quant: Q4_0 | 41m 14s | 151721 | 154 | 262000 | No | 0 | 247 | 0 | 2026-08-29 18:26 |
