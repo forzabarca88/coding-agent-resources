@@ -82,3 +82,4 @@
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b | quant: Q2_K_XL, KV quant: None, thinking: medium, MTP, vitest failed, output EOS string prematurely  | 75m 56s | 79261 | 8 | 196000 | No | 1 | ? | ? | 2026-08-24 10:11 |
 | lmstudio-jdc-ws/deepreinforce-ai/ornith-1.0-35b | quant: Q4_K_M, KV quant: None | 55m 49s | 125661 | 133 | 163000 | No | 0 | 247 | 0 | 2026-08-29 19:13 |
 | openrouter/z-ai/glm-5.3-flash | thinking: max | 37m 12s | 146178 | 41 | 262000 | No | 0 | 247 | 0 | 2026-08-29 20:32 |
+| openrouter/z-ai/glm-5.3-flash | thinking: max | 53m 31s | 179991 | 51 | 262000 | No | 0 | 247 | 0 | 2026-08-29 21:09 |
