@@ -79,3 +79,4 @@
 | lmstudio-jdcmedia/unsloth/gemma-4-12b-it-qat | quant: Q4_K_XL, KV quant: Q8_0, vitest failed, tool call formatting issues | 2m 55s | 37761 | 16 | 128000 | No | 1 | ? | ? | 2026-08-04 11:13 |
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b | quant: Q2_K_XL, KV quant: None, thinking: medium, MTP, vitest failed, output EOS string prematurely  | 75m 56s | 79261 | 8 | 196000 | No | 1 | ? | ? | 2026-08-24 10:11 |
 | lmstudio-jdc-ws/deepreinforce-ai/ornith-1.0-35b | quant: Q4_K_M, KV quant: Q4_0 | 48m 21s | 161205 | 83 | 262000 | No | 0 | 247 | 0 | 2026-08-29 17:37 |
+| lmstudio-jdc-ws/deepreinforce-ai/ornith-1.0-35b | quant: Q4_k_M, KV quant: Q4_0 | 41m 14s | 151721 | 154 | 262000 | No | 0 | 247 | 0 | 2026-08-29 18:26 |
