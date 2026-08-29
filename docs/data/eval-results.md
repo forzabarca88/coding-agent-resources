@@ -26,14 +26,14 @@
 
 | Model | Notes | Duration | Total Context Used | Turns | Limit | Exceeded | Exit | Passed Tests | Failed Tests | Date |
 |---|---|---|---|---|---|---|---|---|---|---|
-| lmstudio-jdc-ws/unsloth/qwen3.6-27b-mtp | quant: Q4_K_XL, KV quant: Q4_0, MTP, preserve thinking: false | 26m 2s | 70436 | 46 | 131000 | No | 0 | 247 | 0 | 2026-08-21 10:57 |
+| lmstudio-jdc-ws/unsloth/qwen3.6-27b-mtp | quant: Q4_K_XL, KV quant: Q4_0, MTP | 26m 2s | 70436 | 46 | 131000 | No | 0 | 247 | 0 | 2026-08-21 10:57 |
 | lmstudio-jdc-ws/unsloth/laguna-s-2.1 | quant: Q4_K_XL, KV quant: Q8_0, reasoning budget: 32k | 92m 30s | 83166 | 109 | 131000 | No | 0 | 247 | 0 | 2026-08-23 00:52 |
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b | quant: Q4_K_XL, KV quant: Q4_0, thinking: medium, MTP | 63m 35s | 84788 | 34 | 131000 | No | 0 | 247 | 0 | 2026-08-24 11:27 |
 | lmstudio-jdcmedia/deepreinforce-ai/ornith-1.0-35b | quant: Q4_K_M, KV quant: Q8_0 | 70m 43s | 96197 | 138 | 128000 | No | 0 | 247 | 0 | 2026-08-03 23:23 |
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b | quant: Q4_K_XL, KV quant: Q8_0, thinking: medium, MTP | 93m 2s | 88039 | 40 | 131000 | No | 0 | 247 | 0 | 2026-08-21 17:18 |
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b | quant: Q4_K_XL, KV quant: Q4_0, thinking: medium, MTP | 106m 29s | 96423 | 44 | 131000 | No | 0 | 247 | 0 | 2026-08-24 19:26 |
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b | quant: Q4_K_XL, KV quant: Q4_0, thinking: medium, MTP | 85m 3s | 100050 | 67 | 131000 | No | 0 | 247 | 0 | 2026-08-21 14:27 |
-| lmstudio-jdc-ws/unsloth/qwen3.6-27b-mtp | quant: Q4_K_XL, KV quant: Q4_0, MTP, preserve thinking: false | 45m 50s | 105611 | 79 | 131000 | No | 0 | 247 | 0 | 2026-08-21 13:41 |
+| lmstudio-jdc-ws/unsloth/qwen3.6-27b-mtp | quant: Q4_K_XL, KV quant: Q4_0, MTP | 45m 50s | 105611 | 79 | 131000 | No | 0 | 247 | 0 | 2026-08-21 13:41 |
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b | quant: Q3_K_XL, KV quant: Q8_0, thinking: medium, MTP | 79m 5s | 106744 | 58 | 131000 | No | 0 | 247 | 0 | 2026-08-28 14:20 |
 | lmstudio-jdcmedia/deepreinforce-ai/ornith-1.0-35b | quant: Q4_K_M, KV quant: Q8_0 | 78m 24s | 109184 | 133 | 128000 | No | 0 | 247 | 0 | 2026-08-05 21:31 |
 | lmstudio-jdc-ws/deepreinforce-ai/ornith-1.0-35b | quant: Q4_K_M, KV quant: Q8_0 | 49m 20s | 111640 | 160 | 128000 | No | 0 | 247 | 0 | 2026-08-17 17:23 |
@@ -41,8 +41,9 @@
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b | quant: Q3_K_XL, KV quant: Q8_0, thinking: xhigh, MTP | 92m 43s | 114581 | 50 | 196000 | No | 0 | 247 | 0 | 2026-08-28 08:42 |
 | lmstudio-jdcmedia/unsloth/qwen3.6-27b | quant: Q3_K_S, KV quant: Q4_0 | 71m 13s | 115361 | 93 | 128000 | No | 0 | 247 | 0 | 2026-08-03 18:44 |
 | lmstudio-jdc-ws/unsloth/laguna-s-2.1 | quant: Q4_K_XL, KV quant: Q8_0, reasoning budget: 32k | 201m 8s | 117616 | 79 | 131000 | No | 0 | 247 | 0 | 2026-08-23 04:53 |
-| lmstudio-jdc-ws/qwen/qwen3.8-27b | quant: Q4_K_M, KV quant: Q4_0, thinking: medium, MTP, preserve thinking: false | 121m 3s | 121063 | 67 | 131000 | No | 0 | 247 | 0 | 2026-08-21 18:51 |
+| lmstudio-jdc-ws/qwen/qwen3.8-27b | quant: Q4_K_M, KV quant: Q4_0, thinking: medium, MTP | 121m 3s | 121063 | 67 | 131000 | No | 0 | 247 | 0 | 2026-08-21 18:51 |
 | lmstudio-jdc-ws/qwen/qwen3.8-27b | quant: Q4_K_M, KV quant: Q8_0, thinking: medium, MTP | 104m 35s | 122824 | 41 | 131000 | No | 0 | 247 | 0 | 2026-08-22 10:07 |
+| lmstudio-jdc-ws/deepreinforce-ai/ornith-1.0-35b | quant: Q4_K_M, KV quant: None | 55m 49s | 125661 | 133 | 163000 | No | 0 | 247 | 0 | 2026-08-29 19:13 |
 | lmstudio-jdcmedia/unsloth/qwen3.6-27b | quant: Q3_K_S, KV quant: Q4_0 | 64m 30s | 123968 | 96 | 128000 | No | 0 | 247 | 0 | 2026-08-05 20:18 |
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b | quant: Q3_K_XL, KV quant: Q4_0, thinking: xhigh, MTP | 114m 32s | 130496 | 63 | 196000 | No | 0 | 247 | 0 | 2026-08-27 18:33 |
 | lmstudio-jdc-ws/unsloth/laguna-s-2.1 | quant: Q4_K_XL, KV quant: Q8_0 | 264m 3s | 131025 | 82 | 262000 | No | 0 | 247 | 0 | 2026-08-23 09:42 |
@@ -83,5 +84,4 @@
 | lmstudio-jdc-ws/unsloth/gemma-4-31b-it-qat | quant: Q4_K_XL, KV quant: Q4_0, vitest failed, tool call formatting issues | 21m 56s | 44128 | 20 | 131000 | No | 1 | 19 | 0 | 2026-08-20 19:08 |
 | lmstudio-jdcmedia/unsloth/gemma-4-12b-it-qat | quant: Q4_K_XL, KV quant: Q8_0, vitest failed, tool call formatting issues | 2m 55s | 37761 | 16 | 128000 | No | 1 | ? | ? | 2026-08-04 11:13 |
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b | quant: Q2_K_XL, KV quant: None, thinking: medium, MTP, vitest failed, output EOS string prematurely  | 75m 56s | 79261 | 8 | 196000 | No | 1 | ? | ? | 2026-08-24 10:11 |
-| lmstudio-jdc-ws/deepreinforce-ai/ornith-1.0-35b | quant: Q4_K_M, KV quant: None | 55m 49s | 125661 | 133 | 163000 | No | 0 | 247 | 0 | 2026-08-29 19:13 |
-| lmstudio-jdc-ws/unsloth/gemma-4-12b-it-qat | quant: Q4_K_XL, KV quant: Q8_0, vitest failed | 16m 10s | 42870 | 31 | 131000 | No | 1 | 15 | 4 | 2026-08-29 22:59 |
+| lmstudio-jdc-ws/unsloth/gemma-4-12b-it-qat | quant: Q4_K_XL, KV quant: Q8_0, vitest failed, tool call formatting issues | 16m 10s | 42870 | 31 | 131000 | No | 1 | 15 | 4 | 2026-08-29 22:59 |
