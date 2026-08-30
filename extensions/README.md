@@ -10,12 +10,15 @@ Extensions are TypeScript modules that hook into pi's event system to provide ad
 
 ### [auto-recover.ts](./auto-recover.ts)
 - **Purpose**: Detects when an agent run ends with an interrupted attempt (an unexecuted trailing tool call, or an empty completion after a tool result)
-- **Behavior**: Automatically sends a user message prompting the model to continue
-- **Trigger**: `agent_settled` event (fires only when Pi will not continue automatically, i.e. the next step is a transition back to the user turn)
+- **Behavior**: Automatically queues a user message prompting the model to continue
+- **Trigger**: `agent_end` (primary) — the recovery follow-up is queued before pi decides whether to continue, so the agent loop keeps going and the recovery runs inside the same prompt call (essential for single-shot `--mode json`/`--mode print`, where pi exits as soon as a run settles). `agent_settled` (fallback) catches the case where an `input`-handling extension made the queueing asynchronous.
 - **Features**:
   - Strict trigger: only fires when the END of the final assistant message is an interrupted attempt — either a structured, unexecuted `toolCall` part, final text/thinking that literally ends with a leaked tool-call tag (e.g. Gemma's `<|tool_call|>call:...<tool_call|>`), or an EMPTY assistant message that directly follows a tool result whose own toolCall is present in the branch (a mid-task blank completion)
   - Never fires on messages that merely mention tool-call syntax and end in normal prose
-  - Tracks consecutive recoveries (max 3)
+  - stopReason-aware: user-aborted frames (`"aborted"`) never trigger nor reset; provider-error frames (`"error"`) never reset the guard, are deferred to pi's own auto-retry at `agent_end`, and are only recovered by the `agent_settled` fallback if retries leave the run interrupted
+  - Gives up after 3 consecutive interrupted runs without a normal completion (at most 2 recovery attempts, then a latch until a normal run; error/aborted runs neither count nor reset the latch)
+  - Tolerates pi's shutdown/replacement race: a run aborted during shutdown still emits `agent_end`/`agent_settled` after the extension runtime is invalidated, and the handler then bails quietly instead of throwing a stale-ctx error
+  - Known limitation: the `agent_settled` fallback starts a fresh run, which never executes in single-shot `--mode json`/`--mode print` (the process exits at settlement) — so an error-interrupted run in those modes (retries disabled / non-retryable provider error) is not recovered; non-error interruptions are recovered in-process via the `agent_end` path
   - Provides UI notifications for recovery status
 
 ### [followup.ts](./followup.ts)
