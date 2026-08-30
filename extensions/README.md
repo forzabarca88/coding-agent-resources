@@ -55,6 +55,7 @@ Extensions are TypeScript modules that hook into pi's event system to provide ad
   - Manages subagent lifecycle
   - Handles context passing between agents
   - Provides subagent coordination utilities
+  - Shows the compaction count of each completed subagent session next to its duration in the result panel
 
 ## Installation
 

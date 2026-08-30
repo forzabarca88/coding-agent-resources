@@ -27,6 +27,7 @@ This extension provides enhanced subagent capabilities, allowing for more sophis
   - Per-invocation model overrides via the `model` (single mode) / `models` ({agentName: `provider/id`}) / per-item `model` parameters, so different agents can run on different models without editing agent markdown
   - Live thinking tail in the expanded panel: streams the last 15 lines of a reasoning model's thinking in realtime (throttled), cleared at each turn end so finalized reasoning is never retained or surfaced to the parent context
   - Live response tail in the expanded panel: streams the last 15 lines of the assistant's response text in realtime (throttled, same mechanism as the thinking tail); cleared at each turn end, after which the finalized text renders as Markdown in the Output section
+  - Compaction count in the result panel: the number of times the subagent session was compacted (successful `compaction_end` events) is shown next to the session duration in the completed result summary line
 
 ## Recursion Guard
 

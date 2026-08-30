@@ -65,6 +65,27 @@ function formatDuration(ms: number): string {
         return `${mins}m ${secs}s`;
 }
 
+function formatCompactions(count: number): string {
+        return `${count} compaction${count === 1 ? "" : "s"}`;
+}
+
+/**
+ * Assembles the summary line for a subagent session: usage stats, then the
+ * session duration followed immediately by the compaction count. Sessions
+ * that are still running (or were never completed) have no `durationMs`, so
+ * only the usage stats render until the session finishes.
+ */
+function formatResultMeta(r: SingleResult): string {
+        const parts: string[] = [];
+        const usageStr = formatUsageStats(r.usage, r.model);
+        if (usageStr) parts.push(usageStr);
+        if (r.durationMs) {
+                parts.push(formatDuration(r.durationMs));
+                if (r.compactions > 0) parts.push(formatCompactions(r.compactions));
+        }
+        return parts.join(" · ");
+}
+
 function formatUsageStats(
         usage: {
                 input: number;
@@ -199,6 +220,7 @@ interface SingleResult {
         errorMessage?: string;
         step?: number;
         durationMs?: number;
+        compactions: number;
         liveThinking?: string;
         liveText?: string;
 }
@@ -352,6 +374,7 @@ async function runSingleAgent(
                         messages: [],
                         stderr: `Unknown agent: "${agentName}". Available agents: ${available}.`,
                         usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0, contextTokens: 0, turns: 0, lastInput: 0, lastOutput: 0, lastCacheRead: 0, lastCacheWrite: 0 },
+                        compactions: 0,
                         step,
                 };
         }
@@ -379,6 +402,7 @@ async function runSingleAgent(
                 stderr: "",
                 usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0, contextTokens: 0, turns: 0, lastInput: 0, lastOutput: 0, lastCacheRead: 0, lastCacheWrite: 0 },
                 model: modelToUse,
+                compactions: 0,
                 step,
         };
 
@@ -512,6 +536,15 @@ async function runSingleAgent(
                                         emitUpdate();
                                 }
 
+                                // Count completed compactions in this session. pi emits `compaction_end`
+                                // with a `result` only when the compaction succeeded; aborted/failed
+                                // compactions (including a failed overflow-recovery retry) carry
+                                // `result: undefined` and are not counted. A successful overflow-recovery
+                                // compaction does emit a `result` and is a real compaction counted here.
+                                if (event.type === "compaction_end" && event.result && !event.aborted) {
+                                        currentResult.compactions++;
+                                }
+
                                 // Note: pi emits tool_execution_start/update/end and turn_end (toolResults)
                                 // for tool execution. There is no tool_result_end event, and tool result
                                 // messages aren't needed by getDisplayItems/getFinalOutput anyway.
@@ -551,8 +584,12 @@ async function runSingleAgent(
                 });
 
                 currentResult.exitCode = exitCode;
-                currentResult.durationMs = Date.now() - startTime;
+                // Only mark the session as having run to completion (setting `durationMs`)
+                // on the non-aborted path. The compaction count is gated on `durationMs`,
+                // so an aborted session must never surface a "completed" meta line even if
+                // this ordering changes later.
                 if (wasAborted) throw new Error("Subagent was aborted");
+                currentResult.durationMs = Date.now() - startTime;
                 return currentResult;
         } finally {
                 if (tmpPromptPath)
@@ -791,6 +828,7 @@ export default function (pi: ExtensionAPI) {
                                                 messages: [],
                                                 stderr: "",
                                                 usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0, contextTokens: 0, turns: 0, lastInput: 0, lastOutput: 0, lastCacheRead: 0, lastCacheWrite: 0 },
+                                                compactions: 0,
                                         };
                                 }
 
@@ -993,9 +1031,7 @@ export default function (pi: ExtensionAPI) {
                                                         container.addChild(new Markdown(finalOutput.trim(), 0, 0, mdTheme));
                                                 }
                                         }
-                                        const usageStr = formatUsageStats(r.usage, r.model);
-                                        const durStr = r.durationMs ? formatDuration(r.durationMs) : undefined;
-                                        const metaStr = [usageStr, durStr].filter(Boolean).join(" · ");
+                                        const metaStr = formatResultMeta(r);
                                         if (metaStr) {
                                                 container.addChild(new Spacer(1));
                                                 container.addChild(new Text(theme.fg("dim", metaStr), 0, 0));
@@ -1019,9 +1055,7 @@ export default function (pi: ExtensionAPI) {
                                         text += `\n${renderDisplayItems(displayItems, COLLAPSED_ITEM_COUNT)}`;
                                         if (displayItems.length > COLLAPSED_ITEM_COUNT) text += `\n${theme.fg("muted", "(Ctrl+O to expand)")}`;
                                 }
-                                const usageStr = formatUsageStats(r.usage, r.model);
-                                const durStr = r.durationMs ? formatDuration(r.durationMs) : undefined;
-                                const metaStr = [usageStr, durStr].filter(Boolean).join(" · ");
+                                const metaStr = formatResultMeta(r);
                                 if (metaStr) text += `\n${theme.fg("dim", metaStr)}`;
                                 return new Text(text, 0, 0);
                         }
@@ -1090,9 +1124,7 @@ export default function (pi: ExtensionAPI) {
                                                         container.addChild(new Markdown(finalOutput.trim(), 0, 0, mdTheme));
                                                 }
 
-                                                const stepUsage = formatUsageStats(r.usage, r.model);
-                                                const stepDur = r.durationMs ? formatDuration(r.durationMs) : undefined;
-                                                const stepMeta = [stepUsage, stepDur].filter(Boolean).join(" · ");
+                                                const stepMeta = formatResultMeta(r);
                                                 if (stepMeta) container.addChild(new Text(theme.fg("dim", stepMeta), 0, 0));
 
                                                 // Live tails at the bottom of each step block
@@ -1126,9 +1158,7 @@ export default function (pi: ExtensionAPI) {
                                         text += `\n\n${theme.fg("muted", `─── Step ${r.step}: `)}${theme.fg("accent", r.agent)} ${rIcon}`;
                                         if (displayItems.length === 0) text += `\n${theme.fg("muted", "(no output)")}`;
                                         else text += `\n${renderDisplayItems(displayItems, 5)}`;
-                                        const stepUsage = formatUsageStats(r.usage, r.model);
-                                        const stepDur = r.durationMs ? formatDuration(r.durationMs) : undefined;
-                                        const stepMeta = [stepUsage, stepDur].filter(Boolean).join(" · ");
+                                        const stepMeta = formatResultMeta(r);
                                         if (stepMeta) text += `\n${theme.fg("dim", stepMeta)}`;
                                 }
                                 const usageStr = formatUsageStats(aggregateUsage(details.results));
@@ -1191,9 +1221,7 @@ export default function (pi: ExtensionAPI) {
                                                         container.addChild(new Markdown(finalOutput.trim(), 0, 0, mdTheme));
                                                 }
 
-                                                const taskUsage = formatUsageStats(r.usage, r.model);
-                                                const taskDur = r.durationMs ? formatDuration(r.durationMs) : undefined;
-                                                const taskMeta = [taskUsage, taskDur].filter(Boolean).join(" · ");
+                                                const taskMeta = formatResultMeta(r);
                                                 if (taskMeta) container.addChild(new Text(theme.fg("dim", taskMeta), 0, 0));
 
                                                 // Live tails at the bottom of each task block
@@ -1230,9 +1258,7 @@ export default function (pi: ExtensionAPI) {
                                                 text += `\n${theme.fg("muted", r.exitCode === -1 ? "(running...)" : "(no output)")}`;
                                         else text += `\n${renderDisplayItems(displayItems, 5)}`;
                                         if (r.exitCode !== -1) {
-                                                const taskUsage = formatUsageStats(r.usage, r.model);
-                                                const taskDur = r.durationMs ? formatDuration(r.durationMs) : undefined;
-                                                const taskMeta = [taskUsage, taskDur].filter(Boolean).join(" · ");
+                                                const taskMeta = formatResultMeta(r);
                                                 if (taskMeta) text += `\n${theme.fg("dim", taskMeta)}`;
                                         }
                                 }
