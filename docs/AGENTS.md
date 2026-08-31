@@ -16,7 +16,8 @@ This folder is the static documentation site: plain HTML/CSS/JS with **no build 
   │   └── specs.md                   # machine specs card + run command
   └── visualization/
       ├── masthead.md                # chart page subtitle
-      └── note.md                    # "Reading the chart" note
+      ├── note.md                    # "Reading the chart" note
+      └── breakdown.md               # "Runs by model" ranges-chart note
   ```
 
 - A content slot is any element with a `data-content="content/<path>.md"` attribute. `assets/content.js` fetches the file and replaces the slot's inner HTML with the rendered markdown. Slots must stay free of prose.
@@ -37,7 +38,8 @@ This folder is the static documentation site: plain HTML/CSS/JS with **no build 
 - The machine specs are markdown tables in `content/evaluation-results/specs.md` — first column is the spec label (styled as a `dt`), `###` headings name the machines, and the table header row is intentionally hidden. Do not add a fourth column.
 - The run command on the same page is a fenced code block; `.specs__md pre::before` adds the `$ ` prompt, so do not type a `$` prefix in the file.
 - `data/eval-results.md` is generated data — `agent-evaluation/run-eval.sh` appends rows. Never edit it by hand; it is not content markdown.
-- Styling for rendered content is scoped to the slot classes in `assets/styles.css` (`.masthead__subhead`, `.intro__md`, `.specs__md`, `.viz__md`, `.content-error`). Do not reuse the `.md` class on content slots — it carries the wide results-table rules.
+- How a markdown construct renders is defined **once** in `assets/styles.css`, in the shared "Rendered markdown" block: `:is()` rules over the slot classes (`.masthead__subhead`, `.intro__md`, `.specs__md`, `.viz__md`, `.brk__md`) plus the `.md` results container cover paragraphs, lists, inline code, fenced code blocks, blockquotes, `strong`, headings and tables, so identical markdown renders identically in every slot. (`em` needs no rule — the browser's italics apply; links use the global link rule.) The shared block sits **before** the slot sections so slot overrides win.
+- Slot sections in `styles.css` only add tone (colour/size/line-height on the slot container, so `li`/`code`/`strong` inherit it), measure (`p { max-width }` — per-paragraph, since a container max-width would clip the wide results tables), trailing-spacing cleanup, and slot-specific components: the specs machine grid + `$ ` prompt, the wide `.md` results tables, and the `.intro__md > blockquote` callout. Do not add per-construct prose rules to a slot, and do not reuse the `.md` class on content slots — it also carries the wide results-table rules. `.content-error` stays a slot-specific failure style.
 
 ## Adding a page
 
@@ -58,11 +60,11 @@ docs/
 │   ├── index.md                  # Index page subtitle
 │   ├── pages.md                  # Published-page registry
 │   ├── evaluation-results/       # Results page content (masthead, intro, specs)
-│   └── visualization/            # Chart page content (masthead, note)
+│   └── visualization/            # Chart page content (masthead, note, breakdown)
 ├── data/
 │   └── eval-results.md           # Single canonical results file; run-eval.sh appends runs here (data, not prose)
 ├── assets/
-│   ├── styles.css                # Site stylesheet (incl. scoped rules for rendered content)
+│   ├── styles.css                # Site stylesheet (shared rendered-markdown rules + slot overrides)
 │   ├── content.js                # Fetches content/*.md into [data-content] slots (marked)
 │   ├── site.js                   # Shared site behaviour (active page in nav)
 │   ├── results.js                # Fetches data/eval-results.md and renders it as HTML
@@ -76,4 +78,4 @@ docs/
 - When asked to change any wording on the site, edit the `.md` under `content/` — never inline prose in the HTML.
 - `assets/visualization.js`'s wildcard search matches each run's model name and Notes, with `*`/`?` able to span both fields (a NUL joins them in `searchHaystack`, so literal text cannot bridge). `tests/visualization-search.test.mjs` covers the semantics — run it with `node --test 'docs/tests/*.test.mjs'` after changing that logic.
 - After adding/renaming/removing a content file, grep the HTML for `data-content="content/...` to keep slots in sync, and re-check `docs/README`-adjacent docs (root `README.md`) if page-level behaviour changed.
-- The pattern lives here so future agents know: content = `content/*.md`, chrome = HTML, behaviour = JS, styles = `assets/styles.css`.
+- The pattern lives here so future agents know: content = `content/*.md`, chrome = HTML, behaviour = JS, styles = `assets/styles.css` (shared rendered-markdown typography first, slot tone/components after).

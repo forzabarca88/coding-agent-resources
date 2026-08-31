@@ -132,6 +132,130 @@ a:focus-visible {
 }
 
 /* ============================================================
+   Rendered markdown — shared typography for every content slot
+   ------------------------------------------------------------
+   All prose slots (.masthead__subhead, .intro__md, .specs__md,
+   .viz__md, .brk__md) and the .md results container render
+   human-edited markdown via marked (see docs/AGENTS.md). The rules
+   below define how each markdown construct renders — identically in
+   every slot, so the markup in the .md file decides the look, not
+   the surrounding page. The slot sections further down only add
+   tone (colour/size/measure) and slot-specific components (specs
+   machine grid, results tables, intro callout blockquote).
+   ============================================================ */
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) {
+  overflow-wrap: break-word; /* long URLs and code must not break the measure */
+}
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) p {
+  margin-bottom: 1rem;
+}
+/* Lists — the global reset strips margins/padding, so restore the indent here */
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) ul,
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) ol {
+  margin: 0 0 1rem 1.5rem;
+}
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) li {
+  margin-bottom: 0.25rem;
+}
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) li::marker {
+  color: var(--carbon-soft);
+}
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) li > p {
+  margin-bottom: 0; /* loose-list paragraphs */
+}
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) strong {
+  font-weight: 600;
+}
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) code {
+  font-family: var(--font-mono);
+  font-size: 0.8125em;
+  background: var(--zebra);
+  padding: 0.1em 0.4em;
+  border-radius: 2px;
+  color: var(--carbon);
+}
+/* Fenced code blocks — the site-wide code-block look (the "$ " prompt is a specs add-on) */
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) pre {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--paper);
+  background: var(--ink);
+  padding: 0.9rem 1.1rem;
+  border-radius: 2px;
+  white-space: pre;
+  overflow-x: auto;
+  margin: 1rem 0;
+}
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) pre code {
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+}
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) blockquote {
+  margin: 1rem 0;
+  padding-left: 1rem;
+  border-left: 2px solid var(--rule-strong);
+  color: var(--mist);
+}
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) blockquote p:last-child {
+  margin-bottom: 0;
+}
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) hr {
+  border: 0;
+  border-top: 1px solid var(--rule);
+  margin: 1.5rem 0;
+}
+/* Headings and tables — base treatments so any construct the markdown can
+   produce renders properly in a prose slot. .md and specs re-style tables
+   (wide data tables, machine-spec grid) in their slot sections below. */
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) h1,
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) h2,
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) h3,
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) h4 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--ink);
+  margin: 1.75rem 0 0.75rem;
+}
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) h1 {
+  font-size: 1.4rem;
+  margin: 0 0 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--rule);
+}
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) h2 { font-size: 1.2rem; }
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) h3 { font-size: 1.05rem; }
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) h4 { font-size: 0.95rem; }
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  font-size: 0.9375rem;
+}
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) th,
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--rule);
+  text-align: left;
+  vertical-align: top;
+}
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) thead th {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 400;
+  color: var(--carbon-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+/* Whatever the markdown starts with sits flush under the section heading */
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) > :first-child {
+  margin-top: 0;
+}
+
+/* ============================================================
    Masthead
    ============================================================ */
 .masthead {
@@ -162,10 +286,7 @@ a:focus-visible {
   color: var(--mist);
   max-width: 62ch;
 }
-.masthead__subhead p { margin: 1em 0; }
-.masthead__subhead p:first-child { margin-top: 0; }
 .masthead__subhead p:last-child { margin-bottom: 0; }
-.masthead__subhead a { color: var(--carbon); }
 
 /* ============================================================
    Introduction
@@ -186,14 +307,9 @@ a:focus-visible {
   letter-spacing: 0.06em;
   margin-bottom: 1rem;
 }
-.intro p {
-  max-width: 62ch;
-  margin-bottom: 0.75rem;
-  font-size: 1rem;
-  line-height: 1.65;
-}
-.intro p:last-child { margin-bottom: 0; }
-.intro code, .masthead__subhead code, .page-index code {
+.intro__md p { max-width: 62ch; }
+/* .page-index is rebuilt HTML (not raw markdown), so it keeps its own code chip */
+.page-index code {
   font-family: var(--font-mono);
   font-size: 0.8125em;
   background: var(--zebra);
@@ -201,21 +317,26 @@ a:focus-visible {
   border-radius: 2px;
   color: var(--carbon);
 }
-/* Intro content — paragraphs and callout notes rendered from content/evaluation-results/intro.md */
+/* Intro content — paragraphs and callout notes rendered from content/evaluation-results/intro.md.
+   The callout overrides the shared blockquote look; it keeps body-ink text for contrast. */
 .intro__md > blockquote {
   max-width: 62ch;
-  margin: 0 0 0.75rem;
+  margin: 0 0 1rem;
   padding: 0.9rem 1.1rem;
   border: 1px solid var(--rule);
   border-left: 3px solid var(--carbon);
   border-radius: 2px;
   background: var(--zebra);
+  color: var(--ink);
   font-size: 0.9375rem;
   line-height: 1.6;
 }
 .intro__md > blockquote p {
   margin: 0;
   max-width: none;
+}
+.intro__md > blockquote code {
+  background: var(--paper); /* zebra chip on a zebra card would vanish — use paper */
 }
 
 /* ============================================================
@@ -242,13 +363,10 @@ a:focus-visible {
   margin-bottom: 1rem;
 }
 /* Specs content — rendered from content/evaluation-results/specs.md: intro note, one
-   ### machine heading + two-column Spec/Value table each, then the run command. */
-.specs__md p {
-  max-width: 62ch;
-  margin-bottom: 1.25rem;
-  font-size: 1rem;
-  line-height: 1.65;
-}
+   ### machine heading + two-column Spec/Value table each, then the run command.
+   Prose, lists, code and the fenced block come from the shared rendered-markdown
+   rules; this section only adds the machine-spec grid and the "$ " prompt. */
+.specs__md p { max-width: 62ch; }
 .specs__md h3, .specs__md h4 {
   font-family: var(--font-mono);
   font-size: 0.6875rem;
@@ -286,22 +404,10 @@ a:focus-visible {
   border-right: 1px solid var(--rule); /* vertical divider between label and value columns */
 }
 .specs__md tbody td code {
-  color: var(--carbon);
-  background: var(--zebra);
-  padding: 0.05em 0.35em;
-  border-radius: 2px;
+  font-size: inherit; /* table cells are already mono — keep the shared chip but not the size step-down */
 }
 .specs__md pre {
-  font-family: var(--font-mono);
-  font-size: 0.8125rem;
-  line-height: 1.5;
-  color: var(--paper);
-  background: var(--ink);
-  padding: 0.9rem 1.1rem;
-  border-radius: 2px;
-  white-space: pre;
-  overflow-x: auto;
-  margin: 0.75rem 0 0;
+  margin: 0.75rem 0 0; /* sits tight under the ordered list that introduces it */
 }
 .specs__md pre::before {
   content: "$ ";
@@ -501,57 +607,17 @@ a:focus-visible {
 .results-clear:focus-visible { outline: 2px solid var(--carbon); outline-offset: 2px; }
 
 /* ============================================================
-   Rendered markdown
+   Rendered results — .md container on evaluation-results.html
+   ------------------------------------------------------------
+   Prose constructs come from the shared rendered-markdown rules
+   above; this section adds heading styles and the wide evaluation
+   tables. Do not reuse .md on content slots for that reason.
    ============================================================ */
 .md {
   overflow-x: auto;
 }
-.md h1 {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 1.4rem;
-  line-height: 1.2;
-  color: var(--ink);
-  margin-bottom: 1.25rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid var(--rule);
-}
-.md h2, .md h3, .md h4 {
-  font-family: var(--font-display);
-  font-weight: 600;
-  color: var(--ink);
-  margin: 1.75rem 0 0.75rem;
-}
-.md h2 { font-size: 1.2rem; }
-.md h3 { font-size: 1.05rem; }
-.md h4 { font-size: 0.95rem; }
-.md p {
-  max-width: 62ch;
-  margin-bottom: 0.75rem;
-}
-.md ul, .md ol {
-  margin: 0 0 0.75rem 1.25rem;
-}
-.md li { margin-bottom: 0.25rem; }
-.md blockquote {
-  margin: 1rem 0;
-  padding-left: 1rem;
-  border-left: 2px solid var(--rule-strong);
-  color: var(--mist);
-}
-.md code {
-  font-family: var(--font-mono);
-  font-size: 0.8125em;
-  background: var(--zebra);
-  padding: 0.1em 0.4em;
-  border-radius: 2px;
-  color: var(--carbon);
-}
-.md hr {
-  border: 0;
-  border-top: 1px solid var(--rule);
-  margin: 1.5rem 0;
-}
+/* Headings come from the shared rendered-markdown rules above */
+.md p { max-width: 62ch; }
 
 /* Table — the evaluation record */
 .md table {
@@ -634,13 +700,14 @@ a:focus-visible {
   padding: 2.25rem 0;
   border-bottom: 1px solid var(--rule);
 }
-.viz__md p {
-  max-width: 72ch;
-  margin-bottom: 1.5rem;
+/* Chart notes — muted caption tone applied to the whole slot so every markdown
+   construct inside it (paragraphs, lists, code, strong/em) reads identically. */
+.viz__md {
   color: var(--mist);
   font-size: 0.9375rem;
   line-height: 1.6;
 }
+.viz__md p { max-width: 72ch; }
 /* Compact sticky filter bar — slim single row that stays pinned to the top
    while the charts scroll beneath; the heavy model controls live in a
    dismissible popover so the bar itself never blankets the page. */
@@ -1061,21 +1128,13 @@ a:focus-visible {
   padding: 2.25rem 0;
   border-bottom: 1px solid var(--rule);
 }
-.brk__md p {
-  max-width: 72ch;
-  margin-bottom: 1.5rem;
+/* Chart notes — same muted caption tone as .viz__md (shared markdown rules apply) */
+.brk__md {
   color: var(--mist);
   font-size: 0.9375rem;
   line-height: 1.6;
 }
-.brk__md code {
-  font-family: var(--font-mono);
-  font-size: 0.8125em;
-  background: var(--zebra);
-  padding: 0.1em 0.4em;
-  border-radius: 2px;
-  color: var(--carbon);
-}
+.brk__md p { max-width: 72ch; }
 
 /* Metric toggle — one rail at a time (Context Used | Turns) */
 .brk-metric { justify-self: start; margin: 0.25rem 0 0.9rem; }
