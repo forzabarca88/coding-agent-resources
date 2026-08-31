@@ -1,6 +1,7 @@
 Each point in this scatter plot is one successful run, plotted by how it performed.
 
 **Total Context Used:** How many tokens were used by the model to solve the tasks.
+
 **Turns:** The number of turns taken by the turn to solve the tasks.
 
 **Quadrants:** The dashed lines split the plot at the midpoint of each axis.
