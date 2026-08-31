@@ -13,6 +13,7 @@ The bottom-left shaded region (least context, fewest turns) can be considered as
 - `openrouter/` — every provider run
 - `Q4` — every run whose notes mention Q4
 - `Q2_K_XL` — only the runs quantised at Q2_K_XL, not every run of the same model
+- `qwen3.8-27b*Q4_0` - Only Qwen 3.8 27B with Q4 KV cache 
 
 **Sources:** Cloud results are labelled *Provider*; runs on the local test machines are labelled *Local*.
 
