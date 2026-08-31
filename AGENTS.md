@@ -41,12 +41,14 @@ coding-agent-resources/
 │   │   └── visualization/    # Chart page content (masthead, reading-the-chart note)
 │   ├── data/
 │   │   └── eval-results.md   # Single canonical results file; run-eval.sh appends runs here
-│   └── assets/
-│       ├── styles.css        # Site stylesheet
-│       ├── content.js        # Fetches content/*.md into [data-content] slots and renders with marked
-│       ├── site.js           # Shared site behaviour (active page in nav)
-│       ├── results.js        # Fetches data/eval-results.md and renders it as HTML
-│       └── visualization.js  # Renders eval results as an interactive scatter chart
+│   ├── assets/
+│   │   ├── styles.css        # Site stylesheet
+│   │   ├── content.js        # Fetches content/*.md into [data-content] slots and renders with marked
+│   │   ├── site.js           # Shared site behaviour (active page in nav)
+│   │   ├── results.js        # Fetches data/eval-results.md and renders it as HTML
+│   │   └── visualization.js  # Renders eval results as an interactive scatter chart
+│   └── tests/
+│       └── visualization-search.test.mjs # End-to-end wildcard-search tests (node --test 'docs/tests/*.test.mjs')
 ├── extensions/
 │   ├── README.md             # Extensions overview
 │   ├── auto-recover.ts       # Detects interrupted turns (unexecuted tool call or blank completion) and prompts model to continue

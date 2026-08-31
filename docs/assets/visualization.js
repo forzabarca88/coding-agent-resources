@@ -256,10 +256,10 @@
    * query is active; clearing the query restores the previous one.
    * ------------------------------------------------------------------ */
 
-  // Turns a wildcard pattern into a RegExp against the full (lower-cased)
-  // model name or note text. '*' matches any run of characters, '?' exactly
-  // one. Patterns are matched as substrings, so 'qwen3.6-27b', 'openrouter/*'
-  // and note fragments like 'Q4' all find what the user means.
+  // Turns a wildcard pattern into a RegExp against the search haystack.
+  // '*' matches any run of characters, '?' exactly one. Patterns are matched
+  // as substrings, so 'qwen3.6-27b', 'openrouter/*' and note fragments like
+  // 'Q4' all find what the user means.
   function globToRegExp(pattern) {
     var p = String(pattern).toLowerCase();
     var re = '';
@@ -272,12 +272,26 @@
     return new RegExp('^.*' + re + '.*$');
   }
 
+  // The text a search pattern is tested against for one run: the model name
+  // and the Notes joined by a NUL. The separator keeps literal (no-wildcard)
+  // patterns inside a single field, while '*' and '?' can bridge the join —
+  // so 'qwen3.8-27b*Q4' matches runs of a qwen3.8-27b model whose Notes
+  // mention Q4, and 'Q2_K_XL' still only finds runs quantised at Q2_K_XL.
+  function searchHaystack(r) {
+    return String(r.model || '').toLowerCase() + '\u0000' +
+      String(r.notes || '').toLowerCase();
+  }
+
   // Models matching the current query, in source-scoped order; null when no
   // query is active. Used by the summary and the chip strip while a search is
-  // active: a model counts as matching when the query matches its name OR the
-  // Notes of at least one of its successful runs in the current source (so
-  // searching "Q4" finds every model with a run at a Q4 quantisation). The
-  // visible rows themselves are filtered individually in visibleRows().
+  // active: a model counts as matching when the query matches its name, the
+  // Notes of one of its successful runs in the current source, or a pattern
+  // bridging name and Notes (so searching "Q4" finds every model with a run
+  // at a Q4 quantisation, and "qwen3.8-27b*Q4" narrows that to qwen3.8-27b).
+  // sourceModels() only returns models with at least one successful run in
+  // the source, so testing the combined haystack of those runs also covers
+  // name-only queries. The visible rows themselves are filtered individually
+  // in visibleRows().
   // Memoized on (query, source) — searchMatches is consulted once per draw by
   // the summary and chips, so this avoids recomputing the same O(models×runs)
   // scan on every redraw.
@@ -290,10 +304,9 @@
     if (key === searchMemoKey) return searchMemoVal;
     var re = globToRegExp(q);
     var res = sourceModels().filter(function (m) {
-      if (re.test(String(m).toLowerCase())) return true;
       return allRows.some(function (r) {
         return r.model === m && isSuccessful(r) && inSource(r) &&
-          re.test(String(r.notes || '').toLowerCase());
+          re.test(searchHaystack(r));
       });
     });
     searchMemoKey = key;
@@ -323,13 +336,10 @@
     var rows = allRows.filter(function (r) {
       if (!isSuccessful(r) || !inSource(r)) return false;
       // A live wildcard search filters the rows themselves: a run is kept
-      // only when the pattern matches its own model name or its own Notes.
-      // This makes "Q2_K_XL" show just the single run quantised at Q2_K_XL
-      // instead of every run of the same model.
-      if (searchRe) {
-        if (searchRe.test(String(r.model || '').toLowerCase())) return true;
-        return searchRe.test(String(r.notes || '').toLowerCase());
-      }
+      // only when the pattern matches its model name and/or Notes (see
+      // searchHaystack). This makes "Q2_K_XL" show just the single run
+      // quantised at Q2_K_XL instead of every run of the same model.
+      if (searchRe) return searchRe.test(searchHaystack(r));
       if (!modelSelected(r)) return false;
       return true;
     });
@@ -951,9 +961,7 @@
     if (sel && sel.indexOf(r.model) === -1) return false;
     var q = state.search.trim();
     if (q) {
-      var re = globToRegExp(q);
-      return re.test(String(r.model || '').toLowerCase()) ||
-        re.test(String(r.notes || '').toLowerCase());
+      return globToRegExp(q).test(searchHaystack(r));
     }
     return true;
   }

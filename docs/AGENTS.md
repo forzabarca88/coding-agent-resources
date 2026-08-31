@@ -61,16 +61,19 @@ docs/
 │   └── visualization/            # Chart page content (masthead, note)
 ├── data/
 │   └── eval-results.md           # Single canonical results file; run-eval.sh appends runs here (data, not prose)
-└── assets/
-    ├── styles.css                # Site stylesheet (incl. scoped rules for rendered content)
-    ├── content.js                # Fetches content/*.md into [data-content] slots (marked)
-    ├── site.js                   # Shared site behaviour (active page in nav)
-    ├── results.js                # Fetches data/eval-results.md and renders it as HTML
-    └── visualization.js          # Plots eval results as a scatter chart
+├── assets/
+│   ├── styles.css                # Site stylesheet (incl. scoped rules for rendered content)
+│   ├── content.js                # Fetches content/*.md into [data-content] slots (marked)
+│   ├── site.js                   # Shared site behaviour (active page in nav)
+│   ├── results.js                # Fetches data/eval-results.md and renders it as HTML
+│   └── visualization.js          # Plots eval results as a scatter chart
+└── tests/
+    └── visualization-search.test.mjs # End-to-end wildcard-search tests (run: node --test 'docs/tests/*.test.mjs')
 ```
 
 ## Workflow for agents
 
 - When asked to change any wording on the site, edit the `.md` under `content/` — never inline prose in the HTML.
+- `assets/visualization.js`'s wildcard search matches each run's model name and Notes, with `*`/`?` able to span both fields (a NUL joins them in `searchHaystack`, so literal text cannot bridge). `tests/visualization-search.test.mjs` covers the semantics — run it with `node --test 'docs/tests/*.test.mjs'` after changing that logic.
 - After adding/renaming/removing a content file, grep the HTML for `data-content="content/...` to keep slots in sync, and re-check `docs/README`-adjacent docs (root `README.md`) if page-level behaviour changed.
 - The pattern lives here so future agents know: content = `content/*.md`, chrome = HTML, behaviour = JS, styles = `assets/styles.css`.
