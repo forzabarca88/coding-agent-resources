@@ -68,11 +68,12 @@
 | lmstudio-jdc-ws/unsloth/qwen3.6-27b-mtp | quant: Q4_K_XL, KV quant: Q4_0, MTP, vitest failed | 50m 42s | 126940 | 106 | 131000 | Yes | 1 | 245 | 2 | 2026-08-21 12:20 |
 | lmstudio-jdc-ws/ornith-ai/ornith-1.5-35b-a3b | quant: Q8_0, KV quant: Q8_0, vitest failed | 103m 54s | 126730 | 97 | 131000 | No | 1 | 237 | 10 | 2026-08-23 14:06 |
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b | quant: Q4_K_XL, KV quant: Q4_0, thinking: low, MTP, vitest failed | 117m 3s | 123924 | 37 | 128000 | Yes | 1 | 236 | 11 | 2026-08-17 18:12 |
+| lmstudio-jdc-ws/ornith-ai/ornith-1.5-9b | quant: BF16, KV quant: Q8_0, vitest failed, thinking loop | 190m 4s | 218375 | 279 | 262000 | No | 1 | 232 | 15 | 2026-09-01 10:15 |
 | lmstudio-jdc-ws/unsloth/ornith-1.0-35b | quant: Q8_K_XL, KV quant: Q8_0, vitest failed | 90m 1s | 124066 | 37 | 128000 | Yes | 1 | 226 | 21 | 2026-08-17 15:42 |
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b | quant: Q4_K_XL, KV quant: Q4_0, thinking: xhigh, MTP, vitest failed | 125m 40s | 123916 | 41 | 128000 | No | 1 | 224 | 23 | 2026-08-16 15:49 |
 | lmstudio-jdc-ws/ornith-ai/ornith-1.5-9b | quant: Q4_K_M, KV quant: Q8_0, MTP, vitest failed | 84m 28s | 192067 | 138 | 196000 | No | 1 | 218 | 29 | 2026-08-28 16:11 |
 | lmstudio-jdc-ws/unsloth/qwen3.5-9b | quant: Q8_0, KV quant: Q8_0, vitest failed, decided implementation good enough | 63m 41s | 147048 | 125 | 196000 | No | 1 | 153 | 94 | 2026-08-22 22:54 |
-| lmstudio-jdcmedia/deepreinforce-ai/ornith-1.0-9b | quant: Q4_K_M, KV quant: Q8_0, vitest failed, thinking hit output limit | 71m 56s | 167439 | 141 | 262000 | Yes | 1 | 169 | 78 | 2026-08-04 12:31 |
+| lmstudio-jdcmedia/deepreinforce-ai/ornith-1.0-9b | quant: Q4_K_M, KV quant: Q8_0, vitest failed, thinking loop | 71m 56s | 167439 | 141 | 262000 | Yes | 1 | 169 | 78 | 2026-08-04 12:31 |
 | lmstudio-jdc-ws/unsloth/muse-glimmer-30b | quant: Q4_K_XL, KV quant: Q8_0, thinking: high, vitest failed, exhibits laziness | 102m 6s | 126998 | 257 | 131000 | Yes | 1 | 165 | 82 | 2026-08-18 21:01 |
 | lmstudio-jdcmedia/unsloth/qwen3.6-27b | quant: Q3_K_S, KV quant: Q4_0, vitest failed | 27m 52s | 81307 | 22 | 80000 | Yes | 1 | 133 | 114 | 2026-08-03 22:43 |
 | lmstudio-jdcmedia/deepreinforce-ai/ornith-1.0-9b | quant: Q4_K_M, KV quant: None, vitest failed | 31m 44s | 122292 | 49 | 128000 | Yes | 1 | 130 | 117 | 2026-08-04 11:16 |
@@ -89,4 +90,3 @@
 | lmstudio-jdcmedia/unsloth/gemma-4-12b-it-qat | quant: Q4_K_XL, KV quant: Q8_0, vitest failed, tool call formatting issues | 2m 55s | 37761 | 16 | 128000 | No | 1 | ? | ? | 2026-08-04 11:13 |
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b | quant: Q2_K_XL, KV quant: None, thinking: medium, MTP, vitest failed, output EOS string prematurely  | 75m 56s | 79261 | 8 | 196000 | No | 1 | ? | ? | 2026-08-24 10:11 |
 | lmstudio-jdc-ws/unsloth/gemma-4-12b-it-qat | quant: Q4_K_XL, KV quant: Q8_0, vitest failed, tool call formatting issues | 16m 10s | 42870 | 31 | 131000 | No | 1 | 15 | 4 | 2026-08-29 22:59 |
-| lmstudio-jdc-ws/ornith-ai/ornith-1.5-9b@bf16 | quant: BF16, KV quant: Q8_0, vitest failed | 190m 4s | 218375 | 279 | 262000 | No | 1 | 232 | 15 | 2026-09-01 10:15 |
