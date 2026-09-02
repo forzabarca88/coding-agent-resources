@@ -135,7 +135,7 @@ a:focus-visible {
    Rendered markdown — shared typography for every content slot
    ------------------------------------------------------------
    All prose slots (.masthead__subhead, .intro__md, .specs__md,
-   .viz__md, .brk__md) and the .md results container render
+   .viz__md, .brk__md, .findings__md) and the .md results container render
    human-edited markdown via marked (see docs/AGENTS.md). The rules
    below define how each markdown construct renders — identically in
    every slot, so the markup in the .md file decides the look, not
@@ -143,30 +143,30 @@ a:focus-visible {
    tone (colour/size/measure) and slot-specific components (specs
    machine grid, results tables, intro callout blockquote).
    ============================================================ */
-:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) {
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .findings__md, .md) {
   overflow-wrap: break-word; /* long URLs and code must not break the measure */
 }
-:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) p {
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .findings__md, .md) p {
   margin-bottom: 1rem;
 }
 /* Lists — the global reset strips margins/padding, so restore the indent here */
-:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) ul,
-:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) ol {
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .findings__md, .md) ul,
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .findings__md, .md) ol {
   margin: 0 0 1rem 1.5rem;
 }
-:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) li {
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .findings__md, .md) li {
   margin-bottom: 0.25rem;
 }
-:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) li::marker {
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .findings__md, .md) li::marker {
   color: var(--carbon-soft);
 }
-:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) li > p {
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .findings__md, .md) li > p {
   margin-bottom: 0; /* loose-list paragraphs */
 }
-:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) strong {
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .findings__md, .md) strong {
   font-weight: 600;
 }
-:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) code {
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .findings__md, .md) code {
   font-family: var(--font-mono);
   font-size: 0.8125em;
   background: var(--zebra);
@@ -175,7 +175,7 @@ a:focus-visible {
   color: var(--carbon);
 }
 /* Fenced code blocks — the site-wide code-block look (the "$ " prompt is a specs add-on) */
-:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) pre {
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .findings__md, .md) pre {
   font-family: var(--font-mono);
   font-size: 0.8125rem;
   line-height: 1.5;
@@ -187,22 +187,22 @@ a:focus-visible {
   overflow-x: auto;
   margin: 1rem 0;
 }
-:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) pre code {
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .findings__md, .md) pre code {
   background: transparent;
   padding: 0;
   color: inherit;
   font-size: inherit;
 }
-:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) blockquote {
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .findings__md, .md) blockquote {
   margin: 1rem 0;
   padding-left: 1rem;
   border-left: 2px solid var(--rule-strong);
   color: var(--mist);
 }
-:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) blockquote p:last-child {
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .findings__md, .md) blockquote p:last-child {
   margin-bottom: 0;
 }
-:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) hr {
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .findings__md, .md) hr {
   border: 0;
   border-top: 1px solid var(--rule);
   margin: 1.5rem 0;
@@ -210,39 +210,39 @@ a:focus-visible {
 /* Headings and tables — base treatments so any construct the markdown can
    produce renders properly in a prose slot. .md and specs re-style tables
    (wide data tables, machine-spec grid) in their slot sections below. */
-:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) h1,
-:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) h2,
-:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) h3,
-:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) h4 {
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .findings__md, .md) h1,
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .findings__md, .md) h2,
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .findings__md, .md) h3,
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .findings__md, .md) h4 {
   font-family: var(--font-display);
   font-weight: 600;
   line-height: 1.2;
   color: var(--ink);
   margin: 1.75rem 0 0.75rem;
 }
-:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) h1 {
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .findings__md, .md) h1 {
   font-size: 1.4rem;
   margin: 0 0 1.25rem;
   padding-bottom: 0.75rem;
   border-bottom: 1px solid var(--rule);
 }
-:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) h2 { font-size: 1.2rem; }
-:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) h3 { font-size: 1.05rem; }
-:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) h4 { font-size: 0.95rem; }
-:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) table {
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .findings__md, .md) h2 { font-size: 1.2rem; }
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .findings__md, .md) h3 { font-size: 1.05rem; }
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .findings__md, .md) h4 { font-size: 0.95rem; }
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .findings__md, .md) table {
   width: 100%;
   border-collapse: collapse;
   margin: 1rem 0;
   font-size: 0.9375rem;
 }
-:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) th,
-:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) td {
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .findings__md, .md) th,
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .findings__md, .md) td {
   padding: 0.5rem 0.75rem;
   border-bottom: 1px solid var(--rule);
   text-align: left;
   vertical-align: top;
 }
-:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) thead th {
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .findings__md, .md) thead th {
   font-family: var(--font-mono);
   font-size: 0.6875rem;
   font-weight: 400;
@@ -251,7 +251,7 @@ a:focus-visible {
   letter-spacing: 0.1em;
 }
 /* Whatever the markdown starts with sits flush under the section heading */
-:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .md) > :first-child {
+:is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .findings__md, .md) > :first-child {
   margin-top: 0;
 }
 
@@ -295,7 +295,9 @@ a:focus-visible {
   padding: 2.25rem 0;
   border-bottom: 1px solid var(--rule);
 }
-.intro__heading {
+/* Section heading row — mono uppercase label + chip, shared by every section
+   heading on every page (.intro__heading is reused by the chart sections) */
+:is(.intro__heading, .specs__heading, .findings__heading) {
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -305,8 +307,8 @@ a:focus-visible {
   color: var(--ink);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  margin-bottom: 1rem;
 }
+.intro__heading, .specs__heading { margin-bottom: 1rem; }
 .intro__md p { max-width: 62ch; }
 /* .page-index is rebuilt HTML (not raw markdown), so it keeps its own code chip */
 .page-index code {
@@ -349,18 +351,6 @@ a:focus-visible {
   border-radius: 2px;
   background: var(--zebra);
   padding: 1.5rem 1.75rem 1.75rem;
-}
-.specs__heading {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  font-weight: 400;
-  color: var(--ink);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin-bottom: 1rem;
 }
 /* Specs content — rendered from content/evaluation-results/specs.md: intro note, one
    ### machine heading + two-column Spec/Value table each, then the run command.
@@ -413,6 +403,62 @@ a:focus-visible {
   content: "$ ";
   color: var(--carbon-bright);
 }
+
+/* ============================================================
+   Overall findings — collapsible shared conclusions block
+   ------------------------------------------------------------
+   One markdown file (content/overall-findings.md) renders into
+   both data pages (results + chart) inside a native <details>:
+   the summary row is the whole toggle, collapsed on load. The
+   content itself is styled by the shared rendered-markdown rules
+   above; this section adds the toggle chrome and slot tone.
+   ============================================================ */
+.findings {
+  padding: 2.25rem 0;
+  border-bottom: 1px solid var(--rule);
+}
+.findings__summary {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.4rem 0.6rem;
+  margin: -0.4rem -0.6rem; /* keep the heading text aligned with the other section headings */
+  border-radius: 2px;
+  cursor: pointer;
+  list-style: none; /* custom caret below replaces the default disclosure marker */
+}
+.findings__summary::-webkit-details-marker { display: none; }
+.findings__summary:hover { background: var(--zebra); }
+.findings__summary:focus-visible {
+  outline: 2px solid var(--carbon);
+  outline-offset: 2px;
+}
+/* Findings heading: typography from the shared section-heading rule above; no
+   margin — the summary row owns the spacing */
+.findings__state {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--carbon-soft);
+}
+.findings__state::after { content: "show"; }
+.findings[open] .findings__state::after { content: "hide"; }
+.findings__caret {
+  color: var(--carbon-soft);
+  transition: transform 0.15s;
+}
+.findings[open] .findings__caret { transform: rotate(180deg); }
+/* Findings content — body-ink tone: these are conclusions, not captions */
+.findings__md {
+  margin-top: 1rem;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--ink);
+}
+.findings__md p { max-width: 62ch; }
+.findings__md > :last-child { margin-bottom: 0; }
 
 /* ============================================================
    Page index — the ledger-style list of pages on the index page

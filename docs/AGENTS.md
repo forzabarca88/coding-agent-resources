@@ -10,6 +10,7 @@ This folder is the static documentation site: plain HTML/CSS/JS with **no build 
   content/
   ├── index.md                       # index.html subtitle
   ├── pages.md                       # published-page registry (rendered by index.html)
+  ├── overall-findings.md            # shared "Overall findings" block (one file, both data pages)
   ├── evaluation-results/
   │   ├── masthead.md                # results page subtitle
   │   ├── intro.md                   # intro paragraph + callout note
@@ -37,9 +38,10 @@ This folder is the static documentation site: plain HTML/CSS/JS with **no build 
 - On `evaluation-results.html`, the "Total Context Used" callout is a `blockquote` in `content/evaluation-results/intro.md`; it is styled by `.intro__md > blockquote`. If it is changed to a plain paragraph, its callout styling is lost.
 - The machine specs are markdown tables in `content/evaluation-results/specs.md` — first column is the spec label (styled as a `dt`), `###` headings name the machines, and the table header row is intentionally hidden. Do not add a fourth column.
 - The run command on the same page is a fenced code block; `.specs__md pre::before` adds the `$ ` prompt, so do not type a `$` prefix in the file.
+- The "Overall findings" section on `evaluation-results.html` and `visualization.html` is one shared file, `content/overall-findings.md`: both pages point a slot at it, so one edit updates both. It renders inside a native `<details class="findings">` (collapsed on load, no JS) whose `<summary>` row is the whole toggle — do not add a second heading around it, do not set `open` in the HTML, and do not split the file per page.
 - `data/eval-results.md` is generated data — `agent-evaluation/run-eval.sh` appends rows. Never edit it by hand; it is not content markdown.
-- How a markdown construct renders is defined **once** in `assets/styles.css`, in the shared "Rendered markdown" block: `:is()` rules over the slot classes (`.masthead__subhead`, `.intro__md`, `.specs__md`, `.viz__md`, `.brk__md`) plus the `.md` results container cover paragraphs, lists, inline code, fenced code blocks, blockquotes, `strong`, headings and tables, so identical markdown renders identically in every slot. (`em` needs no rule — the browser's italics apply; links use the global link rule.) The shared block sits **before** the slot sections so slot overrides win.
-- Slot sections in `styles.css` only add tone (colour/size/line-height on the slot container, so `li`/`code`/`strong` inherit it), measure (`p { max-width }` — per-paragraph, since a container max-width would clip the wide results tables), trailing-spacing cleanup, and slot-specific components: the specs machine grid + `$ ` prompt, the wide `.md` results tables, and the `.intro__md > blockquote` callout. Do not add per-construct prose rules to a slot, and do not reuse the `.md` class on content slots — it also carries the wide results-table rules. `.content-error` stays a slot-specific failure style.
+- How a markdown construct renders is defined **once** in `assets/styles.css`, in the shared "Rendered markdown" block: `:is()` rules over the slot classes (`.masthead__subhead`, `.intro__md`, `.specs__md`, `.viz__md`, `.brk__md`, `.findings__md`) plus the `.md` results container cover paragraphs, lists, inline code, fenced code blocks, blockquotes, `strong`, headings and tables, so identical markdown renders identically in every slot. (`em` needs no rule — the browser's italics apply; links use the global link rule.) The shared block sits **before** the slot sections so slot overrides win.
+- Slot sections in `styles.css` only add tone (colour/size/line-height on the slot container, so `li`/`code`/`strong` inherit it), measure (`p { max-width }` — per-paragraph, since a container max-width would clip the wide results tables), trailing-spacing cleanup, and slot-specific components: the specs machine grid + `$ ` prompt, the wide `.md` results tables, the `.intro__md > blockquote` callout, and the findings `<details>` toggle chrome. Do not add per-construct prose rules to a slot, and do not reuse the `.md` class on content slots — it also carries the wide results-table rules. `.content-error` stays a slot-specific failure style.
 
 ## Adding a page
 
@@ -59,6 +61,7 @@ docs/
 ├── content/                      # Human-edited markdown — all written content
 │   ├── index.md                  # Index page subtitle
 │   ├── pages.md                  # Published-page registry
+│   ├── overall-findings.md       # Shared "Overall findings" block (one file, both data pages)
 │   ├── evaluation-results/       # Results page content (masthead, intro, specs)
 │   └── visualization/            # Chart page content (masthead, note, breakdown)
 ├── data/
@@ -70,7 +73,8 @@ docs/
 │   ├── results.js                # Fetches data/eval-results.md and renders it as HTML
 │   └── visualization.js          # Plots eval results as a scatter chart
 └── tests/
-    └── visualization-search.test.mjs # End-to-end wildcard-search tests (run: node --test 'docs/tests/*.test.mjs')
+    ├── visualization-search.test.mjs # End-to-end wildcard-search tests (run: node --test 'docs/tests/*.test.mjs')
+    └── findings-slot.test.mjs        # Shared Overall-findings block tests (run: node --test 'docs/tests/*.test.mjs')
 ```
 
 ## Workflow for agents

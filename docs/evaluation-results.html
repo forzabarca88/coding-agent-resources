@@ -61,6 +61,20 @@
         </div>
       </section>
 
+      <!-- Overall findings (prose: content/overall-findings.md — one shared file, also
+           rendered on the chart page). Collapsed on load; the summary row is the toggle. -->
+      <details class="findings">
+        <summary class="findings__summary">
+          <h2 class="findings__heading">
+            <span class="chip">Read</span>
+            Overall findings
+          </h2>
+          <span class="findings__state" aria-hidden="true"></span>
+          <span class="findings__caret" aria-hidden="true">▾</span>
+        </summary>
+        <div class="findings__md" data-content="content/overall-findings.md"></div>
+      </details>
+
       <!-- Results, rendered live from data/eval-results.md -->
       <section class="results">
         <p id="results-status" class="results-status" role="status" aria-live="polite">

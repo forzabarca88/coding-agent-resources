@@ -44,6 +44,20 @@
         <div class="masthead__subhead" data-content="content/visualization/masthead.md"></div>
       </header>
 
+      <!-- Overall findings (prose: content/overall-findings.md — one shared file, also
+           rendered on the results page). Collapsed on load; the summary row is the toggle. -->
+      <details class="findings">
+        <summary class="findings__summary">
+          <h2 class="findings__heading">
+            <span class="chip">Read</span>
+            Overall findings
+          </h2>
+          <span class="findings__state" aria-hidden="true"></span>
+          <span class="findings__caret" aria-hidden="true">▾</span>
+        </summary>
+        <div class="findings__md" data-content="content/overall-findings.md"></div>
+      </details>
+
       <!-- Compact sticky filter bar — shared by both charts. Stays pinned to
            the top of the viewport but stays slim (one row), so it never
            blankets the charts: a Source seg + a Models dropdown (search/chips
