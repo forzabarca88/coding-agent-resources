@@ -36,3 +36,15 @@ A large number of tool calls may suggest:
 - Lots of repeated tool calls due to aggressive truncation of output in order to reduce context size.
 
 A large amount of reasoning tokens can be useful for reducing the number of turns spent on a complicated task (i.e. less corrections), but for this eval it may suggest that the model "overthinks".
+
+### Recommendations
+
+**The following recommendations are only based on the data collected for this eval** - please keep in mind that this eval does not represent the wide spectrum of software engineering tasks, but only a tiny subset.
+
+- For many models, KV quantization at Q4_0 appears to have minimal impact on the outcome - while providing a substantial increase in the potential size of the context window.
+  - E.g. the best `Qwen 3.6 27B` and `Qwen 3.8 27B` runs being at Q4 KV.
+- Current non-uniform quantization (specifically `unsloth` as tested) seems very good - it may be preferable to run a larger model at Q3 (or even Q2) rather than a smaller model at Q8.
+  - E.g. `Qwen 3.8 27B` at `Q2_K_XL` outperforms all 9B models tested.
+- The recommended sampling parameters for each model are extremely important for coherent results - this is very evident in the results of some models such as `Laguna S 2.1` where the incorrect parameters produced far poorer results than the corrected settings.
+- **Non-determinism is a feature and not a bug for LLMs.** Results show significant variance across multiple runs for both Provider and Local models - worth keeping in mind during day to day use, as ultimately consistent outputs require deterministic guardrails for any of these models.
+  - E.g. difference between best and worst `deepseek-v4-flash-0731` runs at the same `xhigh` reasoning is 30k.
