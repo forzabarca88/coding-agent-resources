@@ -23,3 +23,16 @@ There are multiple reasons why a lower value for this metric can be considered b
 This refers to the total number of input + output token cycles required by the agent to complete the evaluation task.
 
 This metric has a bit more nuance, but generally it is more efficient in terms of cost and duration to complete tasks in as few agent turns as possible.
+
+
+### Turns + Context
+
+**High turns + Low context:** Large number of tool calls, but limited reasoning tokens.
+
+**Low turns + High context:** Fewer tool calls, but large amount of reasoning and/or tool call output.
+
+A large number of tool calls may suggest:
+- Lots of corrections to its created files.
+- Lots of repeated tool calls due to aggressive truncation of output in order to reduce context size.
+
+A large amount of reasoning tokens can be useful for reducing the number of turns spent on a complicated task (i.e. less corrections), but for this eval it may suggest that the model "overthinks".
