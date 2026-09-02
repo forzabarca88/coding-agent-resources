@@ -2,12 +2,12 @@
 
 ## Understanding the data
 
-Messages sent from a coding harness to the API (using the `/completions` endpoint) are stateless. This means that the size of the messages always grow as the number of turns increases, as the latest message send is the combination of the previous message's input + output tokens.
+Messages sent from a coding harness to the API (using the `/completions` endpoint) are stateless. This means that the size of the messages always grow as the number of turns increases, as the latest message sent is the combination of the previous message's input + output tokens.
 
 This leads into the metrics which are tracked by this eval - `Context Used` and `Turns`.
 
 
-### Total Context Used
+### Context Used
 
 This refers to the total number of tokens contained in the **last** message before the eval task was completed.
 
