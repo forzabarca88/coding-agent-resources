@@ -97,3 +97,5 @@
 | lmstudio-jdc-ws/ornith-ai/ornith-1.5-9b@q8_0 | quant: Q8_0, KV quant: None, vitest failed | 175m 7s | 257472 | 265 | 262000 | Yes | 1 | 201 | 46 | 2026-09-04 08:02 |
 | lmstudio-jdc-ws/ornith-ai/ornith-1.5-9b@bf16 | quant: None, KV quant: None | 290m 11s | 211039 | 298 | 262000 | No | 0 | 247 | 0 | 2026-09-04 10:57 |
 | lmstudio-jdc-ws/ornith-ai/ornith-1.5-9b@q4_k_m | quant: Q4_K_M, KV quant: None, vitest failed | 143m 42s | 257947 | 203 | 262000 | Yes | 1 | 213 | 34 | 2026-09-04 15:48 |
+| lmstudio-jdc-ws/ornith-ai/ornith-1.5-9b@q8_0 | quant: Q8_0, KV quant: None, interrupted, vitest failed | 49m 20s | 103012 | 10 | 262000 | No | 1 | ? | ? | 2026-09-04 19:36 |
+| lmstudio-jdc-ws/ornith-ai/ornith-1.5-9b@q8_0 | quant: Q8_0, KV quant: None, vitest failed | 49m 20s | 103012 | 10 | 262000 | No | 1 | ? | ? | 2026-09-04 18:11 |
