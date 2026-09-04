@@ -94,3 +94,4 @@
 | lmstudio-jdc-ws/unsloth/gemma-4-12b-it-qat | quant: Q4_K_XL, KV quant: Q8_0, vitest failed, tool call formatting issues | 16m 10s | 42870 | 31 | 131000 | No | 1 | 15 | 4 | 2026-08-29 22:59 |
 | lmstudio-jdc-ws/ornith-ai/ornith-1.5-9b@bf16 | quant: None, KV quant: None | 297m 14s | 214327 | 260 | 262000 | No | 0 | 247 | 0 | 2026-09-04 00:47 |
 | lmstudio-jdc-ws/ornith-ai/ornith-1.5-9b@q4_k_m | quant: Q4_K_M, KV quant: None, vitest failed | 137m 45s | 258044 | 246 | 262000 | No | 1 | 235 | 12 | 2026-09-04 05:44 |
+| lmstudio-jdc-ws/ornith-ai/ornith-1.5-9b@q8_0 | quant: Q8_0, KV quant: None, vitest failed | 175m 7s | 257472 | 265 | 262000 | No | 1 | 201 | 46 | 2026-09-04 08:02 |
