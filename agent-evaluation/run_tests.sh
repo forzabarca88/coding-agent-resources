@@ -23,6 +23,11 @@
 # parsing of the human-readable console output. If vitest fails to
 # produce a report, its raw output is dumped to stderr so the cause
 # is not lost.
+#
+# Hang-proof by construction: if vitest is not installed the script fails
+# immediately (that is an eval fail per eval-prompt.md, no prompting), the
+# stated command `npx vitest run test/` is run unchanged, stdin is /dev/null,
+# and a hard `timeout` bounds the run.
 # =============================================================================
 set -euo pipefail
 
@@ -48,11 +53,29 @@ TMPDIR=$(mktemp -d) || { echo "Error: Failed to create temp directory" >&2; exit
 trap 'rm -rf "$TMPDIR"' EXIT
 RESULTS_FILE="$TMPDIR/vitest-results.json"
 LOG_FILE="$TMPDIR/vitest.log"
+: > "$LOG_FILE"   # exists even if vitest never ran, so the fallback cat can't fail
 
-set +e
-npx vitest run test/ --reporter=json --outputFile="$RESULTS_FILE" >"$LOG_FILE" 2>&1
-VITEST_EXIT=$?
-set -e
+# Missing dependencies are an immediate eval fail (checked up front, so we
+# never reach the npx path with vitest missing). Otherwise run exactly the
+# command stated in eval-prompt.md: `npx vitest run test/` (plus the JSON
+# reporter flags for count extraction). stdin=/dev/null prevents any prompt
+# from blocking; `timeout -k` makes 600s a hard ceiling even if npx ignores
+# TERM (gtimeout = Homebrew coreutils on macOS).
+if [ ! -x "node_modules/.bin/vitest" ]; then
+    echo "Error: vitest is not installed (node_modules/.bin/vitest missing). Run: npm install" >&2
+    VITEST_EXIT=1
+else
+    TIMEOUT_CMD=()
+    if command -v timeout >/dev/null 2>&1; then
+        TIMEOUT_CMD=(timeout -k 30 600)
+    elif command -v gtimeout >/dev/null 2>&1; then
+        TIMEOUT_CMD=(gtimeout -k 30 600)
+    fi
+    set +e
+    "${TIMEOUT_CMD[@]}" npx vitest run test/ --reporter=json --outputFile="$RESULTS_FILE" >"$LOG_FILE" 2>&1 </dev/null
+    VITEST_EXIT=$?
+    set -e
+fi
 
 # ---------------------------------------------------------------------------
 # Extract counts from the structured JSON report
