@@ -19,10 +19,23 @@ For the local models, the test machines have the following specs. Each machine i
 
 | Spec | Value |
 | --- | --- |
+| Model reference | `lmstudio-jdchome` |
+| CPU | Intel Core i5-13400F |
+| RAM | 32 GB DDR4 (dual-channel) |
+| GPU | Nvidia GeForce RTX 4070 Ti SUPER (16GB) |
+| Backend | CUDA |
+| OS | Windows 11 Pro |
+| Harness | pi running in WSL |
+| API Server | LM Studio |
+
+### Machine 3
+
+| Spec | Value |
+| --- | --- |
 | Model reference | `lmstudio-jdc-ws` |
 | CPU | Xeon W-2235 |
 | RAM | 128 GB DDR4 (quad-channel) |
-| GPU | AMD Radeon RX 9060 XT (16GB) + Nvidia RTX 3060 TI (8GB) |
+| GPU | AMD Radeon RX 9060 XT (16GB) + Nvidia GeForce RTX 3060 TI (8GB) |
 | Backend | Vulkan |
 | OS | Windows 11 Pro |
 | Harness | pi running in WSL |
