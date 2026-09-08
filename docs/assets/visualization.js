@@ -1155,55 +1155,80 @@
   var lastVizShown = [];
   var lastBrkShown = [];
 
-  // Legend sections shared by both charts: the Quant shape keys and the KV
+  // Legend layout: one row per channel group (Model / Quant / KV quant on
+  // the scatter, Status / Quant / KV quant on the breakdown). A fixed label
+  // column left-justifies every group, and each row's keys form an auto-fit
+  // grid (CSS) whose minimum cell width is the row's widest key, so keys sit
+  // in equal-width columns that line up across rows and fill the row width.
+  function legendRowHtml(label, keyHtmls, widestPx) {
+    return '<div class="legend-row">' +
+      '<span class="legend-label">' + label + '</span>' +
+      '<div class="legend-keys" style="--lg-key-min:' + Math.max(1, Math.round(widestPx)) + 'px">' +
+      keyHtmls.join('') + '</div></div>';
+  }
+
+  // Estimated on-screen width of a legend key: mono label (same 6.1px/char
+  // estimate as brkTruncate) + the mark + the key's internal 0.45rem gap.
+  function legendKeyWidth(text, markPx) {
+    return String(text).length * 6.1 + 2 + markPx + 7;
+  }
+
+  // Legend group rows shared by both charts: the Quant shape keys and the KV
   // quant ring keys, each built from the runs actually shown (so the legend
   // always matches the plot) and each drawn at the active point radius (so
-  // the legend matches the plot's size too). Empty when no run in the group.
-  function legendQuantPart(shown) {
+  // the legend matches the plot's size too). null when no run in the group.
+  function legendQuantGroup(shown) {
     var quants = [];
     shown.forEach(function (r) {
       var q = brkQuant(r);
       if (q && quants.indexOf(q) === -1 && BRK_QUANTS.indexOf(q) !== -1) quants.push(q);
     });
-    if (!quants.length) return '';
-    var parts = ['<span class="legend-label">Quant</span>'];
+    if (!quants.length) return null;
     var rc = pointRadius();
     var cc = rc + 4;
+    var markPx = (rc * 2 + 8) * legendPxUnit;
+    var keys = [];
+    var widest = 0;
     BRK_QUANTS.forEach(function (q) {
       if (quants.indexOf(q) === -1) return;
       var sh = brkShape(q);
-      parts.push('<span class="legend-key">' +
+      keys.push('<span class="legend-key">' +
         legendSwatch(brkMark(sh, cc, cc, rc, BRK_OK, BRK_INK, null), rc, legendOpticalDy(sh, rc)) + esc(q) + '</span>');
+      widest = Math.max(widest, legendKeyWidth(q, markPx));
     });
-    return parts.join('');
+    return { label: 'Quant', keys: keys, widest: widest };
   }
 
-  function legendKVPart(shown) {
+  function legendKVGroup(shown) {
     var kvs = [];
     shown.forEach(function (r) {
       var kv = brkKV(r);
       if (kvs.indexOf(kv) === -1) kvs.push(kv);
     });
-    if (!kvs.length) return '';
+    if (!kvs.length) return null;
     // stable order: recorded values (sorted), then None, then unrecorded.
     kvs.sort(function (a, b) {
       function rank(x) { return x === '' ? 2 : x === 'None' ? 1 : 0; }
       return (rank(a) - rank(b)) || String(a).localeCompare(String(b));
     });
-    var parts = ['<span class="legend-label">KV quant</span>'];
     var rc = pointRadius();
     var cc = rc + 4;
+    var markPx = (rc * 2 + 8) * legendPxUnit;
     // Same 2.5u stroke as the plot rings (brkMark), so a legend ring matches
     // the on-chart rings exactly at any scale.
+    var keys = [];
+    var widest = 0;
     kvs.forEach(function (kv) {
       var c = kv === '' ? BRK_KVCOL[''] : kv === 'None' ? BRK_KVCOL['None'] : brkKVColor(kv);
-      parts.push('<span class="legend-key">' +
+      var label = brkLegendLabel(kv);
+      keys.push('<span class="legend-key">' +
         legendSwatch('<circle cx="' + cc + '" cy="' + cc + '" r="' + rc + '" fill="' + BRK_OK +
           '" stroke="' + c + '" stroke-width="2.5"' +
           (kv === 'None' ? ' stroke-dasharray="' + brkDash(rc) + '"' : '') + '/>', rc) +
-        esc(brkLegendLabel(kv)) + '</span>');
+        esc(label) + '</span>');
+      widest = Math.max(widest, legendKeyWidth(label, markPx));
     });
-    return parts.join('');
+    return { label: 'KV quant', keys: keys, widest: widest };
   }
 
   function renderBreakdownLegend(shown) {
@@ -1211,13 +1236,16 @@
     refreshLegendScale();
     lastBrkShown = shown.slice();
     var dot = legendDotPx();
-    var parts = [];
-    parts.push('<span class="legend-label">Status</span>');
-    parts.push('<span class="legend-key"><span class="lg" style="background:' + BRK_OK + ';width:' + dot + 'px;height:' + dot + 'px"></span>success</span>');
-    parts.push('<span class="legend-key"><span class="lg" style="background:' + BRK_FAIL + ';width:' + dot + 'px;height:' + dot + 'px"></span>failed</span>');
-    parts.push(legendQuantPart(shown));
-    parts.push(legendKVPart(shown));
-    brkLegendEl.innerHTML = parts.join('');
+    var rows = [legendRowHtml('Status',
+      [
+        '<span class="legend-key"><span class="lg" style="background:' + BRK_OK + ';width:' + dot + 'px;height:' + dot + 'px"></span>success</span>',
+        '<span class="legend-key"><span class="lg" style="background:' + BRK_FAIL + ';width:' + dot + 'px;height:' + dot + 'px"></span>failed</span>'
+      ],
+      Math.max(legendKeyWidth('success', dot), legendKeyWidth('failed', dot)))];
+    var g;
+    if ((g = legendQuantGroup(shown))) rows.push(legendRowHtml(g.label, g.keys, g.widest));
+    if ((g = legendKVGroup(shown))) rows.push(legendRowHtml(g.label, g.keys, g.widest));
+    brkLegendEl.innerHTML = rows.join('');
   }
 
   // Scatter legend — same Quant/KV decoding as the range chart, plus the
@@ -1228,22 +1256,26 @@
     if (!vizLegendEl) return;
     refreshLegendScale();
     lastVizShown = shown.slice();
-    var parts = [];
+    var rows = [];
     var models = [];
     shown.forEach(function (r) {
       if (models.indexOf(r.model) === -1) models.push(r.model);
     });
     if (models.length) {
-      parts.push('<span class="legend-label">Model</span>');
       var dot = legendDotPx();
+      var keys = [];
+      var widest = 0;
       models.forEach(function (m) {
-        parts.push('<span class="legend-key"><span class="lg" style="background:' + modelColor(m) +
+        keys.push('<span class="legend-key"><span class="lg" style="background:' + modelColor(m) +
           ';border-radius:50%;width:' + dot + 'px;height:' + dot + 'px"></span>' + esc(m) + '</span>');
+        widest = Math.max(widest, legendKeyWidth(m, dot));
       });
+      rows.push(legendRowHtml('Model', keys, widest));
     }
-    parts.push(legendQuantPart(shown));
-    parts.push(legendKVPart(shown));
-    vizLegendEl.innerHTML = parts.join('');
+    var g;
+    if ((g = legendQuantGroup(shown))) rows.push(legendRowHtml(g.label, g.keys, g.widest));
+    if ((g = legendKVGroup(shown))) rows.push(legendRowHtml(g.label, g.keys, g.widest));
+    vizLegendEl.innerHTML = rows.join('');
   }
 
   function showBrkTpt(g, r) {

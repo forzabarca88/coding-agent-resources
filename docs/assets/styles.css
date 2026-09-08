@@ -1195,23 +1195,41 @@ a:focus-visible {
 .brk-metric { justify-self: start; margin: 0.25rem 0 0.9rem; }
 
 /* Legend — decoded live from the runs actually shown, so it always matches.
-   Shared by the scatter and the model breakdown. */
+   Shared by the scatter and the model breakdown. One row per channel group
+   (Model / Quant / KV quant, or Status / Quant / KV quant): the fixed label
+   column left-justifies every group in line, and each row's keys form an
+   auto-fit grid — equal-width cells, as many columns as fit — so keys line
+   up in columns across rows and each row fills the legend width. */
 .brk-legend,
 .viz-legend {
+  --legend-label-w: 4.6rem; /* fits the widest group label ("KV QUANT") */
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem 2.2rem;
-  align-items: center;
+  flex-direction: column;
+  gap: 0.5rem;
   margin-bottom: 1rem;
 }
-.brk-legend .legend-label,
-.viz-legend .legend-label {
+.legend-row {
+  display: grid;
+  grid-template-columns: var(--legend-label-w) 1fr;
+  column-gap: 0.9rem;
+  align-items: center;
+  min-width: 0;
+}
+.legend-row .legend-label {
   font-family: var(--font-mono);
   font-size: 0.625rem;
   text-transform: uppercase;
   letter-spacing: 0.12em;
   color: var(--carbon-soft);
-  margin-right: 0.2rem;
+}
+.legend-row .legend-keys {
+  display: grid;
+  /* min cell = the row's widest key (--lg-key-min, set per row in JS), so a
+     key never overflows its cell; 1fr stretches the cells to fill the row */
+  grid-template-columns: repeat(auto-fit, minmax(min(var(--lg-key-min, 10rem), 100%), 1fr));
+  gap: 0.4rem 1.4rem;
+  justify-items: start;
+  min-width: 0;
 }
 .legend-key {
   display: inline-flex;
@@ -1220,6 +1238,8 @@ a:focus-visible {
   font-family: var(--font-mono);
   font-size: 0.625rem;
   color: var(--mist);
+  min-width: 0;
+  max-width: 100%;
 }
 .legend-key .lg {
   /* Fallback dot: every .lg normally carries an inline width/height equal to
@@ -1305,8 +1325,10 @@ a:focus-visible {
    Responsive — evaluation chart page
    ============================================================ */
 @media (max-width: 640px) {
-  .brk-legend { gap: 0.4rem 1rem; }
-  .viz-legend { gap: 0.4rem 1rem; }
+  .brk-legend,
+  .viz-legend { gap: 0.4rem; }
+  .legend-row { column-gap: 0.6rem; }
+  .legend-row .legend-keys { gap: 0.3rem 0.9rem; }
   .brk-chart { max-height: 320px; }
   .viz-bar { gap: 0.5rem 0.75rem; }
   .viz-bar__tag { display: none; }
