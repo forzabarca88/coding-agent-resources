@@ -21,4 +21,7 @@ The **Source** and **Models** filters — including the wildcard search — driv
 this chart exactly as they drive the scatter, so a failing run the scatter
 drops still appears here. The "Runs to show" limit applies to the scatter
 only, since ranking by least context makes no sense for a range view; the
-breakdown always shows every matching run.
+breakdown always shows every matching run. The shared **point size** control
+scales these marks too (row height bounds it, so the largest setting stops
+short of the scatter's full 2×); the scatter's new legend carries the same
+Quant and KV quant keys plus the model fill colour.

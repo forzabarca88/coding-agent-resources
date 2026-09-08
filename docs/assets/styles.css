@@ -1194,15 +1194,18 @@ a:focus-visible {
 /* Metric toggle — one rail at a time (Context Used | Turns) */
 .brk-metric { justify-self: start; margin: 0.25rem 0 0.9rem; }
 
-/* Legend — decoded live from the runs actually shown, so it always matches. */
-.brk-legend {
+/* Legend — decoded live from the runs actually shown, so it always matches.
+   Shared by the scatter and the model breakdown. */
+.brk-legend,
+.viz-legend {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem 2.2rem;
   align-items: center;
   margin-bottom: 1rem;
 }
-.brk-legend .legend-label {
+.brk-legend .legend-label,
+.viz-legend .legend-label {
   font-family: var(--font-mono);
   font-size: 0.625rem;
   text-transform: uppercase;
@@ -1300,6 +1303,7 @@ a:focus-visible {
    ============================================================ */
 @media (max-width: 640px) {
   .brk-legend { gap: 0.4rem 1rem; }
+  .viz-legend { gap: 0.4rem 1rem; }
   .brk-chart { max-height: 320px; }
   .viz-bar { gap: 0.5rem 0.75rem; }
   .viz-bar__tag { display: none; }
@@ -1315,4 +1319,13 @@ a:focus-visible {
   .select { max-width: 100%; }
   .viz-tooltip { min-width: 0; }
   .model-search { flex: 1 1 100%; }
+}
+
+/* Mid-width screens: slim the shared filter bar so it keeps fitting on one
+   row — drop the bar tags and the Models toggle's summary text (the button
+   still reads "Models", and the chips/counters stay available in the
+   popover). The segs carry their own aria-labels. */
+@media (max-width: 900px) {
+  .viz-bar__tag { display: none; }
+  .viz-pop__summary { display: none; }
 }
