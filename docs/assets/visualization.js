@@ -1113,16 +1113,36 @@
     if (w > 0) legendPxUnit = w / 920;
   }
 
+  // Vertical optical-centre shift for a legend swatch (viewBox units). Marks
+  // are drawn with their GEOMETRIC centre at the viewBox centre, but an
+  // odd-sided apex-up polygon (tri-up, gon5, star5, ...) has its flat bottom
+  // edge closer to the centre than its single top vertex, so the ink's
+  // vertical middle sits (1 - cos(180/n)) / 2 * r above the box centre
+  // (tri-up: 0.25r, gon5: ~0.096r). The eye centres a label on the ink's
+  // extent, so the legend copy shifts down by that amount; tri-down
+  // (flat top, single bottom vertex) mirrors it. Even-sided shapes and
+  // tri-left/right are vertically symmetric and need no shift. Plot marks
+  // keep their geometric centre on the data point — this is legend-only.
+  function legendOpticalDy(shape, r2) {
+    var m = /^star(\d+)$/.exec(shape) || /^gon(\d+)$/.exec(shape);
+    var n = m ? +m[1] : (shape === 'tri-up' || shape === 'tri-down' ? 3 : 0);
+    if (!n || n % 2 === 0) return 0;
+    var dy = (1 - Math.cos(Math.PI / n)) / 2 * r2;
+    return shape === 'tri-down' ? -dy : dy;
+  }
+
   // Legend swatch: the glyph drawn at the ACTIVE point radius inside a
   // viewBox that fits it, rendered at legendPxUnit CSS px per viewBox unit —
   // so the swatch diameter equals the on-chart glyph diameter at the current
   // point-size setting AND viewport, and the whole legend grows/shrinks with
-  // the control.
-  function legendSwatch(markHtml, r2) {
+  // the control. `dy` re-centres asymmetric glyphs optically (see
+  // legendOpticalDy) so the swatch's ink lines up with the label text.
+  function legendSwatch(markHtml, r2, dy) {
     var side = r2 * 2 + 8;
     var px = Math.round(side * legendPxUnit * 100) / 100;
+    var body = dy ? '<g transform="translate(0 ' + dy.toFixed(2) + ')">' + markHtml + '</g>' : markHtml;
     return '<svg viewBox="0 0 ' + side + ' ' + side + '" width="' + px + '" height="' + px +
-      '" aria-hidden="true">' + markHtml + '</svg>';
+      '" aria-hidden="true">' + body + '</svg>';
   }
 
   // Legend dot diameter in CSS px (status fill in the breakdown, model fill
@@ -1153,7 +1173,7 @@
       if (quants.indexOf(q) === -1) return;
       var sh = brkShape(q);
       parts.push('<span class="legend-key">' +
-        legendSwatch(brkMark(sh, cc, cc, rc, BRK_OK, BRK_INK, null), rc) + esc(q) + '</span>');
+        legendSwatch(brkMark(sh, cc, cc, rc, BRK_OK, BRK_INK, null), rc, legendOpticalDy(sh, rc)) + esc(q) + '</span>');
     });
     return parts.join('');
   }
