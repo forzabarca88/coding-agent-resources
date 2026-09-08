@@ -58,7 +58,7 @@
   ];
 
   var state = {
-    source: 'all',        // 'all' | 'Provider' | 'Local'
+    source: 'Local',      // 'all' | 'Provider' | 'Local' — Local selected by default
     models: '',           // '' = all models, else comma-separated selected names
     search: '',           // active wildcard query — while non-empty it derives the model selection
     searchSaved: null,    // the models value before the search began, restored on clear
