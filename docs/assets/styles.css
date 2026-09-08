@@ -951,12 +951,12 @@ a:focus-visible {
 }
 .chart-svg .axis-label {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 11px;   /* same as the breakdown tick labels — both charts share the 920-unit scale */
   fill: var(--mist);
 }
 .chart-svg .axis-title {
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: 12px;   /* same as the breakdown axis title */
   fill: var(--carbon-soft);
   letter-spacing: 0.04em;
 }
@@ -1222,6 +1222,9 @@ a:focus-visible {
   color: var(--mist);
 }
 .legend-key .lg {
+  /* Fallback dot: every .lg normally carries an inline width/height equal to
+     the active mark diameter (legendDotPx); the rule below is a safe base
+     for any legend built without those inline styles. */
   width: 0.8rem;
   height: 0.8rem;
   flex-shrink: 0;

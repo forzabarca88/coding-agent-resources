@@ -91,22 +91,17 @@
   var plotW = W - M.left - M.right;
   var plotH = H - M.top - M.bottom;
 
-  // Scatter point size presets: glyph radius in viewBox units. 'l' (the
-  // default) is twice the original 6u circle, which is what made the plain
-  // dots read small; 's' restores the original look, 'm' sits between. The
-  // halo ring tracks the glyph at 1.5x, as it always has (9 at the old 6).
+  // Shared point-size presets: glyph radius in viewBox units, used by BOTH
+  // charts and their legends, so a mark means the same size everywhere. 'l'
+  // (the default) doubles the original 6u circle — that is why marks stray
+  // from Small: Large is the new default at twice the size; 's' restores the
+  // original look, 'm' sits between. The scatter halo ring tracks the glyph
+  // at 1.5x, as it always has (9 at the old 6).
   var P_SIZE = { s: 6, m: 9, l: 12 };
   function pointRadius() { return P_SIZE[state.psize] || P_SIZE.l; }
 
-  // Breakdown mark sizes, keyed by the same point-size setting — so the
-  // control scales both charts. The 34u rows bound these radii: unlike the
-  // scatter, where 'l' runs at the full 2x (12u), a 12u glyph would mash the
-  // row's label area, so 'l' clamps at 10u here; 'm' is the original 7u.
-  var BRK_SIZE = { s: 5, m: 7, l: 10 };
-  function brkRadius() { return BRK_SIZE[state.psize] || BRK_SIZE.l; }
-
   // Dashed ring for KV quant "None": dashes scale with the glyph radius
-  // (baseline 3.6 / 1.4 at the breakdown's 7u), so the None signal keeps its
+  // (baseline 3.6 / 1.4 at the original 7u), so the None signal keeps its
   // proportions at any size in either chart. Trailing zeros are trimmed so a
   // whole-number dash still reads clean (5.1 2, not 5.1 2.0).
   function brkDash(r2) {
@@ -574,6 +569,7 @@
       tooltipEl.classList.add('is-hidden');
       pinned = null;
       if (vizLegendEl) vizLegendEl.innerHTML = '';
+      lastVizShown = [];   // don't let a resize resurrect a legend for an empty chart
       if (summaryEl) {
         var q = state.search.trim();
         var matches = searchMatches();
@@ -1102,10 +1098,47 @@
     return kv;
   }
 
+  // px per viewBox unit at the current layout. Both charts use a 920-unit
+  // viewBox rendered at the content-column width, so this single number is
+  // the exact on-screen size of one chart unit. The legend swatches are
+  // drawn at this scale, making a legend glyph EXACTLY the on-chart glyph
+  // size at any viewport. Falls back to 1 (stub DOMs / not yet laid out)
+  // until a real chart width is measurable.
+  var legendPxUnit = 1;
+  function refreshLegendScale() {
+    var e = chartEl && chartEl.querySelector ? chartEl.querySelector('.chart-svg') : null;
+    if (!e) e = chartEl;
+    if (!e) return;
+    var w = e.getBoundingClientRect().width;
+    if (w > 0) legendPxUnit = w / 920;
+  }
+
+  // Legend swatch: the glyph drawn at the ACTIVE point radius inside a
+  // viewBox that fits it, rendered at legendPxUnit CSS px per viewBox unit —
+  // so the swatch diameter equals the on-chart glyph diameter at the current
+  // point-size setting AND viewport, and the whole legend grows/shrinks with
+  // the control.
+  function legendSwatch(markHtml, r2) {
+    var side = r2 * 2 + 8;
+    var px = Math.round(side * legendPxUnit * 100) / 100;
+    return '<svg viewBox="0 0 ' + side + ' ' + side + '" width="' + px + '" height="' + px +
+      '" aria-hidden="true">' + markHtml + '</svg>';
+  }
+
+  // Legend dot diameter in CSS px (status fill in the breakdown, model fill
+  // in the scatter): matches the swatch glyph diameter so all legend marks
+  // agree with each other and with the plot.
+  function legendDotPx() { return Math.max(2, Math.round(pointRadius() * 2 * legendPxUnit)); }
+
+  // Live row sets for the two legends, so a window resize can re-render them
+  // at the corrected scale without touching the charts.
+  var lastVizShown = [];
+  var lastBrkShown = [];
+
   // Legend sections shared by both charts: the Quant shape keys and the KV
   // quant ring keys, each built from the runs actually shown (so the legend
-  // always matches the plot). Schematic size — they decode channels, they
-  // don't mirror the point-size setting. Empty when no run in the group.
+  // always matches the plot) and each drawn at the active point radius (so
+  // the legend matches the plot's size too). Empty when no run in the group.
   function legendQuantPart(shown) {
     var quants = [];
     shown.forEach(function (r) {
@@ -1114,11 +1147,13 @@
     });
     if (!quants.length) return '';
     var parts = ['<span class="legend-label">Quant</span>'];
+    var rc = pointRadius();
+    var cc = rc + 4;
     BRK_QUANTS.forEach(function (q) {
       if (quants.indexOf(q) === -1) return;
       var sh = brkShape(q);
-      parts.push('<span class="legend-key"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">' +
-        brkMark(sh, 8, 8, 5.4, BRK_OK, BRK_INK, null) + '</svg>' + esc(q) + '</span>');
+      parts.push('<span class="legend-key">' +
+        legendSwatch(brkMark(sh, cc, cc, rc, BRK_OK, BRK_INK, null), rc) + esc(q) + '</span>');
     });
     return parts.join('');
   }
@@ -1136,11 +1171,16 @@
       return (rank(a) - rank(b)) || String(a).localeCompare(String(b));
     });
     var parts = ['<span class="legend-label">KV quant</span>'];
+    var rc = pointRadius();
+    var cc = rc + 4;
+    // Same 2.5u stroke as the plot rings (brkMark), so a legend ring matches
+    // the on-chart rings exactly at any scale.
     kvs.forEach(function (kv) {
       var c = kv === '' ? BRK_KVCOL[''] : kv === 'None' ? BRK_KVCOL['None'] : brkKVColor(kv);
-      parts.push('<span class="legend-key"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">' +
-        '<circle cx="8" cy="8" r="6" fill="' + BRK_OK + '" stroke="' + c + '" stroke-width="2.6" ' +
-        (kv === 'None' ? 'stroke-dasharray="3.6 1.4"' : '') + '/></svg>' +
+      parts.push('<span class="legend-key">' +
+        legendSwatch('<circle cx="' + cc + '" cy="' + cc + '" r="' + rc + '" fill="' + BRK_OK +
+          '" stroke="' + c + '" stroke-width="2.5"' +
+          (kv === 'None' ? ' stroke-dasharray="' + brkDash(rc) + '"' : '') + '/>', rc) +
         esc(brkLegendLabel(kv)) + '</span>');
     });
     return parts.join('');
@@ -1148,10 +1188,13 @@
 
   function renderBreakdownLegend(shown) {
     if (!brkLegendEl) return;
+    refreshLegendScale();
+    lastBrkShown = shown.slice();
+    var dot = legendDotPx();
     var parts = [];
     parts.push('<span class="legend-label">Status</span>');
-    parts.push('<span class="legend-key"><span class="lg" style="background:' + BRK_OK + '"></span>success</span>');
-    parts.push('<span class="legend-key"><span class="lg" style="background:' + BRK_FAIL + '"></span>failed</span>');
+    parts.push('<span class="legend-key"><span class="lg" style="background:' + BRK_OK + ';width:' + dot + 'px;height:' + dot + 'px"></span>success</span>');
+    parts.push('<span class="legend-key"><span class="lg" style="background:' + BRK_FAIL + ';width:' + dot + 'px;height:' + dot + 'px"></span>failed</span>');
     parts.push(legendQuantPart(shown));
     parts.push(legendKVPart(shown));
     brkLegendEl.innerHTML = parts.join('');
@@ -1163,6 +1206,8 @@
   // filters, the top-N limit and the wildcard search exactly as the plot does.
   function renderVizLegend(shown) {
     if (!vizLegendEl) return;
+    refreshLegendScale();
+    lastVizShown = shown.slice();
     var parts = [];
     var models = [];
     shown.forEach(function (r) {
@@ -1170,9 +1215,10 @@
     });
     if (models.length) {
       parts.push('<span class="legend-label">Model</span>');
+      var dot = legendDotPx();
       models.forEach(function (m) {
         parts.push('<span class="legend-key"><span class="lg" style="background:' + modelColor(m) +
-          ';border-radius:50%"></span>' + esc(m) + '</span>');
+          ';border-radius:50%;width:' + dot + 'px;height:' + dot + 'px"></span>' + esc(m) + '</span>');
       });
     }
     parts.push(legendQuantPart(shown));
@@ -1225,6 +1271,7 @@
     if (!order.length) {
       brkEl.innerHTML = '';
       if (brkLegendEl) brkLegendEl.innerHTML = '';
+      lastBrkShown = [];   // don't let a resize resurrect a legend for an empty chart
       hideBrkTpt();
       if (brkStatusEl) brkStatusEl.textContent = '';
       return;
@@ -1244,7 +1291,8 @@
     var xStep = xAxis.step;
     var xs = tickValues(xMax, xStep);
 
-    var W = 980;
+    var W = 920;   // same viewBox width as the scatter — one unit renders at
+                    // the same pixel size in both charts, so marks match
     var valRight = W - 32;   // right margin sized for the widest tick label
     function sx(v) { return BRK_LABEL + (v / xMax) * (valRight - BRK_LABEL); }
 
@@ -1294,7 +1342,10 @@
       var x0 = isFinite(min) ? sx(min) : valRight, x1 = isFinite(max) ? sx(max) : valRight;
       body.push('<rect class="brk-rail" x="' + x0 + '" y="' + (mid - 1) + '" width="' + Math.max(2, x1 - x0) + '" height="2" pointer-events="none"/>');
 
-      // one interactive mark per run — sized by the shared point-size control
+      // one interactive mark per run — same glyph radius as the scatter, so
+      // a size setting reads identically in both charts. The mark is nudged
+      // right when a low value would push its edge under the model label
+      // column (only possible for a value sitting at the axis origin).
       runs.forEach(function (r, j) {
         var okk = r.code === '0';
         var fill = okk ? BRK_OK : BRK_FAIL;
@@ -1303,8 +1354,10 @@
         var label = r.model + ': ' + (okk ? 'success' : 'failed') + ', ' + metricText(r) + '.';
         var gid = i + '_' + j;
         outMarks[gid] = r;
+        var rc = pointRadius();
+        var mx = Math.max(sx(r[mKey]), BRK_LABEL + rc + 4);
         body.push('<g class="brk-mark" data-brk="' + gid + '" tabindex="0" role="button" pointer-events="bounding-box" aria-label="' + esc(label) + '">' +
-          brkMark(shape, sx(r[mKey]), mid, brkRadius(), fill, brkKVColor(kv), kv === 'None' ? brkDash(brkRadius()) : null) + '</g>');
+          brkMark(shape, mx, mid, rc, fill, brkKVColor(kv), kv === 'None' ? brkDash(rc) : null) + '</g>');
       });
       body.push('</svg>');
     });
@@ -1435,8 +1488,8 @@
     });
   }
   // Point-size toggle — shared by both charts: the scatter re-places its
-  // glyphs and labels against the new radius; the breakdown follows through
-  // brkRadius() in drawBreakdown. Redraws both via draw().
+  // glyphs and labels, the breakdown re-renders its marks through
+  // pointRadius(), and both legends rescale. One draw() updates everything.
   psizeBtns.forEach(function (btn) {
     btn.addEventListener('click', function () {
       var p = btn.getAttribute('data-psize');
@@ -1572,6 +1625,18 @@
     if (sel === null) modelsSummary.textContent = 'all successful models';
     else if (!sel.length) modelsSummary.textContent = 'no models';
     else modelsSummary.textContent = sel.length + ' model' + (sel.length === 1 ? '' : 's');
+  }
+
+  // Keep the legends exactly matched to the charts when the window resizes
+  // (the charts rescale responsively; the legends re-derive the same
+  // px-per-unit). Rendering the legends is cheap, so no debounce is needed.
+  // Charts that are empty (no rows shown) have empty legends and empty
+  // snapshots, so a resize can never repopulate a ghost legend.
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', function () {
+      if (chartEl && chartEl.innerHTML) renderVizLegend(lastVizShown);
+      if (brkEl && brkEl.innerHTML) renderBreakdownLegend(lastBrkShown);
+    });
   }
 
   load();

@@ -7,8 +7,10 @@ carries the range chart's Quant and KV quant keys, joined by a Model key for
 the fill colour.
 
 **Point size:** the shared *Small / Medium / Large* control in the filter bar
-scales the marks in both charts; *Large* (the default) doubles the scatter's
-original size, *Medium* and *Small* declutter dense regions.
+scales the marks of **both** charts identically — a shape marked *Large* is
+the same size on the scatter and on the range chart, and the legends grow
+with them. *Large* (the default) doubles the original size; *Medium* and
+*Small* declutter dense regions.
 
 **Total Context Used:** How many tokens were used by the model to solve the tasks.
 
