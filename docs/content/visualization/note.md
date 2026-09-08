@@ -1,5 +1,11 @@
 Each point in this scatter plot is one successful run, plotted by how it performed.
 
+**Shapes:** every run keeps the same glyph it has on the range chart below — the
+shape marks the weight quantisation, the outline the KV cache quant — only the
+fill changes, from status to the model colour. The caption's **point size**
+control grows or shrinks the marks; *Large* (the default) is double the
+original size, *Medium* and *Small* declutter dense regions.
+
 **Total Context Used:** How many tokens were used by the model to solve the tasks.
 
 **Turns:** The number of turns taken by the turn to solve the tasks.

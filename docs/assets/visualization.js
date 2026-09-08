@@ -3,7 +3,8 @@
 
   // Loads data/eval-results.md and renders a scatter plot of successful runs:
   // Total Context Used (tokens) on the X axis, Turns on the Y axis, points
-  // coloured by Model with direct labels where space allows. Used by
+  // coloured by Model — their glyph shapes repeat the range chart's quant
+  // marks — with direct labels where space allows. Used by
   // visualization.html only. Everything is derived from the markdown at
   // runtime — nothing is hardcoded.
   var RESULTS_PATH = 'data/eval-results.md';
@@ -14,6 +15,7 @@
   var summaryEl = document.getElementById('viz-summary');
   var retryEl = document.getElementById('viz-retry');
   var sourceBtns = Array.prototype.slice.call(document.querySelectorAll('[data-source]'));
+  var psizeBtns = Array.prototype.slice.call(document.querySelectorAll('[data-psize]'));
   var topSel = document.getElementById('top-filter');
   var chipsEl = document.getElementById('model-chips');
   var modelsAllBtn = document.getElementById('models-all');
@@ -63,6 +65,7 @@
     search: '',           // active wildcard query — while non-empty it derives the model selection
     searchSaved: null,    // the models value before the search began, restored on clear
     top: 25,              // 'all' or a number — scatter only
+    psize: 'l',           // scatter point size: 's' | 'm' | 'l' — 'l' is the default and double the original
     metric: 'tokens'      // breakdown metric: 'tokens' (Context Used) | 'turns'
   };
 
@@ -86,6 +89,13 @@
   var H = 560;
   var plotW = W - M.left - M.right;
   var plotH = H - M.top - M.bottom;
+
+  // Scatter point size presets: glyph radius in viewBox units. 'l' (the
+  // default) is twice the original 6u circle, which is what made the plain
+  // dots read small; 's' restores the original look, 'm' sits between. The
+  // halo ring tracks the glyph at 1.5x, as it always has (9 at the old 6).
+  var P_SIZE = { s: 6, m: 9, l: 12 };
+  function pointRadius() { return P_SIZE[state.psize] || P_SIZE.l; }
 
   /* ------------------------------------------------------------------ *
    * Small utilities
@@ -483,16 +493,21 @@
       var px = xF(r.tokensN);
       var py = yF(r.turnsN);
       var text = labelText[r.model];
+      // Label offset and point clearance scale with the point radius (the
+      // halo ring sits at 1.5x the glyph), so labels keep breathing at any
+      // size selection: off-center pad = halo + 3, point clash = halo + 2.
+      var pad = pointRadius() * 1.5 + 3;
+      var clashPad = pointRadius() * 1.5 + 2;
       var w = text.length * 6.6 + 6;
       var hw = 10; // half-height of the label box
       var x0, x1, anchorEnd = false;
 
-      if (px + 12 + w <= plotRight) {
-        x0 = px + 12;
-        x1 = px + 12 + w;
-      } else if (px - 12 - w >= plotLeft) {
-        x0 = px - 12 - w;
-        x1 = px - 12;
+      if (px + pad + w <= plotRight) {
+        x0 = px + pad;
+        x1 = px + pad + w;
+      } else if (px - pad - w >= plotLeft) {
+        x0 = px - pad - w;
+        x1 = px - pad;
         anchorEnd = true;
       } else {
         return; // no room horizontally
@@ -502,12 +517,12 @@
       var y1 = py + hw;
       if (y0 < plotTop || y1 > plotBottom) return; // out of plot vertically
 
-      // Collision with any other point (halo radius 9 -> use 11 to breathe).
+      // Collision with any other point (halo radius -> +2 to breathe).
       var clash = rows.some(function (q) {
         if (q === r) return false;
         var qx = xF(q.tokensN);
         var qy = yF(q.turnsN);
-        return x0 < qx + 11 && x1 > qx - 11 && y0 < qy + 11 && y1 > qy - 11;
+        return x0 < qx + clashPad && x1 > qx - clashPad && y0 < qy + clashPad && y1 > qy - clashPad;
       });
       if (clash) return;
 
@@ -518,7 +533,7 @@
       if (clash) return;
 
       placed.push({ x0: x0, x1: x1, y0: y0, y1: y1 });
-      out.push({ row: r, cx: px, cy: py, text: text, anchorEnd: anchorEnd });
+      out.push({ row: r, cx: px, cy: py, text: text, anchorEnd: anchorEnd, pad: pad });
     });
 
     return out;
@@ -529,6 +544,9 @@
    * ------------------------------------------------------------------ */
 
   function draw() {
+    // Build the quant->glyph order up front: the scatter's glyphs depend on
+    // it too, so that must not rely on the breakdown element existing.
+    buildQuantOrder();
     drawBreakdown();
     var rows = visibleRows();
     pointPos = [];
@@ -583,7 +601,8 @@
     // --- SVG wrapper -------------------------------------------------
     out.push(
       '<svg class="chart-svg" viewBox="0 0 ' + W + ' ' + H + '" role="group" ' +
-      'aria-label="Scatter plot of total context used against turns for successful evaluation runs">'
+      'aria-label="Scatter plot of total context used against turns for successful evaluation runs; ' +
+      'point shape marks weight quant, outline KV quant, fill model colour">'
     );
 
     // --- Best-quadrant tint: the plot splits into four quadrants at the
@@ -647,7 +666,7 @@
     // --- Labels (drawn before points so points stay readable) ---------
     anchors.forEach(function (a) {
       var fill = modelColor(a.row.model);
-      var tx = a.anchorEnd ? a.cx - 12 : a.cx + 12;
+      var tx = a.anchorEnd ? a.cx - a.pad : a.cx + a.pad;
       out.push(
         '<text class="pt-label" x="' + tx + '" y="' + a.cy + '" fill="' + fill + '" ' +
         (a.anchorEnd ? 'text-anchor="end"' : '') + '>' + esc(a.text) + '</text>'
@@ -664,11 +683,22 @@
         left: (px / W) * 100,
         top: (py / H) * 100
       };
+      // Glyph marks mirror the range chart below: shape carries the weight
+      // quant and the outline the KV quant, so a run reads the same in both
+      // charts; only the fill changes meaning, to the model colour. brkMark /
+      // brkShape / brkQuant / brkKV live in the breakdown section further
+      // down, and drawBreakdown() (called at the top of draw) has already
+      // built BRK_QUANTS by the time we get here.
+      var rpt = pointRadius();
+      var kv = brkKV(r);
+      var q = brkQuant(r);
       out.push(
         '<g class="pt" data-idx="' + i + '" tabindex="0" role="button" ' +
-        'aria-label="' + esc(r.model) + ': ' + fmt(r.tokensN) + ' tokens, ' + fmt(r.turnsN) + ' turns">' +
-        '<circle cx="' + px + '" cy="' + py + '" r="9" class="pt__halo"/>' +
-        '<circle cx="' + px + '" cy="' + py + '" r="6" fill="' + c + '"/>' +
+        'aria-label="' + esc(r.model) + ': ' + fmt(r.tokensN) + ' tokens, ' + fmt(r.turnsN) + ' turns' +
+        (q ? ', quant ' + esc(q) : '') + (kv ? ', KV quant ' + esc(kv) : '') + '">' +
+        '<circle cx="' + px + '" cy="' + py + '" r="' + (rpt * 1.5) + '" class="pt__halo"/>' +
+        brkMark(brkShape(q), px, py, rpt, c, brkKVColor(kv),
+          kv === 'None' ? (rpt / 7 * 3.6).toFixed(1) + ' ' + (rpt / 7 * 1.4).toFixed(1) : null) +
         '</g>'
       );
     });
@@ -867,6 +897,11 @@
       btn.setAttribute('aria-pressed', String(btn.getAttribute('data-source') === state.source));
       btn.classList.toggle('is-active', btn.getAttribute('data-source') === state.source);
     });
+    psizeBtns.forEach(function (btn) {
+      var on = btn.getAttribute('data-psize') === state.psize;
+      btn.classList.toggle('is-active', on);
+      btn.setAttribute('aria-pressed', String(on));
+    });
     if (topSel) {
       // All models (no search, no explicit selection) is the only mode where
       // the top-N limit applies.
@@ -988,10 +1023,12 @@
 
   // One SVG run-mark for the breakdown: fill carries status, stroke carries KV
   // value, shape carries quant weight. Any BRK_SHAPES entry (or a generated
-  // gon-N fallback) renders here.
+  // gon-N fallback) renders here. `dash` is a full stroke-dasharray value or
+  // null: the breakdown pins 3.6 1.4, the scatter scales it with the glyph
+  // radius so the "None" ring keeps its proportions at any size.
   function brkMark(shape, cx, cy, r2, fill, kv, dash) {
     var s = 'fill="' + fill + '" stroke="' + kv + '" stroke-width="2.5"' +
-      (dash ? ' stroke-dasharray="3.6 1.4"' : '');
+      (dash ? ' stroke-dasharray="' + dash + '"' : '');
     var pts, n = 0, rot = 0;
     var star = shape.match(/^star(\d+)$/);
     if (star) {
@@ -1063,7 +1100,7 @@
         if (quants.indexOf(q) === -1) return;
         var sh = brkShape(q);
         parts.push('<span class="legend-key"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">' +
-          brkMark(sh, 8, 8, 5.4, BRK_OK, BRK_INK, false) + '</svg>' + esc(q) + '</span>');
+          brkMark(sh, 8, 8, 5.4, BRK_OK, BRK_INK, null) + '</svg>' + esc(q) + '</span>');
       });
     }
 
@@ -1215,7 +1252,7 @@
         var gid = i + '_' + j;
         outMarks[gid] = r;
         body.push('<g class="brk-mark" data-brk="' + gid + '" tabindex="0" role="button" pointer-events="bounding-box" aria-label="' + esc(label) + '">' +
-          brkMark(shape, sx(r[mKey]), mid, 7, fill, brkKVColor(kv), kv === 'None') + '</g>');
+          brkMark(shape, sx(r[mKey]), mid, 7, fill, brkKVColor(kv), kv === 'None' ? '3.6 1.4' : null) + '</g>');
       });
       body.push('</svg>');
     });
@@ -1345,6 +1382,17 @@
       draw();
     });
   }
+  // Point-size toggle — scatter only; the breakdown marks keep their fixed
+  // size. Re-draws the glyphs and re-places labels against the new radius.
+  psizeBtns.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var p = btn.getAttribute('data-psize');
+      if (p === state.psize) return;
+      state.psize = p;
+      syncControls();
+      draw();
+    });
+  });
   if (modelsAllBtn) {
     modelsAllBtn.addEventListener('click', function () {
       // Activating Select all/Clear supersedes search mode and applies to

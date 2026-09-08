@@ -961,11 +961,11 @@ a:focus-visible {
   letter-spacing: 0.04em;
 }
 .pt { cursor: pointer; }
-.pt circle { transition: r 0.15s ease, stroke-width 0.15s ease; }
+.pt > * { transition: r 0.15s ease, stroke-width 0.15s ease; }
 .pt__halo { fill: none; stroke: transparent; stroke-width: 0; }
-.pt:hover circle:last-child,
-.pt:focus-visible circle:last-child,
-.pt--pinned circle:last-child { stroke: var(--ink); stroke-width: 2.5; }
+.pt:hover > *:last-child,
+.pt:focus-visible > *:last-child,
+.pt--pinned > *:last-child { stroke: var(--ink); stroke-width: 3; }
 .pt:focus-visible { outline: none; }
 .pt:focus-visible .pt__halo { stroke: var(--carbon); stroke-width: 1.5; }
 
