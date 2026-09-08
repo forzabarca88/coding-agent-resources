@@ -103,3 +103,4 @@
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b | quant: Q2_K_XL, KV quant: None, thinking: medium, MTP, vitest failed, output EOS string prematurely  | 75m 56s | 79261 | 8 | 196000 | No | 1 | ? | ? | 2026-08-24 10:11 |
 | lmstudio-jdc-ws/unsloth/gemma-4-12b-it-qat | quant: Q4_K_XL, KV quant: Q8_0, vitest failed, tool call formatting issues | 16m 10s | 42870 | 31 | 131000 | No | 1 | 15 | 4 | 2026-08-29 22:59 |
 | lmstudio-jdc-ws/ornith-ai/ornith-1.5-9b | quant: Q8_0, KV quant: None, vitest failed, thinking hit output limit | 49m 20s | 103012 | 10 | 262000 | Yes | 1 | ? | ? | 2026-09-04 18:11 |
+| lmstudio-jdc-ws/inclusionai/ling-3.0-tiny | quant: Q8_0, KV quant: None, vitest failed | 23m 6s | 55180 | 12 | 131000 | No | 1 | ? | ? | 2026-09-08 20:38 |
