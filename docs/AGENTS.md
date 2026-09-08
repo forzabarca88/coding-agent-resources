@@ -70,10 +70,11 @@ docs/
 │   ├── styles.css                # Site stylesheet (shared rendered-markdown rules + slot overrides)
 │   ├── content.js                # Fetches content/*.md into [data-content] slots (marked)
 │   ├── site.js                   # Shared site behaviour (active page in nav)
-│   ├── results.js                # Fetches data/eval-results.md and renders it as HTML
+│   ├── results.js                # Fetches data/eval-results.md, renders local-first with a sticky filter/sort bar
 │   └── visualization.js          # Plots eval results as a scatter chart
 └── tests/
     ├── visualization-search.test.mjs # End-to-end wildcard-search tests (run: node --test 'docs/tests/*.test.mjs')
+    ├── results-order.test.mjs        # Local-before-provider section-order tests (run: node --test 'docs/tests/*.test.mjs')
     └── findings-slot.test.mjs        # Shared Overall-findings block tests (run: node --test 'docs/tests/*.test.mjs')
 ```
 
@@ -81,5 +82,6 @@ docs/
 
 - When asked to change any wording on the site, edit the `.md` under `content/` — never inline prose in the HTML.
 - `assets/visualization.js`'s wildcard search matches each run's model name and Notes, with `*`/`?` able to span both fields (a NUL joins them in `searchHaystack`, so literal text cannot bridge). `tests/visualization-search.test.mjs` covers the semantics — run it with `node --test 'docs/tests/*.test.mjs'` after changing that logic.
+- `assets/results.js`'s local-first section ordering is a policy pair at the top of that file (`localFirstOrder` + `reorderSections`), keyed on the machine headings' `(Local)`/`(Provider)` form in the generated data file; `tests/results-order.test.mjs` covers it — run it with `node --test 'docs/tests/*.test.mjs'` after changing that logic. If `data/eval-results.md` ever loses one of the two headings, the reorder no-ops and that test says so.
 - After adding/renaming/removing a content file, grep the HTML for `data-content="content/...` to keep slots in sync, and re-check `docs/README`-adjacent docs (root `README.md`) if page-level behaviour changed.
 - The pattern lives here so future agents know: content = `content/*.md`, chrome = HTML, behaviour = JS, styles = `assets/styles.css` (shared rendered-markdown typography first, slot tone/components after).

@@ -46,10 +46,11 @@ coding-agent-resources/
 │   │   ├── styles.css        # Site stylesheet
 │   │   ├── content.js        # Fetches content/*.md into [data-content] slots and renders with marked
 │   │   ├── site.js           # Shared site behaviour (active page in nav)
-│   │   ├── results.js        # Fetches data/eval-results.md and renders it as HTML
+│   │   ├── results.js        # Fetches data/eval-results.md, renders local-first with a sticky filter/sort bar
 │   │   └── visualization.js  # Renders eval results as an interactive scatter chart
 │   └── tests/
 │       ├── visualization-search.test.mjs # End-to-end wildcard-search tests (node --test 'docs/tests/*.test.mjs')
+│       ├── results-order.test.mjs # Local-before-provider section-order tests (node --test 'docs/tests/*.test.mjs')
 │       └── findings-slot.test.mjs # Shared Overall-findings block tests (node --test 'docs/tests/*.test.mjs')
 ├── extensions/
 │   ├── README.md             # Extensions overview

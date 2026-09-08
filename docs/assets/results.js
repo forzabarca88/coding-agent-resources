@@ -1,9 +1,47 @@
+// The results file is generated data and lists the provider machine first;
+// readers reach for the local results first, so the page reorders the
+// rendered top-level sections. Two helpers live at top level (they touch no
+// page state) so tests can exercise them without a DOM.
+
+// Pure policy: given the heading texts of the sections in file order, return
+// the display order as indices — locals first, the rest after, each group
+// keeping its relative order — or null when no reorder is needed. The match
+// is pinned to the machine headings' parenthesised form, "(Local)", so a
+// heading that merely mentions local ("(Provider, local relay)") can't
+// misclassify; a miss just leaves the generated order untouched.
+function localFirstOrder(headings) {
+  var all = headings.map(function (_, i) { return i; });
+  var locals = all.filter(function (i) { return /\(local\)/i.test(headings[i]); });
+  if (!locals.length || locals.length === headings.length) return null;
+  return locals.concat(all.filter(function (i) { return !/local/i.test(headings[i]); }));
+}
+
+// Apply the policy to the rendered content: move whole sections (heading
+// plus everything up to the next h1) so local machines come first. Only
+// node order changes; tables, rows, and per-table filter/sort are untouched.
+function reorderSections(root) {
+  var children = Array.prototype.slice.call(root.children);
+  var heads = children.filter(function (el) { return el.tagName === 'H1'; });
+  if (heads.length < 2) return;
+  var order = localFirstOrder(heads.map(function (h) { return h.textContent; }));
+  if (!order) return;
+  var first = children.indexOf(heads[0]);
+  var ordered = children.slice(0, first); // nodes before the first section keep their place
+  order.forEach(function (k) {
+    var start = children.indexOf(heads[k]);
+    var end = k + 1 < heads.length ? children.indexOf(heads[k + 1]) : children.length;
+    ordered = ordered.concat(children.slice(start, end));
+  });
+  ordered.forEach(function (el) { root.appendChild(el); }); // appendChild moves nodes
+}
+
 (function () {
   'use strict';
 
-  // Loads data/eval-results.md and renders it as HTML. Also adds a filter
-  // bar (search, status filter, sort) so the growing results stay easy to
-  // search. Used by evaluation-results.html only.
+  // Loads data/eval-results.md and renders it as HTML. The rendered machine
+  // sections are reordered local-first (the generated file lists the provider
+  // machine first), and a filter bar (search, status filter, sort) keeps the
+  // growing results searchable. Used by evaluation-results.html only.
   var RESULTS_PATH = 'data/eval-results.md';
 
   var statusEl = document.getElementById('results-status');
@@ -327,6 +365,7 @@
       return;
     }
     contentEl.innerHTML = marked.parse(md);
+    reorderSections(contentEl);
     Array.prototype.forEach.call(contentEl.querySelectorAll('table'), polishTable);
     buildSets();
     if (controlsEl) {

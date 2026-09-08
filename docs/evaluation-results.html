@@ -75,7 +75,9 @@
         <div class="findings__md" data-content="content/overall-findings.md"></div>
       </details>
 
-      <!-- Results, rendered live from data/eval-results.md -->
+      <!-- Results, rendered live from data/eval-results.md. results.js reorders the
+           machine sections local-first and pins the filter bar to the viewport while
+           the tables scroll (styles.css, mirroring the chart page's .viz-controls). -->
       <section class="results">
         <p id="results-status" class="results-status" role="status" aria-live="polite">
           Loading data/eval-results.md…

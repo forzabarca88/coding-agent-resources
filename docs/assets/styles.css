@@ -589,8 +589,14 @@ a:focus-visible {
 
 .results-controls[hidden] { display: none; }
 
-/* Filter/search bar above the results tables */
+/* Filter/search bar above the results tables — pinned to the top of the
+   viewport while the tables scroll beneath, mirroring .viz-controls on the
+   chart page. The background must stay opaque (paper, not translucent
+   zebra) or rows would show through the stuck bar. */
 .results-controls {
+  position: sticky;
+  top: 0;
+  z-index: 40;
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
@@ -598,8 +604,9 @@ a:focus-visible {
   padding: 1rem 1.25rem;
   border: 1px solid var(--rule);
   border-left: 3px solid var(--carbon);
-  background: var(--zebra);
+  background: var(--paper);
   border-radius: 2px;
+  box-shadow: 0 4px 12px rgba(22, 32, 46, 0.1);
   margin: 0 0 1.25rem;
 }
 .results-field {
@@ -736,7 +743,9 @@ a:focus-visible {
   .specs { padding: 1.25rem 1.25rem 1.5rem; }
   .specs__md tbody td { padding: 0.7rem 0.75rem; }
   .page-footer { flex-direction: column; }
-  .results-controls { flex-direction: column; align-items: stretch; }
+  /* Stacked, the bar is far too tall to pin — un-stick it on small viewports
+     (the chart page keeps its bar slim instead; here the columns stack). */
+  .results-controls { position: static; flex-direction: column; align-items: stretch; }
   .results-search, .results-select { width: 100%; }
 }
 /* ============================================================
