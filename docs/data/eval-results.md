@@ -2,6 +2,8 @@
 
 | Model | Notes | Duration | Total Context Used | Turns | Limit | Exceeded | Exit | Passed Tests | Failed Tests | Date |
 |---|---|---|---|---|---|---|---|---|---|---|
+| openrouter/openai/gpt-6-astra | thinking: low | 1m 40s | 38896 | 16 | 262000 | No | 0 | 247 | 0 | 2026-09-08 10:56 |
+| openrouter/openai/gpt-6-astra | thinking: medium | 2m 7s | 41135 | 17 | 262000 | No | 0 | 247 | 0 | 2026-09-08 10:53 |
 | openrouter/openai/gpt-5.6-sol | thinking: low | 2m 9s | 44940 | 13 | 131000 | No | 0 | 247 | 0 | 2026-08-31 16:22 |
 | openrouter/openai/gpt-5.6-sol | thinking: medium | 2m 17s | 45496 | 19 | 128000 | No | 0 | 247 | 0 | 2026-08-08 13:37 |
 | openrouter/openai/gpt-5.6-luna | thinking: low | 2m 25s | 50713 | 33 | 262000 | No | 0 | 247 | 0 | 2026-08-31 16:09 |
@@ -101,5 +103,3 @@
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b | quant: Q2_K_XL, KV quant: None, thinking: medium, MTP, vitest failed, output EOS string prematurely  | 75m 56s | 79261 | 8 | 196000 | No | 1 | ? | ? | 2026-08-24 10:11 |
 | lmstudio-jdc-ws/unsloth/gemma-4-12b-it-qat | quant: Q4_K_XL, KV quant: Q8_0, vitest failed, tool call formatting issues | 16m 10s | 42870 | 31 | 131000 | No | 1 | 15 | 4 | 2026-08-29 22:59 |
 | lmstudio-jdc-ws/ornith-ai/ornith-1.5-9b | quant: Q8_0, KV quant: None, vitest failed, thinking hit output limit | 49m 20s | 103012 | 10 | 262000 | Yes | 1 | ? | ? | 2026-09-04 18:11 |
-| openrouter/openai/gpt-6-astra | thinking: medium | 2m 7s | 41135 | 17 | 262000 | No | 0 | 247 | 0 | 2026-09-08 10:53 |
-| openrouter/openai/gpt-6-astra | thinking: low | 1m 40s | 38896 | 16 | 262000 | No | 0 | 247 | 0 | 2026-09-08 10:56 |
