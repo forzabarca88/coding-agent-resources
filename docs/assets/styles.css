@@ -1196,7 +1196,8 @@ a:focus-visible {
 
 /* Legend — decoded live from the runs actually shown, so it always matches.
    Shared by the scatter and the model breakdown. One row per channel group
-   (Model / Quant / KV quant, or Status / Quant / KV quant): the fixed label
+   (Quant / KV quant on the scatter, Status / Quant / KV quant on the
+   breakdown): the fixed label
    column left-justifies every group in line, and each row's keys form an
    auto-fit grid — equal-width cells, as many columns as fit — so keys line
    up in columns across rows and each row fills the legend width. */

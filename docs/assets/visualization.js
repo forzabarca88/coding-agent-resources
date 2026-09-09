@@ -1145,9 +1145,9 @@
       '" aria-hidden="true">' + body + '</svg>';
   }
 
-  // Legend dot diameter in CSS px (status fill in the breakdown, model fill
-  // in the scatter): matches the swatch glyph diameter so all legend marks
-  // agree with each other and with the plot.
+  // Legend dot diameter in CSS px (status fill in the breakdown): matches
+  // the swatch glyph diameter so all legend marks agree with each other and
+  // with the plot.
   function legendDotPx() { return Math.max(2, Math.round(pointRadius() * 2 * legendPxUnit)); }
 
   // Live row sets for the two legends, so a window resize can re-render them
@@ -1155,8 +1155,8 @@
   var lastVizShown = [];
   var lastBrkShown = [];
 
-  // Legend layout: one row per channel group (Model / Quant / KV quant on
-  // the scatter, Status / Quant / KV quant on the breakdown). A fixed label
+  // Legend layout: one row per channel group (Quant / KV quant on the
+  // scatter, Status / Quant / KV quant on the breakdown). A fixed label
   // column left-justifies every group, and each row's keys form an auto-fit
   // grid (CSS) whose minimum cell width is the row's widest key, so keys sit
   // in equal-width columns that line up across rows and fill the row width.
@@ -1248,8 +1248,7 @@
     brkLegendEl.innerHTML = rows.join('');
   }
 
-  // Scatter legend — same Quant/KV decoding as the range chart, plus the
-  // Model fill colour (the one channel the scatter's glyphs add). Rebuilt on
+  // Scatter legend — same Quant/KV decoding as the range chart. Rebuilt on
   // every scatter draw from the rows actually shown, so it tracks the
   // filters, the top-N limit and the wildcard search exactly as the plot does.
   function renderVizLegend(shown) {
@@ -1257,21 +1256,6 @@
     refreshLegendScale();
     lastVizShown = shown.slice();
     var rows = [];
-    var models = [];
-    shown.forEach(function (r) {
-      if (models.indexOf(r.model) === -1) models.push(r.model);
-    });
-    if (models.length) {
-      var dot = legendDotPx();
-      var keys = [];
-      var widest = 0;
-      models.forEach(function (m) {
-        keys.push('<span class="legend-key"><span class="lg" style="background:' + modelColor(m) +
-          ';border-radius:50%;width:' + dot + 'px;height:' + dot + 'px"></span>' + esc(m) + '</span>');
-        widest = Math.max(widest, legendKeyWidth(m, dot));
-      });
-      rows.push(legendRowHtml('Model', keys, widest));
-    }
     var g;
     if ((g = legendQuantGroup(shown))) rows.push(legendRowHtml(g.label, g.keys, g.widest));
     if ((g = legendKVGroup(shown))) rows.push(legendRowHtml(g.label, g.keys, g.widest));
