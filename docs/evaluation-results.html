@@ -3,10 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="color-scheme" content="light">
+  <meta name="color-scheme" content="dark light">
   <meta name="description" content="Evaluation results for the coding agent harness, rendered live from data/eval-results.md.">
+  <!-- Apply the saved theme choice before first paint (dark is the CSS default). -->
+  <script src="assets/theme.js"></script>
   <title>Evaluation Results — Coding Agent Resources</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='6' fill='none' stroke='%232e4a7a' stroke-width='2.5'/%3E%3Cpath d='M16 3v6M16 23v6M3 16h6M23 16h6' stroke='%232e4a7a' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='6' fill='none' stroke='%238fa6cc' stroke-width='2.5'/%3E%3Cpath d='M16 3v6M16 23v6M3 16h6M23 16h6' stroke='%238fa6cc' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
@@ -29,11 +31,25 @@
         </svg>
         <span>Coding Agent Resources</span>
       </a>
-      <nav class="site-nav" aria-label="Site pages">
-        <a class="site-nav__link" data-page-link="index" href="index.html">Index</a>
-        <a class="site-nav__link" data-page-link="results" href="evaluation-results.html">Evaluation results</a>
-        <a class="site-nav__link" data-page-link="viz" href="visualization.html">Evaluation Chart</a>
-      </nav>
+      <div class="site-header__end">
+        <nav class="site-nav" aria-label="Site pages">
+          <a class="site-nav__link" data-page-link="index" href="index.html">Index</a>
+          <a class="site-nav__link" data-page-link="results" href="evaluation-results.html">Evaluation results</a>
+          <a class="site-nav__link" data-page-link="viz" href="visualization.html">Evaluation Chart</a>
+        </nav>
+        <button type="button" class="theme-toggle" data-theme-toggle
+          aria-label="Switch to light theme" title="Switch to light theme">
+          <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <g class="ti-sun" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <circle cx="12" cy="12" r="4.2"/>
+              <path d="M12 2.8v2.3M12 18.9v2.3M2.8 12h2.3M18.9 12h2.3M5.2 5.2l1.6 1.6M17.2 17.2l1.6 1.6M18.8 5.2l-1.6 1.6M6.8 17.2l-1.6 1.6"/>
+            </g>
+            <g class="ti-moon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20.2 14.1A8.3 8.3 0 1 1 9.9 3.8a6.6 6.6 0 0 0 10.3 10.3z"/>
+            </g>
+          </svg>
+        </button>
+      </div>
     </header>
 
     <main id="main">

@@ -43,9 +43,10 @@ coding-agent-resources/
 │   ├── data/
 │   │   └── eval-results.md   # Single canonical results file; run-eval.sh appends runs here
 │   ├── assets/
-│   │   ├── styles.css        # Site stylesheet
+│   │   ├── styles.css        # Site stylesheet (theme tokens, rendered-markdown rules, slot overrides)
 │   │   ├── content.js        # Fetches content/*.md into [data-content] slots and renders with marked
-│   │   ├── site.js           # Shared site behaviour (active page in nav)
+│   │   ├── site.js           # Shared site behaviour (active page in nav, theme toggle)
+│   │   ├── theme.js          # Pre-paint theme application (saved choice before first paint)
 │   │   ├── results.js        # Fetches data/eval-results.md, renders local-first with a sticky filter/sort bar
 │   │   └── visualization.js  # Renders eval results as an interactive scatter chart
 │   └── tests/

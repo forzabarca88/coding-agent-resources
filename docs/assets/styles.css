@@ -2,6 +2,20 @@
    Coding Agent Resources — Documentation Site
    Palette: carbon-copy paper
    ------------------------------------------------------------
+   Two themes from one metaphor: the default is the carbon sheet
+   itself (dark); [data-theme="light"] is the pale office paper.
+   The header toggle (site.js) persists the choice and dispatches
+   "site:themechange"; assets/visualization.js re-inks its SVG data
+   colours in response (its SVG fills are inline hex values and can
+   never track CSS variables — see the THEMES map in that file).
+   ------------------------------------------------------------
+   Dark (default, on :root)
+   Night  : #0F1520  (deep blue-black carbon sheet)
+   Ink    : #DCE3EE  (the impression)
+   Carbon : #8FA6CC  (brightened carbon blue — rules, labels, data)
+   Red    : #E26353  (failure)
+   Mist   : #8593AB  (muted captions)
+   Light ([data-theme="light"])
    Paper  : #F4F5F8  (cool pale office paper)
    Ink    : #16202E  (deep blue-black)
    Carbon : #2E4A7A  (carbon-copy blue — rules, labels, data)
@@ -12,7 +26,34 @@
 /* --- Reset & base ----------------------------------------- */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* Dark is the default theme — :root carries the carbon-sheet values. */
 :root {
+  color-scheme: dark;
+  --paper: #0F1520;
+  --ink: #DCE3EE;
+  --carbon: #8FA6CC;
+  --carbon-soft: rgba(143, 166, 204, 0.55);
+  --red: #E26353;
+  --mist: #8593AB;
+  --rule: rgba(143, 166, 204, 0.22);
+  --rule-strong: rgba(143, 166, 204, 0.45);
+  --zebra: rgba(143, 166, 204, 0.08);
+  --zebra-hover: rgba(143, 166, 204, 0.14);
+  --carbon-bright: #8FA6CC; /* carbon lightened for use on ink */
+  --on-accent: #0F1520; /* text on a solid carbon fill (chips, active segments) */
+  --code-bg: #1B2534;  /* fenced code panel — lifted off the sheet */
+  --code-fg: #D8DFEA;
+  --panel: #1B2534;    /* raised panel — the tooltip stays dark in both themes */
+  --panel-fg: #DCE3EE;
+  --shadow: rgba(0, 0, 0, 0.55);
+  --shadow-deep: rgba(0, 0, 0, 0.65);
+  --font-display: "Bricolage Grotesque", "Arial Black", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Fragment Mono", "JetBrains Mono", ui-monospace, "SF Mono", "Cascadia Code", monospace;
+  --font-body: "Instrument Sans", system-ui, sans-serif;
+}
+/* Light theme — the pale office paper (the original look). */
+:root[data-theme="light"] {
+  color-scheme: light;
   --paper: #F4F5F8;
   --ink: #16202E;
   --carbon: #2E4A7A;
@@ -22,10 +63,16 @@
   --rule: rgba(46, 74, 122, 0.18);
   --rule-strong: rgba(46, 74, 122, 0.35);
   --zebra: rgba(46, 74, 122, 0.07);
+  /* identical to --zebra, as in the original sheet */
+  --zebra-hover: rgba(46, 74, 122, 0.07);
   --carbon-bright: #8FA6CC; /* carbon lightened for use on ink */
-  --font-display: "Bricolage Grotesque", "Arial Black", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "Fragment Mono", "JetBrains Mono", ui-monospace, "SF Mono", "Cascadia Code", monospace;
-  --font-body: "Instrument Sans", system-ui, sans-serif;
+  --on-accent: #FFFFFF;
+  --code-bg: #16202E;
+  --code-fg: #F4F5F8;
+  --panel: #16202E;
+  --panel-fg: #F4F5F8;
+  --shadow: rgba(22, 32, 46, 0.1);
+  --shadow-deep: rgba(22, 32, 46, 0.24);
 }
 
 body {
@@ -39,8 +86,8 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-::selection { background: var(--carbon); color: #fff; }
-::-moz-selection { background: var(--carbon); color: #fff; }
+::selection { background: var(--carbon); color: var(--on-accent); }
+::-moz-selection { background: var(--carbon); color: var(--on-accent); }
 
 /* --- Skip link -------------------------------------------- */
 .skip-link {
@@ -50,7 +97,7 @@ body {
   z-index: 100;
   padding: 0.5rem 1rem;
   background: var(--carbon);
-  color: #fff;
+  color: var(--on-accent);
   font-family: var(--font-mono);
   font-size: 0.75rem;
   text-decoration: none;
@@ -92,6 +139,35 @@ a:focus-visible {
   border-bottom: 1px solid var(--rule);
   gap: 1rem;
 }
+/* Right side of the header: the nav plus the theme toggle, grouped so the
+   toggle sits at the far right of the page. */
+.site-header__end {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+/* Theme toggle — an icon switch: sun in dark mode (offer light), moon in
+   light mode (offer dark). Dark is the CSS default, so the markup never
+   needs a theme attribute. */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  color: var(--carbon);
+  background: transparent;
+  border: 1px solid var(--rule-strong);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.theme-toggle:hover { background: var(--zebra); }
+.theme-toggle:focus-visible { outline: 2px solid var(--carbon); outline-offset: 2px; }
+.theme-toggle .ti-moon { display: none; }
+:root[data-theme="light"] .theme-toggle .ti-moon { display: block; }
+:root[data-theme="light"] .theme-toggle .ti-sun { display: none; }
 .brand {
   display: flex;
   align-items: center;
@@ -179,8 +255,8 @@ a:focus-visible {
   font-family: var(--font-mono);
   font-size: 0.8125rem;
   line-height: 1.5;
-  color: var(--paper);
-  background: var(--ink);
+  color: var(--code-fg);
+  background: var(--code-bg);
   padding: 0.9rem 1.1rem;
   border-radius: 2px;
   white-space: pre;
@@ -541,7 +617,7 @@ a:focus-visible {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   background: var(--carbon);
-  color: #fff;
+  color: var(--on-accent);
   border-radius: 2px;
   line-height: 1.3;
 }
@@ -584,7 +660,7 @@ a:focus-visible {
   cursor: pointer;
   margin-bottom: 1.25rem;
 }
-.retry:hover { background: var(--carbon); color: #fff; }
+.retry:hover { background: var(--carbon); color: var(--on-accent); }
 .retry:focus-visible { outline: 2px solid var(--carbon); outline-offset: 2px; }
 
 .results-controls[hidden] { display: none; }
@@ -606,7 +682,7 @@ a:focus-visible {
   border-left: 3px solid var(--carbon);
   background: var(--paper);
   border-radius: 2px;
-  box-shadow: 0 4px 12px rgba(22, 32, 46, 0.1);
+  box-shadow: 0 4px 12px var(--shadow);
   margin: 0 0 1.25rem;
 }
 .results-field {
@@ -703,7 +779,7 @@ a:focus-visible {
 }
 .md tbody td.num { text-align: right; font-variant-numeric: tabular-nums; }
 .md tbody tr:nth-child(even) { background: var(--zebra); }
-.md tbody tr:hover { background: rgba(46, 74, 122, 0.07); }
+.md tbody tr:hover { background: var(--zebra-hover); }
 .md td.over { color: var(--red); font-weight: 500; }
 .md td.pass-count { color: var(--carbon); }
 .md td.fail-count { color: var(--red); }
@@ -735,7 +811,10 @@ a:focus-visible {
    ============================================================ */
 @media (max-width: 640px) {
   .page { padding: 0 16px; }
-  .site-header { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+  .site-header { flex-wrap: wrap; gap: 0.6rem 1rem; }
+  /* Two rows: the brand alone, then nav left + toggle right — the toggle
+     keeps its right-hand position on phones. */
+  .site-header__end { width: 100%; justify-content: space-between; }
   .masthead { padding: 2rem 0 1.5rem; }
   .page-index__item { grid-template-columns: 1fr; gap: 0.35rem; }
   .page-index__meta { justify-self: start; }
@@ -782,7 +861,7 @@ a:focus-visible {
   border-left: 3px solid var(--carbon);
   background: var(--paper);
   border-radius: 2px;
-  box-shadow: 0 4px 12px rgba(22, 32, 46, 0.1);
+  box-shadow: 0 4px 12px var(--shadow);
 }
 .viz-bar__tag {
   font-family: var(--font-mono);
@@ -826,7 +905,7 @@ a:focus-visible {
 }
 .seg-btn:last-child { border-right: 0; }
 .seg-btn:hover { background: var(--zebra); }
-.seg-btn.is-active { background: var(--carbon); color: #fff; }
+.seg-btn.is-active { background: var(--carbon); color: var(--on-accent); }
 .seg-btn:focus-visible { outline: 2px solid var(--carbon); outline-offset: 1px; }
 .select {
   font-family: var(--font-mono);
@@ -882,7 +961,7 @@ a:focus-visible {
   border: 1px solid var(--rule-strong);
   border-left: 3px solid var(--carbon);
   border-radius: 2px;
-  box-shadow: 0 18px 44px rgba(22, 32, 46, 0.24);
+  box-shadow: 0 18px 44px var(--shadow-deep);
   padding: 0.85rem 1rem 1rem;
 }
 .viz-pop__panel[hidden] { display: none; }
@@ -989,11 +1068,11 @@ a:focus-visible {
   max-width: min(320px, 78vw);
   max-height: calc(100vh - 3rem);
   overflow-y: auto;
-  background: var(--ink);
-  color: var(--paper);
+  background: var(--panel);
+  color: var(--panel-fg);
   border-radius: 3px;
   padding: 0.9rem 1rem 1rem;
-  box-shadow: 0 10px 30px rgba(22, 32, 46, 0.25);
+  box-shadow: 0 10px 30px var(--shadow-deep);
   transform: translateY(-100%);
 }
 .viz-tooltip.tip--flip { transform: translate(-100%, -100%); }
@@ -1053,7 +1132,7 @@ a:focus-visible {
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 2px;
   padding: 0.12rem 0.45rem;
-  color: var(--paper);
+  color: var(--panel-fg);
 }
 .tip__grid {
   display: grid;
@@ -1071,7 +1150,7 @@ a:focus-visible {
 .tip__grid dd {
   font-family: var(--font-mono);
   font-size: 0.75rem;
-  color: var(--paper);
+  color: var(--panel-fg);
   text-align: right;
 }
 .viz-summary {
@@ -1197,25 +1276,35 @@ a:focus-visible {
 /* Legend — decoded live from the runs actually shown, so it always matches.
    Shared by the scatter and the model breakdown. One row per channel group
    (Quant / KV quant on the scatter, Status / Quant / KV quant on the
-   breakdown): the fixed label
-   column left-justifies every group in line, and each row's keys form an
-   auto-fit grid — equal-width cells, as many columns as fit — so keys line
-   up in columns across rows and each row fills the legend width. */
+   breakdown). The card chrome (rule border, carbon left edge, hairline
+   between groups) matches the page's panel language — the specs card, the
+   sticky filter bars — so the legend reads as part of the instrument,
+   not a stray footnote. Each group's keys flow and wrap under their own
+   label (like the model-chip strip), so a long group never stretches to
+   fill the row or leaves orphan rows between groups. Hidden until the
+   first draw populates it — an empty filter never leaves an empty box. */
 .brk-legend,
 .viz-legend {
   --legend-label-w: 4.6rem; /* fits the widest group label ("KV QUANT") */
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  display: none;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--carbon);
+  border-radius: 2px;
+  background: var(--paper);
+  padding: 0.55rem 1rem 0.65rem;
   margin-bottom: 1rem;
 }
+.brk-legend:not(:empty),
+.viz-legend:not(:empty) { display: block; }
 .legend-row {
   display: grid;
   grid-template-columns: var(--legend-label-w) 1fr;
-  column-gap: 0.9rem;
+  column-gap: 1rem;
   align-items: center;
   min-width: 0;
+  padding: 0.3rem 0;
 }
+.legend-row + .legend-row { border-top: 1px solid var(--rule); }
 .legend-row .legend-label {
   font-family: var(--font-mono);
   font-size: 0.625rem;
@@ -1224,12 +1313,9 @@ a:focus-visible {
   color: var(--carbon-soft);
 }
 .legend-row .legend-keys {
-  display: grid;
-  /* min cell = the row's widest key (--lg-key-min, set per row in JS), so a
-     key never overflows its cell; 1fr stretches the cells to fill the row */
-  grid-template-columns: repeat(auto-fit, minmax(min(var(--lg-key-min, 10rem), 100%), 1fr));
-  gap: 0.4rem 1.4rem;
-  justify-items: start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.15rem;
   min-width: 0;
 }
 .legend-key {
@@ -1327,9 +1413,9 @@ a:focus-visible {
    ============================================================ */
 @media (max-width: 640px) {
   .brk-legend,
-  .viz-legend { gap: 0.4rem; }
-  .legend-row { column-gap: 0.6rem; }
-  .legend-row .legend-keys { gap: 0.3rem 0.9rem; }
+  .viz-legend { padding: 0.5rem 0.75rem 0.6rem; }
+  .legend-row { column-gap: 0.7rem; padding: 0.25rem 0; }
+  .legend-row .legend-keys { gap: 0.3rem 0.85rem; }
   .brk-chart { max-height: 320px; }
   .viz-bar { gap: 0.5rem 0.75rem; }
   .viz-bar__tag { display: none; }
@@ -1354,4 +1440,17 @@ a:focus-visible {
 @media (max-width: 900px) {
   .viz-bar__tag { display: none; }
   .viz-pop__summary { display: none; }
+}
+
+/* Motion floor: the transitions above are small state changes (hover tints,
+   the caret, the point-size morph) — for users who prefer reduced motion,
+   collapse them to instant state swaps. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }

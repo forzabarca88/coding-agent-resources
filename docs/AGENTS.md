@@ -42,6 +42,7 @@ This folder is the static documentation site: plain HTML/CSS/JS with **no build 
 - `data/eval-results.md` is generated data — `agent-evaluation/run-eval.sh` appends rows. Never edit it by hand; it is not content markdown.
 - How a markdown construct renders is defined **once** in `assets/styles.css`, in the shared "Rendered markdown" block: `:is()` rules over the slot classes (`.masthead__subhead`, `.intro__md`, `.specs__md`, `.viz__md`, `.brk__md`, `.findings__md`) plus the `.md` results container cover paragraphs, lists, inline code, fenced code blocks, blockquotes, `strong`, headings and tables, so identical markdown renders identically in every slot. (`em` needs no rule — the browser's italics apply; links use the global link rule.) The shared block sits **before** the slot sections so slot overrides win.
 - Slot sections in `styles.css` only add tone (colour/size/line-height on the slot container, so `li`/`code`/`strong` inherit it), measure (`p { max-width }` — per-paragraph, since a container max-width would clip the wide results tables), trailing-spacing cleanup, and slot-specific components: the specs machine grid + `$ ` prompt, the wide `.md` results tables, the `.intro__md > blockquote` callout, and the findings `<details>` toggle chrome. Do not add per-construct prose rules to a slot, and do not reuse the `.md` class on content slots — it also carries the wide results-table rules. `.content-error` stays a slot-specific failure style.
+- **Theme**: dark is the default — `:root` carries the dark tokens and `:root[data-theme="light"]` overrides the full palette, so never hardcode palette hexes in CSS; use the variables. `assets/theme.js` (non-deferred, first in each page's head, before the stylesheet) applies the saved choice before first paint; the header toggle (`assets/site.js`) persists it to `localStorage["car.theme"]` and dispatches `site:themechange`. `assets/visualization.js` re-syncs its per-theme data colours (the `THEMES` map) on `site:themechange` — its SVG fills are inline hex values and can never track CSS variables. New colour needs should land in both theme blocks, and a new data colour in `THEMES` needs both a `light` and a `dark` entry.
 
 ## Adding a page
 
@@ -67,9 +68,10 @@ docs/
 ├── data/
 │   └── eval-results.md           # Single canonical results file; run-eval.sh appends runs here (data, not prose)
 ├── assets/
-│   ├── styles.css                # Site stylesheet (shared rendered-markdown rules + slot overrides)
+│   ├── styles.css                # Site stylesheet (theme tokens first, then shared rendered-markdown rules + slot overrides)
 │   ├── content.js                # Fetches content/*.md into [data-content] slots (marked)
-│   ├── site.js                   # Shared site behaviour (active page in nav)
+│   ├── site.js                   # Shared site behaviour (active page in nav, theme toggle)
+│   ├── theme.js                  # Pre-paint theme application (saved choice before first paint)
 │   ├── results.js                # Fetches data/eval-results.md, renders local-first with a sticky filter/sort bar
 │   └── visualization.js          # Plots eval results as a scatter chart
 └── tests/

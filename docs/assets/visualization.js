@@ -42,23 +42,82 @@
   // pin keeps that run's tooltip open until Escape or a re-draw.
   var brkPinned = null;
 
-  // Print-ink hues with strong separation, drawn from the site family (carbon
-  // blue anchor, then chroma spread around the wheel). Models receive colours
+  // Data-ink colours, per theme. The SVG marks are inline hex values and can
+  // never track CSS variables, so each theme gets its own set: the same hue
+  // identity (which model is which colour, which ring means which KV value)
+  // at different lightnesses — deep inks that print on the pale paper, lifted
+  // inks that glow on the dark carbon sheet. syncThemeColors() copies the
+  // active theme's values into the names the drawing code already uses; it
+  // runs at init, before every draw(), and on the site's theme change.
+  var THEMES = {
+    light: {
+      ok: '#2E4A7A',      // success fill (carbon blue)
+      fail: '#B42318',    // failed fill (rust)
+      ink: '#16202E',     // quant-shape ring in the legend
+      kv: { Q4_0: '#0E7A7B', Q8_0: '#A86A2B', None: '#7A4A6B', '': '#9AA7B5' },
+      kvOther: '#1F6F8F', // unlisted KV values
+      quad: '#5D6B82',    // best-quadrant tint
+      palette: [
+        '#B42318', // rust
+        '#2E4A7A', // carbon blue
+        '#0E7A7B', // teal
+        '#A86A2B', // ochre
+        '#1F6F8F', // sea
+        '#5B7A2E', // leaf
+        '#7A4A6B', // plum
+        '#8F5B2A', // cinnamon
+        '#3B6E5E', // pine
+        '#7748A8', // violet
+        '#A35D14', // bronze
+        '#C2563E'  // vermilion
+      ]
+    },
+    dark: {
+      ok: '#8FA6CC',      // success fill (brightened carbon)
+      fail: '#E26353',    // failed fill (lifted rust)
+      ink: '#0F1520',     // quant-shape ring in the legend (a dark cut-out)
+      kv: { Q4_0: '#35B8B9', Q8_0: '#D89A52', None: '#C783AC', '': '#9AA7B5' },
+      kvOther: '#5FB4DC', // unlisted KV values
+      quad: '#8593AB',    // best-quadrant tint
+      palette: [
+        '#E26353', // lifted rust
+        '#8FA6CC', // brightened carbon blue
+        '#35B8B9', // teal
+        '#D89A52', // ochre
+        '#5FB4DC', // sea
+        '#9CC15C', // leaf
+        '#C783AC', // plum
+        '#C98D55', // cinnamon
+        '#6FAE9A', // pine
+        '#A87FD4', // violet
+        '#D89A3E', // bronze
+        '#E88B6F'  // vermilion
+      ]
+    }
+  };
+  // Theme-synced data colours (see THEMES) — models receive palette colours
   // in order of first successful appearance, so colours stay stable.
-  var PALETTE = [
-    '#B42318', // rust
-    '#2E4A7A', // carbon blue
-    '#0E7A7B', // teal
-    '#A86A2B', // ochre
-    '#1F6F8F', // sea
-    '#5B7A2E', // leaf
-    '#7A4A6B', // plum
-    '#8F5B2A', // cinnamon
-    '#3B6E5E', // pine
-    '#7748A8', // violet
-    '#A35D14', // bronze
-    '#C2563E'  // vermilion
-  ];
+  var BRK_OK, BRK_FAIL, BRK_INK, BRK_KVCOL, BRK_KV_OTHER, QUAD_TINT, PALETTE;
+  function themeName() {
+    // The attribute is set before first paint by each page's inline head
+    // script and by the header toggle (site.js); absent = the dark default.
+    // Guarded for non-page environments (tests) without a documentElement.
+    var d = document.documentElement;
+    return (d && d.getAttribute && d.getAttribute('data-theme') === 'light')
+      ? 'light'
+      : 'dark';
+  }
+  function syncThemeColors() {
+    var t = THEMES[themeName()];
+    BRK_OK = t.ok;
+    BRK_FAIL = t.fail;
+    BRK_INK = t.ink;
+    BRK_KVCOL = t.kv;
+    BRK_KV_OTHER = t.kvOther;
+    QUAD_TINT = t.quad;
+    PALETTE = t.palette;
+  }
+  syncThemeColors();
 
   var state = {
     source: 'Local',      // 'all' | 'Provider' | 'Local' — Local selected by default
@@ -557,6 +616,9 @@
    * ------------------------------------------------------------------ */
 
   function draw() {
+    // The theme toggle may have flipped since the last draw — the marks are
+    // inline hex values, so re-sync the data colours before re-inking.
+    syncThemeColors();
     // Build the quant->glyph order up front: the scatter's glyphs depend on
     // it too, so that must not rely on the breakdown element existing.
     buildQuantOrder();
@@ -626,7 +688,7 @@
     // the top-right (most context, most turns) is faintest. Hard, crisp edges
     // at each dashed quadrant boundary replace the old diagonal fade, so the
     // best region reads unambiguously. Drawn before the grid. ---
-    var best = '#5D6B82';
+    var best = QUAD_TINT;
     var midX = M.left + plotW / 2;
     var midY = M.top + plotH / 2;
     // [x, y, w, h, opacity]
@@ -774,7 +836,10 @@
     var models = sourceModels();
     var sel = effectiveSelection();
     var selKey = sel === null ? '*' : sel.join(',');
-    var sig = state.search + '|' + selKey + '|' + models.join(',');
+    // The theme is in the signature: a toggle re-inks the chip dots and the
+    // --modcol custom property (hover border, active tint, focus outline),
+    // which must not survive a theme change from a cached render.
+    var sig = themeName() + '|' + state.search + '|' + selKey + '|' + models.join(',');
     if (sig === chipsSig) return;
     chipsSig = sig;
 
@@ -946,9 +1011,7 @@
    * with the scatter (source / model / search).
    * ------------------------------------------------------------------ */
 
-  var BRK_OK = '#2E4A7A';      // success fill
-  var BRK_FAIL = '#B42318';    // failed fill
-  var BRK_INK = '#16202E';
+  // BRK_OK / BRK_FAIL / BRK_INK are theme-synced (see THEMES above).
   var outMarks = {};           // data-brk id -> row, for tooltip binding
   var BRK_LABEL = 258;         // model-name column width
   var BRK_ROW = 34;            // height of each model row
@@ -992,18 +1055,13 @@
 
   // Actual KV cache value → stroke ("ring") colour, so the axis legend and the
   // marks tell Q4_0 from Q8_0 from None apart instead of only "set" vs "none".
-  var BRK_KVCOL = {
-    'Q4_0': '#0E7A7B',
-    'Q8_0': '#A86A2B',
-    'None': '#7A4A6B',
-    '':     '#9AA7B5'
-  };
+  // BRK_KVCOL is theme-synced (see THEMES above).
   function brkKV(r) {
     var m = String(r.notes || '').match(/KV quant:\s*([^,\s]+)/);
     return m ? m[1].trim() : '';
   }
   function brkKVColor(kv) {
-    return BRK_KVCOL[kv] !== undefined ? BRK_KVCOL[kv] : '#1F6F8F';
+    return BRK_KVCOL[kv] !== undefined ? BRK_KVCOL[kv] : BRK_KV_OTHER;
   }
 
   function brkRow(r) {
@@ -1157,20 +1215,13 @@
 
   // Legend layout: one row per channel group (Quant / KV quant on the
   // scatter, Status / Quant / KV quant on the breakdown). A fixed label
-  // column left-justifies every group, and each row's keys form an auto-fit
-  // grid (CSS) whose minimum cell width is the row's widest key, so keys sit
-  // in equal-width columns that line up across rows and fill the row width.
-  function legendRowHtml(label, keyHtmls, widestPx) {
+  // column left-justifies every group; the keys flow and wrap under their
+  // own label (CSS), so a long group never stretches to fill the row or
+  // leaves an orphan row between groups.
+  function legendRowHtml(label, keyHtmls) {
     return '<div class="legend-row">' +
       '<span class="legend-label">' + label + '</span>' +
-      '<div class="legend-keys" style="--lg-key-min:' + Math.max(1, Math.round(widestPx)) + 'px">' +
-      keyHtmls.join('') + '</div></div>';
-  }
-
-  // Estimated on-screen width of a legend key: mono label (same 6.1px/char
-  // estimate as brkTruncate) + the mark + the key's internal 0.45rem gap.
-  function legendKeyWidth(text, markPx) {
-    return String(text).length * 6.1 + 2 + markPx + 7;
+      '<div class="legend-keys">' + keyHtmls.join('') + '</div></div>';
   }
 
   // Legend group rows shared by both charts: the Quant shape keys and the KV
@@ -1186,17 +1237,14 @@
     if (!quants.length) return null;
     var rc = pointRadius();
     var cc = rc + 4;
-    var markPx = (rc * 2 + 8) * legendPxUnit;
     var keys = [];
-    var widest = 0;
     BRK_QUANTS.forEach(function (q) {
       if (quants.indexOf(q) === -1) return;
       var sh = brkShape(q);
       keys.push('<span class="legend-key">' +
         legendSwatch(brkMark(sh, cc, cc, rc, BRK_OK, BRK_INK, null), rc, legendOpticalDy(sh, rc)) + esc(q) + '</span>');
-      widest = Math.max(widest, legendKeyWidth(q, markPx));
     });
-    return { label: 'Quant', keys: keys, widest: widest };
+    return { label: 'Quant', keys: keys };
   }
 
   function legendKVGroup(shown) {
@@ -1213,11 +1261,9 @@
     });
     var rc = pointRadius();
     var cc = rc + 4;
-    var markPx = (rc * 2 + 8) * legendPxUnit;
     // Same 2.5u stroke as the plot rings (brkMark), so a legend ring matches
     // the on-chart rings exactly at any scale.
     var keys = [];
-    var widest = 0;
     kvs.forEach(function (kv) {
       var c = kv === '' ? BRK_KVCOL[''] : kv === 'None' ? BRK_KVCOL['None'] : brkKVColor(kv);
       var label = brkLegendLabel(kv);
@@ -1226,9 +1272,8 @@
           '" stroke="' + c + '" stroke-width="2.5"' +
           (kv === 'None' ? ' stroke-dasharray="' + brkDash(rc) + '"' : '') + '/>', rc) +
         esc(label) + '</span>');
-      widest = Math.max(widest, legendKeyWidth(label, markPx));
     });
-    return { label: 'KV quant', keys: keys, widest: widest };
+    return { label: 'KV quant', keys: keys };
   }
 
   function renderBreakdownLegend(shown) {
@@ -1240,11 +1285,10 @@
       [
         '<span class="legend-key"><span class="lg" style="background:' + BRK_OK + ';width:' + dot + 'px;height:' + dot + 'px"></span>success</span>',
         '<span class="legend-key"><span class="lg" style="background:' + BRK_FAIL + ';width:' + dot + 'px;height:' + dot + 'px"></span>failed</span>'
-      ],
-      Math.max(legendKeyWidth('success', dot), legendKeyWidth('failed', dot)))];
+      ])];
     var g;
-    if ((g = legendQuantGroup(shown))) rows.push(legendRowHtml(g.label, g.keys, g.widest));
-    if ((g = legendKVGroup(shown))) rows.push(legendRowHtml(g.label, g.keys, g.widest));
+    if ((g = legendQuantGroup(shown))) rows.push(legendRowHtml(g.label, g.keys));
+    if ((g = legendKVGroup(shown))) rows.push(legendRowHtml(g.label, g.keys));
     brkLegendEl.innerHTML = rows.join('');
   }
 
@@ -1257,8 +1301,8 @@
     lastVizShown = shown.slice();
     var rows = [];
     var g;
-    if ((g = legendQuantGroup(shown))) rows.push(legendRowHtml(g.label, g.keys, g.widest));
-    if ((g = legendKVGroup(shown))) rows.push(legendRowHtml(g.label, g.keys, g.widest));
+    if ((g = legendQuantGroup(shown))) rows.push(legendRowHtml(g.label, g.keys));
+    if ((g = legendKVGroup(shown))) rows.push(legendRowHtml(g.label, g.keys));
     vizLegendEl.innerHTML = rows.join('');
   }
 
@@ -1289,6 +1333,9 @@
 
   function drawBreakdown() {
     if (!brkEl) return;
+    // Cheap and idempotent — keeps this path theme-safe even when it is
+    // called on its own (the metric toggle) without a full draw().
+    syncThemeColors();
     buildQuantOrder();
     outMarks = {};
     hideBrkTpt();
@@ -1672,6 +1719,15 @@
     window.addEventListener('resize', function () {
       if (chartEl && chartEl.innerHTML) renderVizLegend(lastVizShown);
       if (brkEl && brkEl.innerHTML) renderBreakdownLegend(lastBrkShown);
+    });
+  }
+
+  // The site's theme toggle (site.js) dispatches this after re-inking the CSS
+  // variables; the marks are inline hex values, so a full re-draw re-inks the
+  // charts and the legends in the new theme's palette.
+  if (document.addEventListener) {
+    document.addEventListener('site:themechange', function () {
+      if (allRows.length) draw();
     });
   }
 
