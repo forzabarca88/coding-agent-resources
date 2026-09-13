@@ -50,6 +50,7 @@
 | lmstudio-jdchome/unsloth/qwen3.6-35b-a3b | quant: Q4_K_M, KV quant: Q8_0 | 22m 44s | 112540 | 103 | 262000 | No | 0 | 247 | 0 | 2026-09-06 23:21 |
 | lmstudio-jdc-ws/ornith-ai/ornith-1.0-35b | quant: Q8_0, KV quant: Q8_0 | 56m 51s | 114180 | 105 | 128000 | No | 0 | 247 | 0 | 2026-08-17 20:36 |
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b | quant: Q3_K_XL, KV quant: Q8_0, thinking: xhigh, MTP | 92m 43s | 114581 | 50 | 196000 | No | 0 | 247 | 0 | 2026-08-28 08:42 |
+| lmstudio-jdc-ws/ornith-ai/ornith-1.5-35b-a3b | quant: None, KV quant: None, MTP, sampling parameters incorrectly set | 126m 36s | 115667 | 78 | 262000 | No | 0 | 247 | 0 | 2026-09-12 23:46 |
 | lmstudio-jdcmedia/unsloth/qwen3.6-27b | quant: Q3_K_S, KV quant: Q4_0 | 71m 13s | 115361 | 93 | 128000 | No | 0 | 247 | 0 | 2026-08-03 18:44 |
 | lmstudio-jdc-ws/unsloth/laguna-s-2.1 | quant: Q4_K_XL, KV quant: Q8_0, reasoning budget: 32k | 201m 8s | 117616 | 79 | 131000 | No | 0 | 247 | 0 | 2026-08-23 04:53 |
 | lmstudio-jdc-ws/ornith-ai/ornith-1.5-35b-a3b | quant: Q8_0, KV quant: None, MTP | 82m 26s | 117601 | 99 | 262000 | No | 0 | 247 | 0 | 2026-09-12 17:37 |
@@ -110,4 +111,3 @@
 | lmstudio-jdc-ws/unsloth/gemma-4-12b-it-qat | quant: Q4_K_XL, KV quant: Q8_0, vitest failed, tool call formatting issues | 16m 10s | 42870 | 31 | 131000 | No | 1 | 15 | 4 | 2026-08-29 22:59 |
 | lmstudio-jdc-ws/ornith-ai/ornith-1.5-9b | quant: Q8_0, KV quant: None, vitest failed, thinking hit output limit | 49m 20s | 103012 | 10 | 262000 | Yes | 1 | ? | ? | 2026-09-04 18:11 |
 | lmstudio-jdc-ws/inclusionai/ling-3.0-tiny | quant: Q8_0, KV quant: None, vitest failed, thinking loop | 23m 6s | 55180 | 12 | 131000 | No | 1 | ? | ? | 2026-09-08 20:38 |
-| lmstudio-jdc-ws/ornith-ai/ornith-1.5-35b-a3b@bf16 | quant: None, KV quant: None, MTP | 126m 36s | 115667 | 78 | 262000 | No | 0 | 247 | 0 | 2026-09-12 23:46 |
