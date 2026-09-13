@@ -112,3 +112,5 @@
 | lmstudio-jdc-ws/ornith-ai/ornith-1.5-9b | quant: Q8_0, KV quant: None, vitest failed, thinking hit output limit | 49m 20s | 103012 | 10 | 262000 | Yes | 1 | ? | ? | 2026-09-04 18:11 |
 | lmstudio-jdc-ws/inclusionai/ling-3.0-tiny | quant: Q8_0, KV quant: None, vitest failed, thinking loop | 23m 6s | 55180 | 12 | 131000 | No | 1 | ? | ? | 2026-09-08 20:38 |
 | lmstudio-jdc-ws/ornith-ai/ornith-1.5-35b-a3b | quant: None, KV quant: None, MTP | 171m 12s | 159207 | 158 | 262000 | No | 0 | 247 | 0 | 2026-09-13 12:16 |
+| lmstudio-jdc-ws/ornith-ai/ornith-1.5-35b-a3b@q8_0 | quant: Q
+8_0, KV quant: Q8_0, MTP | 115m 58s | 151723 | 127 | 262000 | No | 0 | 247 | 0 | 2026-09-13 20:53 |
