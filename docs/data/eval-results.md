@@ -66,7 +66,9 @@
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b | quant: Q2_K_XL, KV quant: Q8_0, thinking: xhigh, MTP | 141m 15s | 142883 | 54 | 196000 | No | 0 | 247 | 0 | 2026-08-22 16:36 |
 | lmstudio-jdc-ws/qwen/qwen3.8-27b | quant: Q4_K_M, KV quant: Q4_0, thinking: xhigh, MTP | 135m 0s | 144189 | 60 | 196000 | No | 0 | 247 | 0 | 2026-08-19 23:47 |
 | lmstudio-jdc-ws/deepreinforce-ai/ornith-1.0-35b | quant: Q4_k_M, KV quant: Q4_0 | 41m 14s | 151721 | 154 | 262000 | No | 0 | 247 | 0 | 2026-08-29 18:26 |
+| lmstudio-jdc-ws/ornith-ai/ornith-1.5-35b-a3b | quant: Q8_0, KV quant: Q8_0, MTP | 115m 58s | 151723 | 127 | 262000 | No | 0 | 247 | 0 | 2026-09-13 20:53 |
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b | quant: Q3_K_XL, KV quant: Q4_0, thinking: xhigh, MTP | 138m 6s | 156395 | 65 | 196000 | No | 0 | 247 | 0 | 2026-08-27 20:28 |
+| lmstudio-jdc-ws/ornith-ai/ornith-1.5-35b-a3b | quant: None, KV quant: None, MTP | 171m 12s | 159207 | 158 | 262000 | No | 0 | 247 | 0 | 2026-09-13 12:16 |
 | lmstudio-jdc-ws/deepreinforce-ai/ornith-1.0-35b | quant: Q4_K_M, KV quant: Q4_0 | 48m 21s | 161205 | 83 | 262000 | No | 0 | 247 | 0 | 2026-08-29 17:37 |
 | lmstudio-jdc-ws/ornith-ai/ornith-1.5-35b-a3b | quant: Q8_0, KV quant: Q8_0 | 162m 22s | 176816 | 157 | 262000 | No | 0 | 247 | 0 | 2026-08-22 13:44 |
 | lmstudio-jdc-ws/ornith-ai/ornith-1.5-9b | quant: None, KV quant: None | 246m 53s | 200753 | 252 | 262000 | No | 0 | 247 | 0 | 2026-09-01 13:33 |
@@ -111,6 +113,3 @@
 | lmstudio-jdc-ws/unsloth/gemma-4-12b-it-qat | quant: Q4_K_XL, KV quant: Q8_0, vitest failed, tool call formatting issues | 16m 10s | 42870 | 31 | 131000 | No | 1 | 15 | 4 | 2026-08-29 22:59 |
 | lmstudio-jdc-ws/ornith-ai/ornith-1.5-9b | quant: Q8_0, KV quant: None, vitest failed, thinking hit output limit | 49m 20s | 103012 | 10 | 262000 | Yes | 1 | ? | ? | 2026-09-04 18:11 |
 | lmstudio-jdc-ws/inclusionai/ling-3.0-tiny | quant: Q8_0, KV quant: None, vitest failed, thinking loop | 23m 6s | 55180 | 12 | 131000 | No | 1 | ? | ? | 2026-09-08 20:38 |
-| lmstudio-jdc-ws/ornith-ai/ornith-1.5-35b-a3b | quant: None, KV quant: None, MTP | 171m 12s | 159207 | 158 | 262000 | No | 0 | 247 | 0 | 2026-09-13 12:16 |
-| lmstudio-jdc-ws/ornith-ai/ornith-1.5-35b-a3b@q8_0 | quant: Q
-8_0, KV quant: Q8_0, MTP | 115m 58s | 151723 | 127 | 262000 | No | 0 | 247 | 0 | 2026-09-13 20:53 |
