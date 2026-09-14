@@ -31,6 +31,18 @@ Extensions are TypeScript modules that hook into pi's event system to provide ad
   - Prevents message loss during active processing
   - Provides feedback via UI notifications
 
+### [hold.ts](./hold.ts)
+- **Purpose**: Registers `/hold` command — the automated, deferred equivalent of pressing ESC: stops the session's processing at the END of the current agent turn
+- **Behavior**:
+  - If agent is busy: arms the hold; the current turn completes normally, then the session stops; pi stays open for the next prompt
+  - If agent is idle: no turn in progress — notifies that the session is already stopped
+- **Command**: `/hold`
+- **Implementation**: Arms a latch that rejects mid-run submissions at the same `input` gate steering uses — any message offered with `streamingBehavior` `steer`/`followUp` while armed is dropped with a notification — and reports the stop at `turn_end`; shows a persistent footer status while armed. Covers the TUI's mid-stream Enter (steer) and Alt+Enter (follow-up) submissions and extension `sendUserMessage(..., { deliverAs })`; note pi's raw RPC `steer`/`follow_up` commands bypass the input gate entirely
+- **Features**:
+  - Never cuts a turn short (unlike ESC/abort) and never exits pi (unlike shutdown)
+  - Nothing queued after `/hold` continues the session; messages already queued before it (e.g. an earlier `/followup`) still complete, as the extension API cannot clear the agent's internal queues
+  - Repeat `/hold` while armed is a no-op; the armed state survives until the turn ends (cleared on `/reload`/`/new`, which recreate the extension)
+
 ### [provider-health-check.ts](./provider-health-check.ts)
 - **Purpose**: Monitors LLM provider health and availability
 - **Features**:

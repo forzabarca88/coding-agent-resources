@@ -13,7 +13,7 @@ coding-agent-resources/
 ├── agents/           # Agent definitions (planner, reviewer, scout, worker)
 ├── agent-evaluation/  # Evaluation harness (web-agent) with its own README
 ├── docs/             # Static documentation site (renders eval results live)
-├── extensions/       # Pi extensions (auto-recover, followup, provider-health-check, success-tone)
+├── extensions/       # Pi extensions (auto-recover, followup, hold, provider-health-check, success-tone)
 │   └── subagent/     # Subagent extension
 ├── prompts/          # Pre-defined prompt templates (ralph-loop)
 ├── references/       # Reference documentation (currently empty)
@@ -57,6 +57,7 @@ Pi extensions that add new functionality:
 
 - **auto-recover.ts** - Detects interrupted turns (unexecuted tool calls or blank completions) and prompts the model to continue
 - **followup.ts** - Registers `/followup` command for queuing messages after current turn
+- **hold.ts** - Registers `/hold` command: deferred ESC that stops the session at the end of the current agent turn, rejecting mid-run submissions while armed (pi stays open)
 - **provider-health-check.ts** - Monitors LLM provider health
 - **success-tone.ts** - Adjusts model tone for successful completions
 - **subagent/** - Subagent management extension

@@ -57,6 +57,7 @@ coding-agent-resources/
 │   ├── README.md             # Extensions overview
 │   ├── auto-recover.ts       # Detects interrupted turns (unexecuted tool call or blank completion) and prompts model to continue
 │   ├── followup.ts           # Registers /followup command for queuing messages after current turn
+│   ├── hold.ts               # Registers /hold command: deferred ESC stopping the session at the end of the current agent turn
 │   ├── provider-health-check.ts # Monitors LLM provider health
 │   ├── success-tone.ts       # Adjusts model tone for successful completions
 │   └── subagent/
