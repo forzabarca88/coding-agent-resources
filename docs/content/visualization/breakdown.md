@@ -3,7 +3,7 @@ Each mark represents its run visually in three ways.
 - **Status** (fill)
   - solid carbon = success
   - red = failed
-- **Quant** (shape)
+- **Model quant** (shape)
   - Represents the model's quantisation (e.g. Q4_K_M)
   - "None" means no quantisation
 - **KV quant** (outline)

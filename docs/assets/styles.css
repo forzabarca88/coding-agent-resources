@@ -1285,7 +1285,7 @@ a:focus-visible {
    first draw populates it — an empty filter never leaves an empty box. */
 .brk-legend,
 .viz-legend {
-  --legend-label-w: 4.6rem; /* fits the widest group label ("KV QUANT") */
+  --legend-label-w: 6.4rem; /* fits the widest group label ("MODEL QUANT") */
   display: none;
   border: 1px solid var(--rule);
   border-left: 3px solid var(--carbon);

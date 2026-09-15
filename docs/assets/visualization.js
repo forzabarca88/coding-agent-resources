@@ -679,7 +679,7 @@
     out.push(
       '<svg class="chart-svg" viewBox="0 0 ' + W + ' ' + H + '" role="group" ' +
       'aria-label="Scatter plot of total context used against turns for successful evaluation runs; ' +
-      'point shape marks weight quant, outline KV quant, fill model colour">'
+      'point shape marks Model quant, outline KV quant, fill model colour">'
     );
 
     // --- Best-quadrant tint: the plot splits into four quadrants at the
@@ -772,7 +772,7 @@
       out.push(
         '<g class="pt" data-idx="' + i + '" tabindex="0" role="button" ' +
         'aria-label="' + esc(r.model) + ': ' + fmt(r.tokensN) + ' tokens, ' + fmt(r.turnsN) + ' turns' +
-        (q ? ', quant ' + esc(q) : '') + (kv ? ', KV quant ' + esc(kv) : '') + '">' +
+        (q ? ', Model quant ' + esc(q) : '') + (kv ? ', KV quant ' + esc(kv) : '') + '">' +
         '<circle cx="' + px + '" cy="' + py + '" r="' + (rpt * 1.5) + '" class="pt__halo"/>' +
         brkMark(brkShape(q), px, py, rpt, c, brkKVColor(kv),
           kv === 'None' ? brkDash(rpt) : null) +
@@ -1213,8 +1213,8 @@
   var lastVizShown = [];
   var lastBrkShown = [];
 
-  // Legend layout: one row per channel group (Quant / KV quant on the
-  // scatter, Status / Quant / KV quant on the breakdown). A fixed label
+  // Legend layout: one row per channel group (Model quant / KV quant on the
+  // scatter, Status / Model quant / KV quant on the breakdown). A fixed label
   // column left-justifies every group; the keys flow and wrap under their
   // own label (CSS), so a long group never stretches to fill the row or
   // leaves an orphan row between groups.
@@ -1224,8 +1224,8 @@
       '<div class="legend-keys">' + keyHtmls.join('') + '</div></div>';
   }
 
-  // Legend group rows shared by both charts: the Quant shape keys and the KV
-  // quant ring keys, each built from the runs actually shown (so the legend
+  // Legend group rows shared by both charts: the Model quant shape keys and
+  // the KV quant ring keys, each built from the runs actually shown (so the legend
   // always matches the plot) and each drawn at the active point radius (so
   // the legend matches the plot's size too). null when no run in the group.
   function legendQuantGroup(shown) {
@@ -1244,7 +1244,7 @@
       keys.push('<span class="legend-key">' +
         legendSwatch(brkMark(sh, cc, cc, rc, BRK_OK, BRK_INK, null), rc, legendOpticalDy(sh, rc)) + esc(q) + '</span>');
     });
-    return { label: 'Quant', keys: keys };
+    return { label: 'Model quant', keys: keys };
   }
 
   function legendKVGroup(shown) {
@@ -1292,7 +1292,7 @@
     brkLegendEl.innerHTML = rows.join('');
   }
 
-  // Scatter legend — same Quant/KV decoding as the range chart. Rebuilt on
+  // Scatter legend — same Model quant/KV decoding as the range chart. Rebuilt on
   // every scatter draw from the rows actually shown, so it tracks the
   // filters, the top-N limit and the wildcard search exactly as the plot does.
   function renderVizLegend(shown) {
