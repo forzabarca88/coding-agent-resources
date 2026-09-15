@@ -37,6 +37,8 @@
 |---|---|---|---|---|---|---|---|---|---|---|
 | lmstudio-jdc-ws/unsloth/qwen3.6-27b-mtp | quant: Q4_K_XL, KV quant: Q4_0, MTP | 26m 2s | 70436 | 46 | 131000 | No | 0 | 247 | 0 | 2026-08-21 10:57 |
 | lmstudio-jdc-ws/qwen3.8-flash-next | quant: Q4_K_XL, KV quant: None, thinking: medium | 76m 31s | 74199 | 28 | 131000 | No | 0 | 247 | 0 | 2026-09-14 23:00 |
+| lmstudio-jdc-ws/qwen3.8-flash-next | quant: Q4_K_XL, KV quant: None, thinking: low | 85m 32s | 80169 | 31 | 131000 | No | 0 | 247 | 0 | 2026-09-15 12:28 |
+| lmstudio-jdc-ws/qwen3.8-flash-next | quant: Q4_K_XL, KV quant: None, thinking: low | 82m 11s | 80347 | 39 | 131000 | No | 0 | 247 | 0 | 2026-09-15 13:54 |
 | lmstudio-jdc-ws/unsloth/laguna-s-2.1 | quant: Q4_K_XL, KV quant: Q8_0, reasoning budget: 32k | 92m 30s | 83166 | 109 | 131000 | No | 0 | 247 | 0 | 2026-08-23 00:52 |
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b | quant: Q4_K_XL, KV quant: Q4_0, thinking: medium, MTP | 63m 35s | 84788 | 34 | 131000 | No | 0 | 247 | 0 | 2026-08-24 11:27 |
 | lmstudio-jdc-ws/qwen3.8-flash-next | quant: Q4_K_XL, KV quant: None, thinking: medium | 96m 4s | 87036 | 28 | 131000 | No | 0 | 247 | 0 | 2026-09-15 00:16 |
@@ -118,5 +120,3 @@
 | lmstudio-jdc-ws/unsloth/gemma-4-12b-it-qat | quant: Q4_K_XL, KV quant: Q8_0, vitest failed, tool call formatting issues | 16m 10s | 42870 | 31 | 131000 | No | 1 | 15 | 4 | 2026-08-29 22:59 |
 | lmstudio-jdc-ws/ornith-ai/ornith-1.5-9b | quant: Q8_0, KV quant: None, vitest failed, thinking hit output limit | 49m 20s | 103012 | 10 | 262000 | Yes | 1 | ? | ? | 2026-09-04 18:11 |
 | lmstudio-jdc-ws/inclusionai/ling-3.0-tiny | quant: Q8_0, KV quant: None, vitest failed, thinking loop | 23m 6s | 55180 | 12 | 131000 | No | 1 | ? | ? | 2026-09-08 20:38 |
-| lmstudio-jdc-ws/qwen3.8-flash-next@q4_k_xl | quant: Q4_K_XL, KV quant: None, thinking: low | 85m 32s | 80169 | 31 | 131000 | No | 0 | 247 | 0 | 2026-09-15 12:28 |
-| lmstudio-jdc-ws/qwen3.8-flash-next@q4_k_xl | quant: Q4_K_XL, KV quant: None, thinking: low | 82m 11s | 80347 | 39 | 131000 | No | 0 | 247 | 0 | 2026-09-15 13:54 |
