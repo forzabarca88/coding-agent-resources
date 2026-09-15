@@ -2,7 +2,7 @@
 
 ## Core Principles
 
-- **DESIGN AND BUILD PRODUCTION GRADE CODE FROM THE START** - i.e. no monolithic files if they should be  modularised, no unnecessary duplication of code, no hardcoded values if they can be placed in a centralised config file, etc.
+- **DESIGN AND BUILD PRODUCTION GRADE CODE FROM THE START** - i.e. no monolithic files if they should be modularised, no unnecessary duplication of code, no hardcoded values if they can be placed in a centralised config file, etc.
 - Keep AGENTS.md minimal - **only** keep information which will be required every time you look at this codebase. `Repository Structure` should **always** be kept up to date, and include a CONCISE single sentence description of each file in the project.  Do not modify `Core Principles`, but review and remove anything else from the document which is not required.
 - After completing any task, always review/amend any related README.md file(s) to ensure that they remain correct. 
 - Do **not** make assumptions without testing and validating first. Follow the scientific method.
