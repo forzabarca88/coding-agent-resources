@@ -36,15 +36,15 @@
 | Model | Notes | Duration | Total Context Used | Turns | Limit | Exceeded | Exit | Passed Tests | Failed Tests | Date |
 |---|---|---|---|---|---|---|---|---|---|---|
 | lmstudio-jdc-ws/unsloth/qwen3.6-27b-mtp | Model quant: Q4_K_XL, KV quant: Q4_0, MTP | 26m 2s | 70436 | 46 | 131000 | No | 0 | 247 | 0 | 2026-08-21 10:57 |
-| lmstudio-jdc-ws/qwen3.8-flash-next | Model quant: Q4_K_XL, KV quant: None, thinking: medium | 76m 31s | 74199 | 28 | 131000 | No | 0 | 247 | 0 | 2026-09-14 23:00 |
-| lmstudio-jdc-ws/qwen3.8-flash-next | Model quant: Q4_K_XL, KV quant: None, thinking: low | 85m 32s | 80169 | 31 | 131000 | No | 0 | 247 | 0 | 2026-09-15 12:28 |
-| lmstudio-jdc-ws/qwen3.8-flash-next | Model quant: Q4_K_XL, KV quant: None, thinking: low | 82m 11s | 80347 | 39 | 131000 | No | 0 | 247 | 0 | 2026-09-15 13:54 |
+| lmstudio-jdc-ws/unsloth/qwen3.8-flash-next | Model quant: Q4_K_XL, KV quant: None, thinking: medium | 76m 31s | 74199 | 28 | 131000 | No | 0 | 247 | 0 | 2026-09-14 23:00 |
+| lmstudio-jdc-ws/unsloth/qwen3.8-flash-next | Model quant: Q4_K_XL, KV quant: None, thinking: low | 85m 32s | 80169 | 31 | 131000 | No | 0 | 247 | 0 | 2026-09-15 12:28 |
+| lmstudio-jdc-ws/unsloth/qwen3.8-flash-next | Model quant: Q4_K_XL, KV quant: None, thinking: low | 82m 11s | 80347 | 39 | 131000 | No | 0 | 247 | 0 | 2026-09-15 13:54 |
 | lmstudio-jdc-ws/unsloth/laguna-s-2.1 | Model quant: Q4_K_XL, KV quant: Q8_0, reasoning budget: 32k | 92m 30s | 83166 | 109 | 131000 | No | 0 | 247 | 0 | 2026-08-23 00:52 |
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b | Model quant: Q4_K_XL, KV quant: Q4_0, thinking: medium, MTP | 63m 35s | 84788 | 34 | 131000 | No | 0 | 247 | 0 | 2026-08-24 11:27 |
-| lmstudio-jdc-ws/qwen3.8-flash-next | Model quant: Q4_K_XL, KV quant: None, thinking: medium | 96m 4s | 87036 | 28 | 131000 | No | 0 | 247 | 0 | 2026-09-15 00:16 |
-| lmstudio-jdc-ws/qwen3.8-flash-next | Model quant: Q4_K_XL, KV quant: None, thinking: xhigh | 114m 26s | 94506 | 41 | 131000 | No | 0 | 247 | 0 | 2026-09-14 19:50 |
-| lmstudio-jdc-ws/qwen3.8-flash-next | quant: Q4_K_XL, KV quant: Q4_0, thinking: xhigh | 105m 37s | 95672 | 37 | 262000 | No | 0 | 247 | 0 | 2026-09-15 17:28 |
-| lmstudio-jdc-ws/qwen3.8-flash-next | Model quant: Q4_K_XL, KV quant: None, thinking: xhigh | 128m 9s | 96012 | 54 | 262000 | No | 0 | 247 | 0 | 2026-09-14 17:38 |
+| lmstudio-jdc-ws/unsloth/qwen3.8-flash-next | Model quant: Q4_K_XL, KV quant: None, thinking: medium | 96m 4s | 87036 | 28 | 131000 | No | 0 | 247 | 0 | 2026-09-15 00:16 |
+| lmstudio-jdc-ws/unsloth/qwen3.8-flash-next | Model quant: Q4_K_XL, KV quant: None, thinking: xhigh | 114m 26s | 94506 | 41 | 131000 | No | 0 | 247 | 0 | 2026-09-14 19:50 |
+| lmstudio-jdc-ws/unsloth/qwen3.8-flash-next | quant: Q4_K_XL, KV quant: Q4_0, thinking: xhigh | 105m 37s | 95672 | 37 | 262000 | No | 0 | 247 | 0 | 2026-09-15 17:28 |
+| lmstudio-jdc-ws/unsloth/qwen3.8-flash-next | Model quant: Q4_K_XL, KV quant: None, thinking: xhigh | 128m 9s | 96012 | 54 | 262000 | No | 0 | 247 | 0 | 2026-09-14 17:38 |
 | lmstudio-jdcmedia/deepreinforce-ai/ornith-1.0-35b | Model quant: Q4_K_M, KV quant: Q8_0 | 70m 43s | 96197 | 138 | 128000 | No | 0 | 247 | 0 | 2026-08-03 23:23 |
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b | Model quant: Q4_K_XL, KV quant: Q8_0, thinking: medium, MTP | 93m 2s | 88039 | 40 | 131000 | No | 0 | 247 | 0 | 2026-08-21 17:18 |
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b | Model quant: Q4_K_XL, KV quant: Q4_0, thinking: medium, MTP | 106m 29s | 96423 | 44 | 131000 | No | 0 | 247 | 0 | 2026-08-24 19:26 |
