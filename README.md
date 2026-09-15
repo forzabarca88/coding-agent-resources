@@ -112,7 +112,7 @@ cd docs
 npx serve .          # or: npx http-server .   /   python3 -m http.server
 ```
 
-The chart's wildcard-search logic has end-to-end tests with no dependencies (they run `docs/assets/visualization.js` against the real `docs/data/eval-results.md` in a minimal DOM stub):
+The chart has end-to-end tests with no dependencies (they run `docs/assets/visualization.js` in a minimal DOM stub — shared harness `docs/tests/viz-harness.mjs` — against the real `docs/data/eval-results.md` for the wildcard search, and against a synthetic fixture for the min-based axis scaling):
 
 ```bash
 node --test 'docs/tests/*.test.mjs'

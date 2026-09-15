@@ -50,9 +50,11 @@ coding-agent-resources/
 │   │   ├── results.js        # Fetches data/eval-results.md, renders local-first with a sticky filter/sort bar
 │   │   └── visualization.js  # Renders eval results as an interactive scatter chart
 │   └── tests/
-│       ├── visualization-search.test.mjs # End-to-end wildcard-search tests (node --test 'docs/tests/*.test.mjs')
-│       ├── results-order.test.mjs # Local-before-provider section-order tests (node --test 'docs/tests/*.test.mjs')
-│       └── findings-slot.test.mjs # Shared Overall-findings block tests (node --test 'docs/tests/*.test.mjs')
+│       ├── viz-harness.mjs                 # Shared minimal-DOM/marked harness that boots assets/visualization.js for the viz tests
+│       ├── visualization-search.test.mjs  # End-to-end wildcard-search tests (node --test 'docs/tests/*.test.mjs')
+│       ├── visualization-axis.test.mjs    # Chart axis min-based scaling tests (node --test 'docs/tests/*.test.mjs')
+│       ├── results-order.test.mjs         # Local-before-provider section-order tests (node --test 'docs/tests/*.test.mjs')
+│       └── findings-slot.test.mjs         # Shared Overall-findings block tests (node --test 'docs/tests/*.test.mjs')
 ├── extensions/
 │   ├── README.md             # Extensions overview
 │   ├── auto-recover.ts       # Detects interrupted turns (unexecuted tool call or blank completion) and prompts model to continue
