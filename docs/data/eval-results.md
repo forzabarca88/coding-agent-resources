@@ -125,3 +125,4 @@
 | lmstudio-jdc-ws/inclusionai/ling-3.0-tiny | Model quant: Q8_0, KV quant: None, vitest failed, thinking loop, exhibits laziness | 23m 6s | 55180 | 12 | 131000 | No | 1 | ? | ? | 2026-09-08 20:38 |
 | lmstudio-jdc-ws/inclusionai/ling-3.0-tiny | Model quant: None, KV quant: None, vitest failed, thinking loop, exhibits laziness | 25m 4s | 70449 | 20 | 131000 | No | 1 | ? | ? | 2026-09-18 17:29 |
 | lmstudio-jdc-ws/unsloth/gemma-4-12b-it-qat | Model quant: Q4_K_XL, KV quant: None, tool call hit output limit | 95m 55s | 32355 | 22 | 262000 | No | 1 | ? | ? | 2026-09-18 20:14 |
+| lmstudio-jdc-ws/unsloth/gemma-4-12b-it-qat | Model quant: Q4_K_XL, KV quant: None, vitest failed, output loop | 37m 23s | 59021 | 34 | 262000 | No | 1 | ? | ? | 2026-09-18 21:00 |
