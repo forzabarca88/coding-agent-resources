@@ -65,7 +65,9 @@ coding-agent-resources/
 │   └── subagent/
 │       ├── README.md         # Subagent extension documentation
 │       ├── index.ts          # Subagent extension entry point
-│       └── agents.ts         # Subagent management utilities
+│       ├── agents.ts         # Subagent management utilities
+│       └── tests/
+│           └── resilience.test.mjs # End-to-end resilience tests; file doubles as a fake `pi` executable (needs node_modules linked to the global pi install)
 ├── prompts/
 │   ├── README.md             # Prompts overview
 │   └── ralph-loop.md         # Iterative development loop prompt template

@@ -10,6 +10,13 @@
  *   - Chain: { chain: [{ agent: "name", task: "... {previous} ..." }, ...] }
  *
  * Uses JSON mode to capture structured output from subagents.
+ *
+ * Network resilience: each invocation runs in a private persistent session
+ * file. If a run ends with a transient provider/network error (classified with
+ * pi's own isRetryableAssistantError), the session is resumed after an
+ * exponential-backoff wait (10s..2m per wait, up to 100 resumes by default),
+ * so an invocation survives arbitrarily long network outages without losing
+ * progress. See the "Network resilience" blocks in this file.
  */
 
 import { spawn } from "node:child_process";
@@ -17,8 +24,8 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import type { AgentToolResult } from "@earendil-works/pi-agent-core";
-import type { Message } from "@earendil-works/pi-ai";
-import { StringEnum } from "@earendil-works/pi-ai";
+import type { AssistantMessage, Message } from "@earendil-works/pi-ai";
+import { isRetryableAssistantError, StringEnum } from "@earendil-works/pi-ai";
 import {
         CONFIG_DIR_NAME,
         type ExtensionAPI,
@@ -36,6 +43,30 @@ const COLLAPSED_ITEM_COUNT = 10;
 const PER_TASK_OUTPUT_CAP = 50 * 1024;
 const LIVE_TAIL_LINES = 15;
 const LIVE_THROTTLE_MS = 80;
+
+// Network-resilience defaults (overridable per invocation via the
+// PI_SUBAGENT_RETRY_* env vars; see the "Network resilience" block below).
+const RETRY_BASE_MS_DEFAULT = 10_000;
+const RETRY_MAX_DELAY_MS_DEFAULT = 120_000;
+const RETRY_MAX_RESUMES_DEFAULT = 100;
+
+/**
+ * Network resilience (consumed by runSingleAgent's resume loop).
+ *
+ * A subagent child process only tolerates transient provider/network errors
+ * for as long as pi's own in-process retry budget lasts (3 attempts with ~14s
+ * of backoff by default). A longer outage makes the child exit with an error.
+ * Because every invocation runs in a private persistent session file
+ * (`--session <file>`, not `--no-session`), the extension resumes the same
+ * conversation after an exponential-backoff wait (base 10s, doubling, capped
+ * at 2m per wait, up to 100 resumes by default ≈ several hours of backoff).
+ * With the defaults, a full 15-minute outage costs only ~11 resumes.
+ *
+ * Env overrides (read per invocation, so they can also be tuned per test):
+ *   PI_SUBAGENT_RETRY_BASE_MS       base wait before the first resume (default 10000)
+ *   PI_SUBAGENT_RETRY_MAX_DELAY_MS  cap for per-wait backoff (default 120000)
+ *   PI_SUBAGENT_RETRY_MAX_RESUMES   max resumes per invocation (default 100; 0 disables resumption)
+ */
 
 /**
  * Recursion guard for nested subagents.
@@ -69,6 +100,10 @@ function formatCompactions(count: number): string {
         return `${count} compaction${count === 1 ? "" : "s"}`;
 }
 
+function formatNetworkResumes(count: number): string {
+        return `${count} network resume${count === 1 ? "" : "s"}`;
+}
+
 /**
  * Assembles the summary line for a subagent session: usage stats, then the
  * session duration followed immediately by the compaction count. Sessions
@@ -82,6 +117,7 @@ function formatResultMeta(r: SingleResult): string {
         if (r.durationMs) {
                 parts.push(formatDuration(r.durationMs));
                 if (r.compactions > 0) parts.push(formatCompactions(r.compactions));
+                if (r.networkResumes > 0) parts.push(formatNetworkResumes(r.networkResumes));
         }
         return parts.join(" · ");
 }
@@ -221,6 +257,7 @@ interface SingleResult {
         step?: number;
         durationMs?: number;
         compactions: number;
+        networkResumes: number;
         liveThinking?: string;
         liveText?: string;
 }
@@ -250,7 +287,18 @@ function isFailedResult(result: SingleResult): boolean {
 
 function getResultOutput(result: SingleResult): string {
         if (isFailedResult(result)) {
-                return result.errorMessage || result.stderr || getFinalOutput(result.messages) || "(no output)";
+                // A non-zero exit means the child itself failed (crash, startup
+                // error, OOM kill): its stderr carries the real cause and must
+                // win over a possibly stale error frame from an earlier run of
+                // the same invocation (transcript frames accumulate across
+                // resumes). Without stderr, say the process died — the last
+                // known error is only a hint at that point.
+                const frame = result.errorMessage || getFinalOutput(result.messages) || "";
+                if (result.exitCode !== 0) {
+                        if (result.stderr) return result.stderr;
+                        return frame ? `process exited with code ${result.exitCode}: ${frame}` : `process exited with code ${result.exitCode} without output`;
+                }
+                return frame || "(no output)";
         }
         return getFinalOutput(result.messages) || "(no output)";
 }
@@ -321,16 +369,6 @@ async function mapWithConcurrencyLimit<TIn, TOut>(
         return results;
 }
 
-async function writePromptToTempFile(agentName: string, prompt: string): Promise<{ dir: string; filePath: string }> {
-        const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "pi-subagent-"));
-        const safeName = agentName.replace(/[^\w.-]+/g, "_");
-        const filePath = path.join(tmpDir, `prompt-${safeName}.md`);
-        await withFileMutationQueue(filePath, async () => {
-                await fs.promises.writeFile(filePath, prompt, { encoding: "utf-8", mode: 0o600 });
-        });
-        return { dir: tmpDir, filePath };
-}
-
 function getPiInvocation(args: string[]): { command: string; args: string[] } {
         const currentScript = process.argv[1];
         const isBunVirtualScript = currentScript?.startsWith("/$bunfs/root/");
@@ -345,6 +383,115 @@ function getPiInvocation(args: string[]): { command: string; args: string[] } {
         }
 
         return { command: "pi", args };
+}
+
+/**
+ * --- Network resilience helpers --------------------------------------------
+ *
+ * runSingleAgent uses these to ride a subagent invocation through transient
+ * provider/network outages: classify the failure, wait with backoff, then
+ * resume the persisted session. See the "Network resilience" block near the
+ * top of this file for the rationale and env overrides.
+ */
+
+function readPositiveIntEnv(name: string, fallback: number): number {
+        const raw = process.env[name];
+        if (!raw) return fallback;
+        const value = Number.parseInt(raw, 10);
+        return Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
+/** Max number of session resumes per invocation after transient failures (0 disables resumption). */
+function maxTransientResumes(): number {
+        const raw = process.env.PI_SUBAGENT_RETRY_MAX_RESUMES;
+        if (!raw) return RETRY_MAX_RESUMES_DEFAULT;
+        const value = Number.parseInt(raw, 10);
+        return Number.isFinite(value) && value >= 0 ? value : RETRY_MAX_RESUMES_DEFAULT;
+}
+
+/** Backoff wait (ms) before resume attempt N (1-indexed). */
+function transientResumeDelayMs(resumeNumber: number): number {
+        const base = readPositiveIntEnv("PI_SUBAGENT_RETRY_BASE_MS", RETRY_BASE_MS_DEFAULT);
+        const cap = readPositiveIntEnv("PI_SUBAGENT_RETRY_MAX_DELAY_MS", RETRY_MAX_DELAY_MS_DEFAULT);
+        // Clamp for setTimeout: delays beyond 2^31-1 ms would be truncated to 1 ms.
+        return Math.min(base * 2 ** (resumeNumber - 1), cap, 2 ** 31 - 1);
+}
+
+function truncateText(text: string, maxLength: number): string {
+        return text.length <= maxLength ? text : `${text.slice(0, maxLength)}…`;
+}
+
+/** The last assistant message in a transcript, if any. */
+function lastAssistantMessage(messages: Message[]): AssistantMessage | undefined {
+        for (let i = messages.length - 1; i >= 0; i--) {
+                const msg = messages[i];
+                if (msg.role === "assistant") return msg;
+        }
+        return undefined;
+}
+
+/**
+ * Classify a finished subagent run as transient (worth resuming) using pi's
+ * own provider-error classifier — the extension resumes exactly the failures
+ * pi itself would retry (network errors, timeouts, HTTP 429/5xx, overload,
+ * stream drops) and never permanent ones (bad credentials, quota/billing
+ * exhaustion, context overflow).
+ *
+ * IMPORTANT: `lastAssistant` and `runStderr` must describe THIS run only (see
+ * the per-run snapshot in runSingleAgent). Classifying against the accumulated
+ * transcript would let a crash during resumption be misread as the original
+ * transient error (stale frames), silently consuming the whole resume budget
+ * and surfacing a stale error message.
+ *
+ * Rules:
+ *   - run ended with an assistant frame: only an error frame qualifies, and
+ *     only when pi's classifier says so; completed/aborted runs never resume
+ *   - run produced no assistant frame (child crashed, pi failed to start):
+ *     transient only when it exited non-zero and this run's stderr carries a
+ *     transient signature
+ */
+function isTransientRunFailure(exitCode: number, lastAssistant: AssistantMessage | undefined, runStderr: string): boolean {
+        if (lastAssistant) {
+                return (
+                        lastAssistant.stopReason === "error" &&
+                        isRetryableAssistantError({ stopReason: "error", errorMessage: lastAssistant.errorMessage || runStderr } as AssistantMessage)
+                );
+        }
+        return exitCode !== 0 && isRetryableAssistantError({ stopReason: "error", errorMessage: runStderr } as AssistantMessage);
+}
+
+/** User message that restarts a failed run from its persisted session. */
+function buildContinuationPrompt(errorSummary: string, hadAssistantTurn: boolean): string {
+        const whatFailed = hadAssistantTurn ? "The previous assistant turn failed" : "The previous run failed";
+        return `[${whatFailed} with a transient provider/network error: ${truncateText(errorSummary, 200)}. The conversation so far — including every tool call and its result — is preserved. Continue the task from exactly where it left off; do not repeat work that is already complete.]`;
+}
+
+/** True when the session file exists and the child persisted anything to it. */
+function sessionHasContent(sessionPath: string): boolean {
+        try {
+                return fs.statSync(sessionPath).size > 0;
+        } catch {
+                return false;
+        }
+}
+
+/** Sleep for `ms`, resolving early with "aborted" if the signal fires first. */
+function abortableSleep(ms: number, signal: AbortSignal | undefined): Promise<"ok" | "aborted"> {
+        return new Promise((resolve) => {
+                if (signal?.aborted) {
+                        resolve("aborted");
+                        return;
+                }
+                const onAbort = () => {
+                        clearTimeout(timer);
+                        resolve("aborted");
+                };
+                const timer = setTimeout(() => {
+                        if (signal) signal.removeEventListener("abort", onAbort);
+                        resolve("ok");
+                }, ms);
+                signal?.addEventListener("abort", onAbort, { once: true });
+        });
 }
 
 type OnUpdateCallback = (partial: AgentToolResult<SubagentDetails>) => void;
@@ -375,6 +522,7 @@ async function runSingleAgent(
                         stderr: `Unknown agent: "${agentName}". Available agents: ${available}.`,
                         usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0, contextTokens: 0, turns: 0, lastInput: 0, lastOutput: 0, lastCacheRead: 0, lastCacheWrite: 0 },
                         compactions: 0,
+                        networkResumes: 0,
                         step,
                 };
         }
@@ -386,12 +534,16 @@ async function runSingleAgent(
         const frontmatterModel = agent.model && agent.model !== "Default" ? agent.model : undefined;
         const modelToUse = modelOverride || frontmatterModel || currentModel;
 
-        const args: string[] = ["--mode", "json", "-p", "--no-session"];
-        args.push("--model", modelToUse);
-        if (agent.tools && agent.tools.length > 0) args.push("--tools", agent.tools.join(","));
-
-        let tmpPromptDir: string | null = null;
-        let tmpPromptPath: string | null = null;
+        // Every invocation runs inside a private temp dir with a persistent
+        // session file (`--session <file>` instead of `--no-session`): if the
+        // child dies mid-task — e.g. a network outage outlasts pi's own
+        // in-process retry budget — the full conversation is on disk and the
+        // run can be resumed without losing progress (see the resume loop
+        // below). The dir (session file included) is removed when the
+        // invocation finishes, so subagent sessions never leak into the
+        // user's session store.
+        const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "pi-subagent-"));
+        const sessionPath = path.join(tmpDir, "session.jsonl");
 
         const currentResult: SingleResult = {
                 agent: agentName,
@@ -403,6 +555,7 @@ async function runSingleAgent(
                 usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0, contextTokens: 0, turns: 0, lastInput: 0, lastOutput: 0, lastCacheRead: 0, lastCacheWrite: 0 },
                 model: modelToUse,
                 compactions: 0,
+                networkResumes: 0,
                 step,
         };
 
@@ -415,195 +568,258 @@ async function runSingleAgent(
                 }
         };
 
+        /** Status text shown while waiting out a transient failure (backoff phase). */
+        const emitStatus = (statusText: string) => {
+                if (onUpdate) {
+                        onUpdate({
+                                content: [{ type: "text", text: statusText }],
+                                details: makeDetails([currentResult]),
+                        });
+                }
+        };
+
         const startTime = Date.now();
         let lastLiveEmit = 0;
 
         try {
+                const baseArgs: string[] = ["--mode", "json", "-p", "--session", sessionPath];
+                baseArgs.push("--model", modelToUse);
+                if (agent.tools && agent.tools.length > 0) baseArgs.push("--tools", agent.tools.join(","));
                 if (agent.systemPrompt.trim()) {
-                        const tmp = await writePromptToTempFile(agent.name, agent.systemPrompt);
-                        tmpPromptDir = tmp.dir;
-                        tmpPromptPath = tmp.filePath;
-                        args.push("--append-system-prompt", tmpPromptPath);
+                        const promptPath = path.join(tmpDir, `prompt-${agent.name.replace(/[^\w.-]+/g, "_")}.md`);
+                        await withFileMutationQueue(promptPath, async () => {
+                                await fs.promises.writeFile(promptPath, agent.systemPrompt, { encoding: "utf-8", mode: 0o600 });
+                        });
+                        baseArgs.push("--append-system-prompt", promptPath);
                 }
 
-                args.push(`Task: ${task}`);
+                const originalPrompt = `Task: ${task}`;
+                let prompt = originalPrompt;
                 let wasAborted = false;
+                let transientResumes = 0;
+                let exitCode: number;
 
-                const exitCode = await new Promise<number>((resolve) => {
-                        const invocation = getPiInvocation(args);
-                        const proc = spawn(invocation.command, invocation.args, {
-                                cwd: cwd ?? defaultCwd,
-                                shell: false,
-                                stdio: ["ignore", "pipe", "pipe"],
-                                // Propagate the nesting depth so the child knows it is a
-                                // subagent and refuses to register the `subagent` tool.
-                                env: { ...process.env, PI_SUBAGENT_DEPTH: String(SUBAGENT_DEPTH + 1) },
-                        });
-                        let buffer = "";
+                for (;;) {
+                        // One child-process run. `prompt` is the original task on the
+                        // first run and a continuation note on resumed runs; everything
+                        // else is identical (same session file, model, tools, system
+                        // prompt), so a resume continues the exact same conversation.
+                        wasAborted = false;
+                        // Snapshot the transcript/stderr so the run can be
+                        // classified on its own output: earlier runs' error
+                        // frames must not make a crash during resumption look
+                        // like the original transient error.
+                        const messagesBefore = currentResult.messages.length;
+                        const stderrBefore = currentResult.stderr.length;
+                        exitCode = await new Promise<number>((resolve) => {
+                                const invocation = getPiInvocation([...baseArgs, prompt]);
+                                const proc = spawn(invocation.command, invocation.args, {
+                                        cwd: cwd ?? defaultCwd,
+                                        shell: false,
+                                        stdio: ["ignore", "pipe", "pipe"],
+                                        // Propagate the nesting depth so the child knows it is a
+                                        // subagent and refuses to register the `subagent` tool.
+                                        env: { ...process.env, PI_SUBAGENT_DEPTH: String(SUBAGENT_DEPTH + 1) },
+                                });
+                                let buffer = "";
 
-                        // pi's JSON mode emits `message_update` as delta-only events:
-                        // they carry `assistantMessageEvent` (with `contentIndex` and
-                        // `delta` fragments for thinking/text/tool-call) but NOT a
-                        // cumulative `message` field. Accumulate each content part per
-                        // contentIndex so live reasoning/text stay available to the
-                        // expanded panel until `message_end` finalizes the message.
-                        type LivePart = { type: "thinking" | "text"; value: string };
-                        const liveParts = new Map<number, LivePart>();
+                                // pi's JSON mode emits `message_update` as delta-only events:
+                                // they carry `assistantMessageEvent` (with `contentIndex` and
+                                // `delta` fragments for thinking/text/tool-call) but NOT a
+                                // cumulative `message` field. Accumulate each content part per
+                                // contentIndex so live reasoning/text stay available to the
+                                // expanded panel until `message_end` finalizes the message.
+                                type LivePart = { type: "thinking" | "text"; value: string };
+                                const liveParts = new Map<number, LivePart>();
 
-                        const processLine = (line: string) => {
-                                if (!line.trim()) return;
-                                let event: any;
-                                try {
-                                        event = JSON.parse(line);
-                                } catch {
-                                        return;
-                                }
-
-                                if (event.type === "message_update" && event.assistantMessageEvent) {
-                                        const sse = event.assistantMessageEvent as {
-                                                type: string;
-                                                contentIndex?: number;
-                                                delta?: string;
-                                                content?: string;
-                                        };
-                                        const idx = sse.contentIndex ?? 0;
-                                        const apply = (kind: "thinking" | "text", value: string) => {
-                                                const part = liveParts.get(idx) ?? { type: kind, value: "" };
-                                                part.value += value;
-                                                part.type = kind;
-                                                liveParts.set(idx, part);
-                                        };
-                                        if (sse.type === "thinking_delta" && sse.delta) apply("thinking", sse.delta);
-                                        else if (sse.type === "text_delta" && sse.delta) apply("text", sse.delta);
-                                        else if (sse.type === "thinking_start") {
-                                                if (!liveParts.has(idx)) liveParts.set(idx, { type: "thinking", value: "" });
-                                        } else if (sse.type === "text_start") {
-                                                if (!liveParts.has(idx)) liveParts.set(idx, { type: "text", value: "" });
-                                        } else if (sse.type === "thinking_end" && sse.content) {
-                                                liveParts.set(idx, { type: "thinking", value: sse.content });
-                                        } else if (sse.type === "text_end" && sse.content) {
-                                                liveParts.set(idx, { type: "text", value: sse.content });
-                                        } else {
-                                                // non-streaming events (start/done/error) carry no new content
+                                const processLine = (line: string) => {
+                                        if (!line.trim()) return;
+                                        let event: any;
+                                        try {
+                                                event = JSON.parse(line);
+                                        } catch {
                                                 return;
                                         }
 
-                                        const thinking = Array.from(liveParts.values())
-                                                .filter((p) => p.type === "thinking")
-                                                .map((p) => p.value)
-                                                .join("");
-                                        const text = Array.from(liveParts.values())
-                                                .filter((p) => p.type === "text")
-                                                .map((p) => p.value)
-                                                .join("");
-                                        if (thinking) currentResult.liveThinking = thinking;
-                                        if (text) currentResult.liveText = text;
-                                        if (thinking || text) {
-                                                const now = Date.now();
-                                                if (now - lastLiveEmit >= LIVE_THROTTLE_MS) {
-                                                        lastLiveEmit = now;
-                                                        emitUpdate();
+                                        if (event.type === "message_update" && event.assistantMessageEvent) {
+                                                const sse = event.assistantMessageEvent as {
+                                                        type: string;
+                                                        contentIndex?: number;
+                                                        delta?: string;
+                                                        content?: string;
+                                                };
+                                                const idx = sse.contentIndex ?? 0;
+                                                const apply = (kind: "thinking" | "text", value: string) => {
+                                                        const part = liveParts.get(idx) ?? { type: kind, value: "" };
+                                                        part.value += value;
+                                                        part.type = kind;
+                                                        liveParts.set(idx, part);
+                                                };
+                                                if (sse.type === "thinking_delta" && sse.delta) apply("thinking", sse.delta);
+                                                else if (sse.type === "text_delta" && sse.delta) apply("text", sse.delta);
+                                                else if (sse.type === "thinking_start") {
+                                                        if (!liveParts.has(idx)) liveParts.set(idx, { type: "thinking", value: "" });
+                                                } else if (sse.type === "text_start") {
+                                                        if (!liveParts.has(idx)) liveParts.set(idx, { type: "text", value: "" });
+                                                } else if (sse.type === "thinking_end" && sse.content) {
+                                                        liveParts.set(idx, { type: "thinking", value: sse.content });
+                                                } else if (sse.type === "text_end" && sse.content) {
+                                                        liveParts.set(idx, { type: "text", value: sse.content });
+                                                } else {
+                                                        // non-streaming events (start/done/error) carry no new content
+                                                        return;
+                                                }
+
+                                                const thinking = Array.from(liveParts.values())
+                                                        .filter((p) => p.type === "thinking")
+                                                        .map((p) => p.value)
+                                                        .join("");
+                                                const text = Array.from(liveParts.values())
+                                                        .filter((p) => p.type === "text")
+                                                        .map((p) => p.value)
+                                                        .join("");
+                                                if (thinking) currentResult.liveThinking = thinking;
+                                                if (text) currentResult.liveText = text;
+                                                if (thinking || text) {
+                                                        const now = Date.now();
+                                                        if (now - lastLiveEmit >= LIVE_THROTTLE_MS) {
+                                                                lastLiveEmit = now;
+                                                                emitUpdate();
+                                                        }
                                                 }
                                         }
-                                }
 
-                                if (event.type === "message_end" && event.message) {
-                                        const msg = event.message as Message;
-                                        currentResult.messages.push(msg);
-                                        currentResult.liveThinking = undefined;
-                                        currentResult.liveText = undefined;
-                                        liveParts.clear();
+                                        if (event.type === "message_end" && event.message) {
+                                                const msg = event.message as Message;
+                                                currentResult.messages.push(msg);
+                                                currentResult.liveThinking = undefined;
+                                                currentResult.liveText = undefined;
+                                                liveParts.clear();
 
-                                        if (msg.role === "assistant") {
-                                                currentResult.usage.turns++;
-                                                const usage = msg.usage;
-                                                if (usage) {
-                                                        currentResult.usage.input += usage.input || 0;
-                                                        currentResult.usage.output += usage.output || 0;
-                                                        currentResult.usage.cacheRead += usage.cacheRead || 0;
-                                                        currentResult.usage.cacheWrite += usage.cacheWrite || 0;
-                                                        currentResult.usage.cost += usage.cost?.total || 0;
-                                                        currentResult.usage.contextTokens = usage.totalTokens || 0;
-                                                        currentResult.usage.lastInput = usage.input || 0;
-                                                        currentResult.usage.lastOutput = usage.output || 0;
-                                                        currentResult.usage.lastCacheRead = usage.cacheRead || 0;
-                                                        currentResult.usage.lastCacheWrite = usage.cacheWrite || 0;
+                                                if (msg.role === "assistant") {
+                                                        currentResult.usage.turns++;
+                                                        const usage = msg.usage;
+                                                        if (usage) {
+                                                                currentResult.usage.input += usage.input || 0;
+                                                                currentResult.usage.output += usage.output || 0;
+                                                                currentResult.usage.cacheRead += usage.cacheRead || 0;
+                                                                currentResult.usage.cacheWrite += usage.cacheWrite || 0;
+                                                                currentResult.usage.cost += usage.cost?.total || 0;
+                                                                currentResult.usage.contextTokens = usage.totalTokens || 0;
+                                                                currentResult.usage.lastInput = usage.input || 0;
+                                                                currentResult.usage.lastOutput = usage.output || 0;
+                                                                currentResult.usage.lastCacheRead = usage.cacheRead || 0;
+                                                                currentResult.usage.lastCacheWrite = usage.cacheWrite || 0;
+                                                        }
+                                                        if (!currentResult.model && msg.model) currentResult.model = msg.model;
+                                                        if (msg.stopReason) currentResult.stopReason = msg.stopReason;
+                                                        if (msg.errorMessage) currentResult.errorMessage = msg.errorMessage;
                                                 }
-                                                if (!currentResult.model && msg.model) currentResult.model = msg.model;
-                                                if (msg.stopReason) currentResult.stopReason = msg.stopReason;
-                                                if (msg.errorMessage) currentResult.errorMessage = msg.errorMessage;
+                                                emitUpdate();
                                         }
-                                        emitUpdate();
-                                }
 
-                                // Count completed compactions in this session. pi emits `compaction_end`
-                                // with a `result` only when the compaction succeeded; aborted/failed
-                                // compactions (including a failed overflow-recovery retry) carry
-                                // `result: undefined` and are not counted. A successful overflow-recovery
-                                // compaction does emit a `result` and is a real compaction counted here.
-                                if (event.type === "compaction_end" && event.result && !event.aborted) {
-                                        currentResult.compactions++;
-                                }
+                                        // Count completed compactions in this session. pi emits `compaction_end`
+                                        // with a `result` only when the compaction succeeded; aborted/failed
+                                        // compactions (including a failed overflow-recovery retry) carry
+                                        // `result: undefined` and are not counted. A successful overflow-recovery
+                                        // compaction does emit a `result` and is a real compaction counted here.
+                                        if (event.type === "compaction_end" && event.result && !event.aborted) {
+                                                currentResult.compactions++;
+                                        }
 
-                                // Note: pi emits tool_execution_start/update/end and turn_end (toolResults)
-                                // for tool execution. There is no tool_result_end event, and tool result
-                                // messages aren't needed by getDisplayItems/getFinalOutput anyway.
-                        };
-
-                        proc.stdout.on("data", (data) => {
-                                buffer += data.toString();
-                                const lines = buffer.split("\n");
-                                buffer = lines.pop() || "";
-                                for (const line of lines) processLine(line);
-                        });
-
-                        proc.stderr.on("data", (data) => {
-                                currentResult.stderr += data.toString();
-                        });
-
-                        proc.on("close", (code) => {
-                                if (buffer.trim()) processLine(buffer);
-                                resolve(code ?? 0);
-                        });
-
-                        proc.on("error", () => {
-                                resolve(1);
-                        });
-
-                        if (signal) {
-                                const killProc = () => {
-                                        wasAborted = true;
-                                        proc.kill("SIGTERM");
-                                        setTimeout(() => {
-                                                if (!proc.killed) proc.kill("SIGKILL");
-                                        }, 5000);
+                                        // Note: pi emits tool_execution_start/update/end and turn_end (toolResults)
+                                        // for tool execution. There is no tool_result_end event, and tool result
+                                        // messages aren't needed by getDisplayItems/getFinalOutput anyway.
                                 };
-                                if (signal.aborted) killProc();
-                                else signal.addEventListener("abort", killProc, { once: true });
-                        }
-                });
 
-                currentResult.exitCode = exitCode;
+                                proc.stdout.on("data", (data) => {
+                                        buffer += data.toString();
+                                        const lines = buffer.split("\n");
+                                        buffer = lines.pop() || "";
+                                        for (const line of lines) processLine(line);
+                                });
+
+                                proc.stderr.on("data", (data) => {
+                                        currentResult.stderr += data.toString();
+                                });
+
+                                let killProc: (() => void) | null = null;
+                                const detachAbort = () => {
+                                        if (signal && killProc) signal.removeEventListener("abort", killProc);
+                                };
+
+                                proc.on("close", (code) => {
+                                        if (buffer.trim()) processLine(buffer);
+                                        detachAbort();
+                                        resolve(code ?? 0);
+                                });
+
+                                proc.on("error", () => {
+                                        detachAbort();
+                                        resolve(1);
+                                });
+
+                                if (signal) {
+                                        killProc = () => {
+                                                wasAborted = true;
+                                                proc.kill("SIGTERM");
+                                                setTimeout(() => {
+                                                        if (!proc.killed) proc.kill("SIGKILL");
+                                                }, 5000);
+                                        };
+                                        if (signal.aborted) killProc();
+                                        else signal.addEventListener("abort", killProc, { once: true });
+                                }
+                        });
+
+                        if (wasAborted) throw new Error("Subagent was aborted");
+                        currentResult.exitCode = exitCode;
+
+                        // Classify this run only (see the snapshot above).
+                        const runStderr = currentResult.stderr.slice(stderrBefore).trim();
+                        const lastAssistant = lastAssistantMessage(currentResult.messages.slice(messagesBefore));
+                        if (
+                                !isTransientRunFailure(exitCode, lastAssistant, runStderr) ||
+                                transientResumes >= maxTransientResumes() ||
+                                signal?.aborted
+                        ) {
+                                break;
+                        }
+
+                        // The run died on a transient provider/network error. The session
+                        // file holds the full conversation, so after a backoff wait we
+                        // resume it and tell the subagent to pick up where it left off —
+                        // this is what lets an invocation ride through arbitrarily long
+                        // network outages instead of losing all progress.
+                        transientResumes++;
+                        const reason = lastAssistant?.errorMessage || runStderr || "transient provider/network error";
+                        const delayMs = transientResumeDelayMs(transientResumes);
+                        const waitLabel = delayMs < 1000 ? `${delayMs}ms` : `${Math.round(delayMs / 1000)}s`;
+                        emitStatus(
+                                `Transient provider/network error: ${truncateText(reason, 160)}\nWaiting ${waitLabel} before resuming (attempt ${transientResumes} of ${maxTransientResumes()})...`,
+                        );
+                        const sleepOutcome = await abortableSleep(delayMs, signal);
+                        if (sleepOutcome === "aborted" || signal?.aborted) throw new Error("Subagent was aborted");
+
+                        // If the child never persisted anything (it died before the
+                        // session file was created) there is nothing to resume: rerun
+                        // the original task instead of a continuation prompt.
+                        prompt = sessionHasContent(sessionPath) ? buildContinuationPrompt(reason, Boolean(lastAssistant)) : originalPrompt;
+                }
+
+                currentResult.networkResumes = transientResumes;
                 // Only mark the session as having run to completion (setting `durationMs`)
                 // on the non-aborted path. The compaction count is gated on `durationMs`,
                 // so an aborted session must never surface a "completed" meta line even if
-                // this ordering changes later.
-                if (wasAborted) throw new Error("Subagent was aborted");
+                // this ordering changes later. (An aborted session throws above.)
                 currentResult.durationMs = Date.now() - startTime;
                 return currentResult;
         } finally {
-                if (tmpPromptPath)
-                        try {
-                                fs.unlinkSync(tmpPromptPath);
-                        } catch {
-                                /* ignore */
-                        }
-                if (tmpPromptDir)
-                        try {
-                                fs.rmdirSync(tmpPromptDir);
-                        } catch {
-                                /* ignore */
-                        }
+                try {
+                        await fs.promises.rm(tmpDir, { recursive: true, force: true });
+                } catch {
+                        /* ignore */
+                }
         }
 }
 
@@ -829,6 +1045,7 @@ export default function (pi: ExtensionAPI) {
                                                 stderr: "",
                                                 usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0, contextTokens: 0, turns: 0, lastInput: 0, lastOutput: 0, lastCacheRead: 0, lastCacheWrite: 0 },
                                                 compactions: 0,
+                                                networkResumes: 0,
                                         };
                                 }
 

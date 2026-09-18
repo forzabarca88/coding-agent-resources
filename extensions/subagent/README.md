@@ -28,6 +28,7 @@ This extension provides enhanced subagent capabilities, allowing for more sophis
   - Live thinking tail in the expanded panel: streams the last 15 lines of a reasoning model's thinking in realtime (throttled), cleared at each turn end so finalized reasoning is never retained or surfaced to the parent context
   - Live response tail in the expanded panel: streams the last 15 lines of the assistant's response text in realtime (throttled, same mechanism as the thinking tail); cleared at each turn end, after which the finalized text renders as Markdown in the Output section
   - Compaction count in the result panel: the number of times the subagent session was compacted (successful `compaction_end` events) is shown next to the session duration in the completed result summary line
+  - Network resilience: survives transient provider/network failures (timeouts, connection drops, 5xx/429 responses, DNS errors) by resuming the invocation's private session after exponential backoff — see [Network Resilience](#network-resilience); the number of resumptions is reported in the completed result summary line (e.g. `2 network resumes`)
 
 ## Recursion Guard
 
@@ -85,48 +86,76 @@ subagent({
 
 ## Configuration
 
-The extension can be configured through the pi configuration file:
+There is no pi settings-file configuration for this extension. All knobs are
+environment variables (read at invocation time, so they can be set per shell
+session) or constants in `index.ts`:
 
-```json
-{
-  "extensions": {
-    "subagent": {
-      "maxParallel": 5,
-      "timeout": 300,
-      "retryOnFailure": true,
-      "maxRetries": 3
-    }
-  }
-}
-```
+| Variable / constant | Default | Purpose |
+| --- | --- | --- |
+| `PI_SUBAGENT_RETRY_BASE_MS` | `10000` | Base delay for transient-failure resumptions (doubles each time) |
+| `PI_SUBAGENT_RETRY_MAX_DELAY_MS` | `120000` | Cap on the backoff delay |
+| `PI_SUBAGENT_RETRY_MAX_RESUMES` | `100` | Maximum resumptions per invocation before it fails (0 disables resumption) |
+| `PI_SUBAGENT_DEPTH` | `0` | Set automatically by the extension; do not set manually |
+| `MAX_PARALLEL_TASKS` (code constant) | `8` | Hard cap on `tasks` array length |
+| `MAX_CONCURRENCY` (code constant) | `4` | Max simultaneous subagent processes |
 
 ## API
 
-### Subagent Configuration
+### Parameters
 
 ```typescript
-interface SubagentConfig {
-  agent: string;           // Agent name
-  task: string;            // Task description
-  cwd?: string;            // Working directory
-  context?: Record<string, any>;  // Additional context
-  timeout?: number;        // Timeout in seconds
-  retry?: boolean;         // Retry on failure
+interface SubagentParams {
+  agent?: string;      // Agent name (single mode)
+  task?: string;       // Task description (single mode)
+  cwd?: string;        // Working directory
+  model?: string;      // Model override, canonical `provider/id` (single mode)
+  models?: Record<string, string>;  // Per-agent model overrides
+  tasks?: Array<{ agent: string; task: string; cwd?: string; model?: string }>;  // Parallel mode
+  chain?: Array<{ agent: string; task: string; cwd?: string; model?: string }>;  // Sequential mode, {previous} placeholder
 }
 ```
 
 ### Execution Modes
 
-- **single**: Execute one subagent
-- **parallel**: Execute multiple subagents concurrently
-- **chain**: Execute subagents sequentially with context passing
+- **single**: Execute one subagent (`agent` + `task`)
+- **parallel**: Execute multiple subagents concurrently (`tasks`)
+- **chain**: Execute subagents sequentially with context passing (`chain`, `{previous}` placeholder)
 
 ## Best Practices
 
 - **Context size**: Keep context passed between agents focused and relevant
-- **Error handling**: Always handle potential subagent failures
-- **Timeouts**: Set appropriate timeouts for long-running tasks
+- **Error handling**: Always handle potential subagent failures (`isError` is set on the result)
 - **Result validation**: Validate subagent results before proceeding
+
+## Network Resilience
+
+Each subagent invocation runs in a **private, persistent session file** (created
+in a per-call temp directory) instead of pi's stateless `--no-session` mode.
+When the child process ends on a transient provider/network error — classified
+with pi's own retryable-error patterns (timeouts, connection failures, DNS
+errors, HTTP 429/5xx) — the extension:
+
+1. Emits a live status update naming the error and the wait time.
+2. Waits with exponential backoff (base `PI_SUBAGENT_RETRY_BASE_MS`, doubling,
+capped at `PI_SUBAGENT_RETRY_MAX_DELAY_MS`), respecting abort the whole time.
+3. Resumes the session file with a continuation prompt that tells the
+   subagent its previous turn failed and that it should verify its work and
+   continue. The full conversation history is preserved, so no progress is
+   lost.
+
+This repeats up to `PI_SUBAGENT_RETRY_MAX_RESUMES` times (default 100 — with
+the default backoff that spans several hours, comfortably covering a 15-minute
+or longer network outage; set 0 to disable resumption entirely). Permanent
+errors (e.g. invalid API key, auth failures) are **not** resumed — they fail
+immediately with the provider error. Only the most recent run's output is
+inspected when deciding whether to resume: a crash *during* resumption is
+never misread as the original transient error. The number of resumptions is exposed per result as `networkResumes`
+and rendered in the completed result summary line (e.g. `2 network resumes`),
+next to the session duration and compaction count.
+
+If the network stays down past the resume budget the invocation fails with
+the provider error; nothing hangs, and aborting the parent session at any
+point (including mid-backoff) still terminates the invocation promptly.
 
 ## Per-Agent Models
 
@@ -186,6 +215,21 @@ subagent({
 To set a persistent per-agent default without editing markdown every time you
 switch, set the `model` field in the agent's frontmatter once. Runtime overrides
 above always win, so the frontmatter value acts as a fallback.
+
+## Tests
+
+`node --test extensions/subagent/tests/resilience.test.mjs`
+
+End-to-end resilience tests: the test file doubles as a fake `pi` executable
+(the extension spawns child pi processes by re-running `process.argv[1]`, so
+when launched with `--mode` the file emulates pi's JSON-mode behaviour,
+including session persistence). Covers: normal completion; recovery from
+transient failures via real session resumption (the final answer provably sees
+the original task plus continuation prompts); no-resume on permanent errors;
+no re-resume when a resumed run crashes without frames (stale cross-run error
+frames must not trigger further resumes, and the surfaced error must be the
+crash, not the stale frame); rerun of the original task when the session file
+was never persisted; and abort during a backoff wait.
 
 ## See Also
 

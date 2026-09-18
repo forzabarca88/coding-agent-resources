@@ -63,11 +63,13 @@ Extensions are TypeScript modules that hook into pi's event system to provide ad
 - **Components**:
   - [agents.ts](./subagent/agents.ts) - Subagent definitions
   - [index.ts](./subagent/index.ts) - Main subagent extension
+  - [tests/resilience.test.mjs](./subagent/tests/resilience.test.mjs) - End-to-end network-resilience tests (doubles as a fake `pi` executable)
 - **Features**:
   - Manages subagent lifecycle
   - Handles context passing between agents
   - Provides subagent coordination utilities
   - Shows the compaction count of each completed subagent session next to its duration in the result panel
+  - Network resilience: transient provider/network failures are survived by resuming the invocation's private session after exponential backoff (default up to 100 resumptions, several hours of coverage); permanent errors fail immediately
 
 ## Installation
 
