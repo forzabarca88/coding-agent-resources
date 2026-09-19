@@ -1,5 +1,7 @@
 # Coding Agent Resources
 
+> ⚠️ This wcodebase was primarily written with generative AI. Please review code accordingly before re-use.
+
 A collection of agents, extensions, prompts, and skills for use with [pi coding agent](https://github.com/Earendil-Works/pi-coding-agent).
 
 ## Overview
