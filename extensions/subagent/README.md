@@ -94,7 +94,7 @@ session) or constants in `index.ts`:
 | --- | --- | --- |
 | `PI_SUBAGENT_RETRY_BASE_MS` | `10000` | Base delay for transient-failure resumptions (doubles each time) |
 | `PI_SUBAGENT_RETRY_MAX_DELAY_MS` | `120000` | Cap on the backoff delay |
-| `PI_SUBAGENT_RETRY_MAX_RESUMES` | `100` | Maximum resumptions per invocation before it fails (0 disables resumption) |
+| `PI_SUBAGENT_RETRY_MAX_RESUMES` | `5` | Maximum resumptions per invocation before it fails (0 disables resumption) |
 | `PI_SUBAGENT_DEPTH` | `0` | Set automatically by the extension; do not set manually |
 | `MAX_PARALLEL_TASKS` (code constant) | `8` | Hard cap on `tasks` array length |
 | `MAX_CONCURRENCY` (code constant) | `4` | Max simultaneous subagent processes |
@@ -143,9 +143,8 @@ capped at `PI_SUBAGENT_RETRY_MAX_DELAY_MS`), respecting abort the whole time.
    continue. The full conversation history is preserved, so no progress is
    lost.
 
-This repeats up to `PI_SUBAGENT_RETRY_MAX_RESUMES` times (default 100 — with
-the default backoff that spans several hours, comfortably covering a 15-minute
-or longer network outage; set 0 to disable resumption entirely). Permanent
+This repeats up to `PI_SUBAGENT_RETRY_MAX_RESUMES` times (default 5; set 0 to
+disable resumption entirely). Permanent
 errors (e.g. invalid API key, auth failures) are **not** resumed — they fail
 immediately with the provider error. Only the most recent run's output is
 inspected when deciding whether to resume: a crash *during* resumption is

@@ -69,7 +69,7 @@ Extensions are TypeScript modules that hook into pi's event system to provide ad
   - Handles context passing between agents
   - Provides subagent coordination utilities
   - Shows the compaction count of each completed subagent session next to its duration in the result panel
-  - Network resilience: transient provider/network failures are survived by resuming the invocation's private session after exponential backoff (default up to 100 resumptions, several hours of coverage); permanent errors fail immediately
+  - Network resilience: transient provider/network failures are survived by resuming the invocation's private session after exponential backoff (default up to 5 resumptions, raise `PI_SUBAGENT_RETRY_MAX_RESUMES` for longer outages); permanent errors fail immediately
 
 ## Installation
 

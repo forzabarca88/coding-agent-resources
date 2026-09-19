@@ -14,9 +14,10 @@
  * Network resilience: each invocation runs in a private persistent session
  * file. If a run ends with a transient provider/network error (classified with
  * pi's own isRetryableAssistantError), the session is resumed after an
- * exponential-backoff wait (10s..2m per wait, up to 100 resumes by default),
- * so an invocation survives arbitrarily long network outages without losing
- * progress. See the "Network resilience" blocks in this file.
+ * exponential-backoff wait (10s..2m per wait; 5 resumes by default, budget
+ * tunable via PI_SUBAGENT_RETRY_MAX_RESUMES), so an invocation rides out
+ * network outages without losing progress. See the "Network resilience" blocks
+ * in this file.
  */
 
 import { spawn } from "node:child_process";
@@ -48,7 +49,7 @@ const LIVE_THROTTLE_MS = 80;
 // PI_SUBAGENT_RETRY_* env vars; see the "Network resilience" block below).
 const RETRY_BASE_MS_DEFAULT = 10_000;
 const RETRY_MAX_DELAY_MS_DEFAULT = 120_000;
-const RETRY_MAX_RESUMES_DEFAULT = 100;
+const RETRY_MAX_RESUMES_DEFAULT = 5;
 
 /**
  * Network resilience (consumed by runSingleAgent's resume loop).
@@ -59,13 +60,12 @@ const RETRY_MAX_RESUMES_DEFAULT = 100;
  * Because every invocation runs in a private persistent session file
  * (`--session <file>`, not `--no-session`), the extension resumes the same
  * conversation after an exponential-backoff wait (base 10s, doubling, capped
- * at 2m per wait, up to 100 resumes by default ≈ several hours of backoff).
- * With the defaults, a full 15-minute outage costs only ~11 resumes.
+ * at 2m per wait; 5 resumes by default).
  *
  * Env overrides (read per invocation, so they can also be tuned per test):
  *   PI_SUBAGENT_RETRY_BASE_MS       base wait before the first resume (default 10000)
  *   PI_SUBAGENT_RETRY_MAX_DELAY_MS  cap for per-wait backoff (default 120000)
- *   PI_SUBAGENT_RETRY_MAX_RESUMES   max resumes per invocation (default 100; 0 disables resumption)
+ *   PI_SUBAGENT_RETRY_MAX_RESUMES   max resumes per invocation (default 5; 0 disables resumption)
  */
 
 /**
