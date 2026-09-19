@@ -77,6 +77,7 @@
 | lmstudio-jdc-ws/qwen/qwen3.8-27b | Model quant: Q4_K_M, KV quant: Q4_0, thinking: xhigh, MTP | 135m 0s | 144189 | 60 | 196000 | No | 0 | 247 | 0 | 2026-08-19 23:47 |
 | lmstudio-jdc-ws/deepreinforce-ai/ornith-1.0-35b | Model quant: Q4_k_M, KV quant: Q4_0 | 41m 14s | 151721 | 154 | 262000 | No | 0 | 247 | 0 | 2026-08-29 18:26 |
 | lmstudio-jdc-ws/ornith-ai/ornith-1.5-35b-a3b | Model quant: Q8_0, KV quant: Q8_0, MTP | 115m 58s | 151723 | 127 | 262000 | No | 0 | 247 | 0 | 2026-09-13 20:53 |
+| lmstudio-jdc-ws/unsloth/qwen3.8-27b | Model quant: Q2_K_XL, KV quant: Q4_0, Runtime: ROCm, thinking: xhigh | 190m 22s | 158317 | 65 | 196000 | No | 0 | 247 | 0 | 2026-09-19 21:44 |
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b | Model quant: Q3_K_XL, KV quant: Q4_0, thinking: xhigh, MTP | 138m 6s | 156395 | 65 | 196000 | No | 0 | 247 | 0 | 2026-08-27 20:28 |
 | lmstudio-jdc-ws/ornith-ai/ornith-1.5-35b-a3b | Model quant: None, KV quant: None, MTP | 171m 12s | 159207 | 158 | 262000 | No | 0 | 247 | 0 | 2026-09-13 12:16 |
 | lmstudio-jdc-ws/deepreinforce-ai/ornith-1.0-35b | Model quant: Q4_K_M, KV quant: Q4_0 | 48m 21s | 161205 | 83 | 262000 | No | 0 | 247 | 0 | 2026-08-29 17:37 |
@@ -128,4 +129,3 @@
 | lmstudio-jdc-ws/inclusionai/ling-3.0-tiny | Model quant: None, KV quant: None, vitest failed, thinking loop, exhibits laziness | 25m 4s | 70449 | 20 | 131000 | No | 1 | ? | ? | 2026-09-18 17:29 |
 | lmstudio-jdc-ws/unsloth/gemma-4-12b-it-qat | Model quant: Q4_K_XL, KV quant: None, tool call hit output limit | 95m 55s | 32355 | 22 | 262000 | No | 1 | ? | ? | 2026-09-18 20:14 |
 | lmstudio-jdc-ws/unsloth/gemma-4-12b-it-qat | Model quant: Q4_K_XL, KV quant: None, vitest failed, output loop | 37m 23s | 59021 | 34 | 262000 | No | 1 | ? | ? | 2026-09-18 21:00 |
-| lmstudio-jdc-ws/unsloth/qwen3.8-27b@q2_k_xl | Model quant: Q2_K_XL, KV quant: Q4_0, Runtime: ROCm | 190m 22s | 158317 | 65 | 196000 | No | 0 | 247 | 0 | 2026-09-19 21:44 |
