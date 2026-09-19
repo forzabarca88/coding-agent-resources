@@ -132,3 +132,4 @@
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b@q3_k_xl | Model quant: Q3_K_XL, KV quant: Q4_0, thinking: medium | 111m 34s | 124794 | 71 | 196000 | No | 0 | 247 | 0 | 2026-09-20 01:03 |
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b@q2_k_xl | Model quant: Q2_K_XL, KV quant: Q4_0, thinking: medium | 149m 50s | 192055 | 68 | 196000 | No | 0 | 247 | 0 | 2026-09-20 02:55 |
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b@q3_k_xl | Model quant: Q3_K_XL, KV quant: Q4_0, thinking: medium | 69m 20s | 98634 | 67 | 196000 | No | 0 | 247 | 0 | 2026-09-20 05:25 |
+| lmstudio-jdc-ws/unsloth/qwen3.8-27b@q2_k_xl | Model quant: Q2_K_XL, KV quant: Q4_0, thinking: medium | 85m 23s | 135882 | 69 | 196000 | No | 0 | 247 | 0 | 2026-09-20 06:34 |
