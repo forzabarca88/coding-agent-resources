@@ -127,3 +127,4 @@
 | lmstudio-jdc-ws/unsloth/gemma-4-12b-it-qat | Model quant: Q4_K_XL, KV quant: None, tool call hit output limit | 95m 55s | 32355 | 22 | 262000 | No | 1 | ? | ? | 2026-09-18 20:14 |
 | lmstudio-jdc-ws/unsloth/gemma-4-12b-it-qat | Model quant: Q4_K_XL, KV quant: None, vitest failed, output loop | 37m 23s | 59021 | 34 | 262000 | No | 1 | ? | ? | 2026-09-18 21:00 |
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b@q2_k_xl | Model quant: Q2_K_XL, KV quant: Q4_0, Runtime: ROCm | 79m 46s | 125966 | 73 | 196000 | No | 0 | 247 | 0 | 2026-09-19 17:37 |
+| lmstudio-jdc-ws/google/gemma-4-12b-qat | Model quant: Q4_0, KV quant: None, Runtime: ROCm, vitest failed, test files modified | 167m 0s | 256500 | 135 | 262000 | No | 1 | 49 | 166 | 2026-09-19 18:57 |
