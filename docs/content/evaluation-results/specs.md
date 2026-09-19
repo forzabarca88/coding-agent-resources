@@ -36,7 +36,7 @@ For the local models, the test machines have the following specs. Each machine i
 | CPU | Xeon W-2235 |
 | RAM | 128 GB DDR4 (quad-channel) |
 | GPU | AMD Radeon RX 9060 XT (16GB) + Nvidia GeForce RTX 3060 Ti (8GB) |
-| Backend | Vulkan |
+| Backend | Vulkan (refer to `Notes` for any exceptions) |
 | OS | Windows 11 Pro |
 | Harness | pi running in WSL |
 | API Server | LM Studio |
