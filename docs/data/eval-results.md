@@ -42,14 +42,14 @@
 | lmstudio-jdc-ws/unsloth/laguna-s-2.1 | Model quant: Q4_K_XL, KV quant: Q8_0, reasoning budget: 32k | 92m 30s | 83166 | 109 | 131000 | No | 0 | 247 | 0 | 2026-08-23 00:52 |
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b | Model quant: Q4_K_XL, KV quant: Q4_0, thinking: medium, MTP | 63m 35s | 84788 | 34 | 131000 | No | 0 | 247 | 0 | 2026-08-24 11:27 |
 | lmstudio-jdc-ws/unsloth/qwen3.8-flash-next | Model quant: Q4_K_XL, KV quant: None, thinking: medium | 96m 4s | 87036 | 28 | 131000 | No | 0 | 247 | 0 | 2026-09-15 00:16 |
+| lmstudio-jdc-ws/unsloth/qwen3.8-27b | Model quant: Q4_K_XL, KV quant: Q8_0, thinking: medium, MTP | 93m 2s | 88039 | 40 | 131000 | No | 0 | 247 | 0 | 2026-08-21 17:18 |
 | lmstudio-jdc-ws/unsloth/qwen3.8-flash-next | Model quant: Q4_K_XL, KV quant: None, thinking: xhigh | 114m 26s | 94506 | 41 | 131000 | No | 0 | 247 | 0 | 2026-09-14 19:50 |
 | lmstudio-jdc-ws/unsloth/qwen3.8-flash-next | Model quant: Q4_K_XL, KV quant: Q4_0, thinking: xhigh | 105m 37s | 95672 | 37 | 262000 | No | 0 | 247 | 0 | 2026-09-15 17:28 |
 | lmstudio-jdc-ws/unsloth/qwen3.8-flash-next | Model quant: Q4_K_XL, KV quant: None, thinking: xhigh | 128m 9s | 96012 | 54 | 262000 | No | 0 | 247 | 0 | 2026-09-14 17:38 |
-| lmstudio-jdc-ws/unsloth/qwen3.8-27b | Model quant: Q3_K_XL, KV quant: Q4_0, thinking: medium | 69m 20s | 98634 | 67 | 196000 | No | 0 | 247 | 0 | 2026-09-20 05:25 |
 | lmstudio-jdcmedia/deepreinforce-ai/ornith-1.0-35b | Model quant: Q4_K_M, KV quant: Q8_0 | 70m 43s | 96197 | 138 | 128000 | No | 0 | 247 | 0 | 2026-08-03 23:23 |
-| lmstudio-jdc-ws/unsloth/qwen3.8-27b | Model quant: Q4_K_XL, KV quant: Q8_0, thinking: medium, MTP | 93m 2s | 88039 | 40 | 131000 | No | 0 | 247 | 0 | 2026-08-21 17:18 |
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b | Model quant: Q4_K_XL, KV quant: Q4_0, thinking: medium, MTP | 106m 29s | 96423 | 44 | 131000 | No | 0 | 247 | 0 | 2026-08-24 19:26 |
 | lmstudio-jdc-ws/unsloth/qwen3.6-27b-mtp | Model quant: Q4_K_XL, KV quant: None | 204m 50s | 96270 | 73 | 131000 | No | 0 | 247 | 0 | 2026-09-12 19:52 |
+| lmstudio-jdc-ws/unsloth/qwen3.8-27b | Model quant: Q3_K_XL, KV quant: Q4_0, thinking: medium | 69m 20s | 98634 | 67 | 196000 | No | 0 | 247 | 0 | 2026-09-20 05:25 |
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b | Model quant: Q4_K_XL, KV quant: Q4_0, thinking: medium, MTP | 85m 3s | 100050 | 67 | 131000 | No | 0 | 247 | 0 | 2026-08-21 14:27 |
 | lmstudio-jdc-ws/unsloth/qwen3.8-flash-next | Model quant: Q4_K_XL, KV quant: Q4_0, thinking: xhigh | 125m 49s | 103896 | 60 | 262000 | No | 0 | 247 | 0 | 2026-09-15 15:22 |
 | lmstudio-jdc-ws/unsloth/qwen3.6-27b-mtp | Model quant: Q4_K_XL, KV quant: Q4_0, MTP | 45m 50s | 105611 | 79 | 131000 | No | 0 | 247 | 0 | 2026-08-21 13:41 |
