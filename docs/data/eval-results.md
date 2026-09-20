@@ -64,6 +64,7 @@
 | lmstudio-jdc-ws/ornith-ai/ornith-1.5-35b-a3b | Model quant: Q8_0, KV quant: None, MTP | 82m 26s | 117601 | 99 | 262000 | No | 0 | 247 | 0 | 2026-09-12 17:37 |
 | lmstudio-jdc-ws/ornith-ai/ornith-1.5-35b-a3b | Model quant: Q8_0, KV quant: None, MTP | 93m 49s | 120473 | 87 | 262000 | No | 0 | 247 | 0 | 2026-09-12 12:50 |
 | lmstudio-jdc-ws/qwen/qwen3.8-27b | Model quant: Q4_K_M, KV quant: Q4_0, thinking: medium, MTP | 121m 3s | 121063 | 67 | 131000 | No | 0 | 247 | 0 | 2026-08-21 18:51 |
+| lmstudio-jdc-ws/unsloth/qwen3.8-27b | Model quant: Q3_K_XL, KV quant: Q4_0, thinking: medium | 111m 34s | 124794 | 71 | 196000 | No | 0 | 247 | 0 | 2026-09-20 01:03 |
 | lmstudio-jdc-ws/qwen/qwen3.8-27b | Model quant: Q4_K_M, KV quant: Q8_0, thinking: medium, MTP | 104m 35s | 122824 | 41 | 131000 | No | 0 | 247 | 0 | 2026-08-22 10:07 |
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b | Model quant: Q2_K_XL, KV quant: Q4_0, Runtime: ROCm, thinking: xhigh | 79m 46s | 125966 | 73 | 196000 | No | 0 | 247 | 0 | 2026-09-19 17:37 |
 | lmstudio-jdc-ws/deepreinforce-ai/ornith-1.0-35b | Model quant: Q4_K_M, KV quant: None | 55m 49s | 125661 | 133 | 163000 | No | 0 | 247 | 0 | 2026-08-29 19:13 |
@@ -71,6 +72,7 @@
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b | Model quant: Q3_K_XL, KV quant: Q4_0, thinking: xhigh, MTP | 114m 32s | 130496 | 63 | 196000 | No | 0 | 247 | 0 | 2026-08-27 18:33 |
 | lmstudio-jdc-ws/unsloth/laguna-s-2.1 | Model quant: Q4_K_XL, KV quant: Q8_0 | 264m 3s | 131025 | 82 | 262000 | No | 0 | 247 | 0 | 2026-08-23 09:42 |
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b | Model quant: Q4_K_XL, KV quant: Q4_0, thinking: xhigh, MTP | 130m 20s | 132392 | 50 | 196000 | No | 0 | 247 | 0 | 2026-08-21 08:47 |
+| lmstudio-jdc-ws/unsloth/qwen3.8-27b | Model quant: Q2_K_XL, KV quant: Q4_0, thinking: medium | 85m 23s | 135882 | 69 | 196000 | No | 0 | 247 | 0 | 2026-09-20 06:34 |
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b | Model quant: Q3_K_XL, KV quant: Q8_0, thinking: xhigh, MTP | 122m 22s | 137006 | 60 | 196000 | No | 0 | 247 | 0 | 2026-08-28 10:15 |
 | lmstudio-jdc-ws/unsloth/qwen3.8-27b | Model quant: Q2_K_XL, KV quant: Q8_0, thinking: xhigh, MTP | 141m 15s | 142883 | 54 | 196000 | No | 0 | 247 | 0 | 2026-08-22 16:36 |
 | lmstudio-jdc-ws/ornith-ai/ornith-1.5-35b-a3b | Model quant: None, KV quant: None, MTP, sampling parameters not set to recommended | 146m 9s | 140162 | 111 | 262000 | No | 0 | 247 | 0 | 2026-09-15 01:53 |
@@ -83,6 +85,7 @@
 | lmstudio-jdc-ws/deepreinforce-ai/ornith-1.0-35b | Model quant: Q4_K_M, KV quant: Q4_0 | 48m 21s | 161205 | 83 | 262000 | No | 0 | 247 | 0 | 2026-08-29 17:37 |
 | lmstudio-jdc-ws/ornith-ai/ornith-1.5-35b-a3b | Model quant: None, KV quant: None, MTP | 186m 1s | 166689 | 145 | 262000 | No | 0 | 247 | 0 | 2026-09-15 19:41 |
 | lmstudio-jdc-ws/ornith-ai/ornith-1.5-35b-a3b | Model quant: Q8_0, KV quant: Q8_0 | 162m 22s | 176816 | 157 | 262000 | No | 0 | 247 | 0 | 2026-08-22 13:44 |
+| lmstudio-jdc-ws/unsloth/qwen3.8-27b | Model quant: Q2_K_XL, KV quant: Q4_0, thinking: medium | 149m 50s | 192055 | 68 | 196000 | No | 0 | 247 | 0 | 2026-09-20 02:55 |
 | lmstudio-jdc-ws/ornith-ai/ornith-1.5-9b | Model quant: None, KV quant: None | 246m 53s | 200753 | 252 | 262000 | No | 0 | 247 | 0 | 2026-09-01 13:33 |
 | lmstudio-jdc-ws/ornith-ai/ornith-1.5-9b | Model quant: None, KV quant: None | 297m 14s | 214327 | 260 | 262000 | No | 0 | 247 | 0 | 2026-09-04 00:47 |
 | lmstudio-jdc-ws/ornith-ai/ornith-1.5-9b | Model quant: Q8_0, KV quant: Q8_0, MTP | 151m 52s | 256466 | 308 | 262000 | No | 0 | 247 | 0 | 2026-08-28 21:33 |
@@ -129,7 +132,3 @@
 | lmstudio-jdc-ws/inclusionai/ling-3.0-tiny | Model quant: None, KV quant: None, vitest failed, thinking loop, exhibits laziness | 25m 4s | 70449 | 20 | 131000 | No | 1 | ? | ? | 2026-09-18 17:29 |
 | lmstudio-jdc-ws/unsloth/gemma-4-12b-it-qat | Model quant: Q4_K_XL, KV quant: None, tool call hit output limit | 95m 55s | 32355 | 22 | 262000 | No | 1 | ? | ? | 2026-09-18 20:14 |
 | lmstudio-jdc-ws/unsloth/gemma-4-12b-it-qat | Model quant: Q4_K_XL, KV quant: None, vitest failed, output loop | 37m 23s | 59021 | 34 | 262000 | No | 1 | ? | ? | 2026-09-18 21:00 |
-| lmstudio-jdc-ws/unsloth/qwen3.8-27b@q3_k_xl | Model quant: Q3_K_XL, KV quant: Q4_0, thinking: medium | 111m 34s | 124794 | 71 | 196000 | No | 0 | 247 | 0 | 2026-09-20 01:03 |
-| lmstudio-jdc-ws/unsloth/qwen3.8-27b@q2_k_xl | Model quant: Q2_K_XL, KV quant: Q4_0, thinking: medium | 149m 50s | 192055 | 68 | 196000 | No | 0 | 247 | 0 | 2026-09-20 02:55 |
-| lmstudio-jdc-ws/unsloth/qwen3.8-27b@q3_k_xl | Model quant: Q3_K_XL, KV quant: Q4_0, thinking: medium | 69m 20s | 98634 | 67 | 196000 | No | 0 | 247 | 0 | 2026-09-20 05:25 |
-| lmstudio-jdc-ws/unsloth/qwen3.8-27b@q2_k_xl | Model quant: Q2_K_XL, KV quant: Q4_0, thinking: medium | 85m 23s | 135882 | 69 | 196000 | No | 0 | 247 | 0 | 2026-09-20 06:34 |
