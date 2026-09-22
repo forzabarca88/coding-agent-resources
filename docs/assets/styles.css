@@ -215,12 +215,13 @@ a:focus-visible {
    human-edited markdown via marked (see docs/AGENTS.md). The rules
    below define how each markdown construct renders — identically in
    every slot, so the markup in the .md file decides the look, not
-   the surrounding page. The slot sections further down only add
-   tone (colour/size/measure) and slot-specific components (specs
+   the surrounding page. Prose runs the full page width — no
+   per-slot measure caps — so the slot sections further down only
+   add tone (colour/size) and slot-specific components (specs
    machine grid, results tables, intro callout blockquote).
    ============================================================ */
 :is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .findings__md, .md) {
-  overflow-wrap: break-word; /* long URLs and code must not break the measure */
+  overflow-wrap: break-word; /* long URLs and code must not break the layout */
 }
 :is(.masthead__subhead, .intro__md, .specs__md, .viz__md, .brk__md, .findings__md, .md) p {
   margin-bottom: 1rem;
@@ -360,7 +361,6 @@ a:focus-visible {
   font-size: 1rem;
   line-height: 1.6;
   color: var(--mist);
-  max-width: 62ch;
 }
 .masthead__subhead p:last-child { margin-bottom: 0; }
 
@@ -385,7 +385,6 @@ a:focus-visible {
   letter-spacing: 0.06em;
 }
 .intro__heading, .specs__heading { margin-bottom: 1rem; }
-.intro__md p { max-width: 62ch; }
 /* .page-index is rebuilt HTML (not raw markdown), so it keeps its own code chip */
 .page-index code {
   font-family: var(--font-mono);
@@ -398,7 +397,6 @@ a:focus-visible {
 /* Intro content — paragraphs and callout notes rendered from content/evaluation-results/intro.md.
    The callout overrides the shared blockquote look; it keeps body-ink text for contrast. */
 .intro__md > blockquote {
-  max-width: 62ch;
   margin: 0 0 1rem;
   padding: 0.9rem 1.1rem;
   border: 1px solid var(--rule);
@@ -409,10 +407,7 @@ a:focus-visible {
   font-size: 0.9375rem;
   line-height: 1.6;
 }
-.intro__md > blockquote p {
-  margin: 0;
-  max-width: none;
-}
+.intro__md > blockquote p { margin: 0; }
 .intro__md > blockquote code {
   background: var(--paper); /* zebra chip on a zebra card would vanish — use paper */
 }
@@ -432,7 +427,6 @@ a:focus-visible {
    ### machine heading + two-column Spec/Value table each, then the run command.
    Prose, lists, code and the fenced block come from the shared rendered-markdown
    rules; this section only adds the machine-spec grid and the "$ " prompt. */
-.specs__md p { max-width: 62ch; }
 .specs__md h3, .specs__md h4 {
   font-family: var(--font-mono);
   font-size: 0.6875rem;
@@ -533,7 +527,6 @@ a:focus-visible {
   line-height: 1.6;
   color: var(--ink);
 }
-.findings__md p { max-width: 62ch; }
 .findings__md > :last-child { margin-bottom: 0; }
 
 /* ============================================================
@@ -585,7 +578,6 @@ a:focus-visible {
   color: var(--mist);
   font-size: 0.9375rem;
   line-height: 1.6;
-  max-width: 62ch;
   margin-top: 0.2rem;
 }
 .page-index__meta {
@@ -739,15 +731,11 @@ a:focus-visible {
    Rendered results — .md container on evaluation-results.html
    ------------------------------------------------------------
    Prose constructs come from the shared rendered-markdown rules
-   above; this section adds heading styles and the wide evaluation
-   tables. Do not reuse .md on content slots for that reason.
+   above; this section adds the wide evaluation tables. Do not reuse .md on content slots for that reason.
    ============================================================ */
 .md {
   overflow-x: auto;
 }
-/* Headings come from the shared rendered-markdown rules above */
-.md p { max-width: 62ch; }
-
 /* Table — the evaluation record */
 .md table {
   width: 100%;
@@ -841,7 +829,6 @@ a:focus-visible {
   font-size: 0.9375rem;
   line-height: 1.6;
 }
-.viz__md p { max-width: 72ch; }
 /* Compact sticky filter bar — slim single row that stays pinned to the top
    while the charts scroll beneath; the heavy model controls live in a
    dismissible popover so the bar itself never blankets the page. */
@@ -1268,7 +1255,6 @@ a:focus-visible {
   font-size: 0.9375rem;
   line-height: 1.6;
 }
-.brk__md p { max-width: 72ch; }
 
 /* Metric toggle — one rail at a time (Context Used | Turns) */
 .brk-metric { justify-self: start; margin: 0.25rem 0 0.9rem; }
