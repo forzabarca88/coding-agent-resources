@@ -60,8 +60,8 @@ A large amount of reasoning tokens can be useful for reducing the number of turn
 
 **Evidence:** Evident in the results of some models such as `Laguna S 2.1`, where the incorrect parameters produced far poorer results than the corrected settings.
 
-### Deal with the non-determinism
+### Non-determinism and your workflow
 
-**Claim:** Non-determinism is a "feature" for LLMs, and results show significant variance across multiple runs for both Provider and Local models. This is worth keeping in mind during day to day use and when making judgements, as consistent outputs ultimately require deterministic guardrails for any of these models.
+**Claim:** Non-determinism is a "feature" for LLMs, and results show significant variance across multiple runs for both Provider and Local models. This is worth keeping in mind during day to day use and when making judgements about the output of your model, as consistency ultimately require deterministic guardrails for any of these models.
 
 **Evidence:** Seen across many results, but a specific example is the best and worst `deepseek-v4-flash-0731` runs at the same `xhigh` reasoning (up to 30k token variance).
