@@ -1,4 +1,4 @@
-> Last updated on **2 September, 2026**
+> Last updated on **22 September, 2026**
 
 # Understanding the data
 
@@ -52,18 +52,41 @@ For this eval, too many tokens compared to other models in the resultset may sug
 
 ### Model quantisation
 
-**Claim:** Current non-uniform quantisation (specifically `unsloth` as tested) seems very good - it may be preferable to run a larger model at Q3 (or even Q2) rather than a smaller model at Q8.
+**Claim:** Current non-uniform quantisation (specifically `unsloth` as tested) seems very good at preserving the model's ability to solve problems - it may be preferable to run a larger model at Q3 (or even Q2) rather than a smaller model at Q8.
 
 **Evidence:** `Qwen 3.8 27B` at `Q2_K_XL` and especially at `Q3_K_XL` outperforms all 9B at Q8 models tested.
+
+**Claim:** For smaller models, quantisation may have a more noticable negative impact compared to larger models.
+
+**Evidence:** `Ornith 1.5 35B A3B` did not show any significant improvement in results at BF16 compared to Q8_0. However, `Ornith 1.5 9B` shows a noticable improvement when left at full precision (both weights and KV) compared to the results at Q8_0.
+
 
 ### Sampling parameters
 
 **Claim:** The recommended sampling parameters for each model are extremely important for coherent results - historical assumptions such as lower temperature being better for coding should NOT be followed with current models.
 
-**Evidence:** Evident in the results of some models such as `Laguna S 2.1`, where the incorrect parameters produced far poorer results than the corrected settings.
+**Evidence:** Evident in the results of some models such as `Laguna S 2.1`, where sampling parameters which did not match the recommended produced far poorer results than the corrected settings. On the flip side, there were instances where "incorrect" parameters produced comparatively better results (some `Ornith 1.5 35B A3B` runs) but this remains inconclusive. 
 
-### Non-determinism and your workflow
+### Non-determinism
 
-**Claim:** Non-determinism is a "feature" for LLMs, and results show significant variance across multiple runs for both Provider and Local models. This is worth keeping in mind during day to day use and when making judgements about the output of your model, as consistency ultimately require deterministic guardrails for any of these models.
+**Claim:** The biggest impact is non-determinism. This is a "feature" for LLMs, and results show significant variance across multiple runs for both Provider and Local models. This is worth keeping in mind during day to day use and when making judgements about the output of your model, as consistency ultimately require deterministic guardrails for any of these models.
 
-**Evidence:** Seen across many results, but a specific example is the best and worst `deepseek-v4-flash-0731` runs at the same `xhigh` reasoning (up to 30k token variance).
+**Evidence:** Seen across many results, but a specific example is the best and worst `Deepseek V4 Flash 0731` runs at the same `xhigh` reasoning (up to 30k token variance). A local example is `Qwen 3.6 27B MTP`, where runs with the same settings show similar variations of around 35k tokens.
+
+
+# FAQ
+
+### Why are you using LM Studio instead of X or Y?
+
+Because it's a solid user experience - it's as simple as that.
+
+The goal of this data is to help newcomers understand the **practical** impacts of quantisation in local LLMs, and from that standpoint I believe LM Studio (and other GUI based options) are a solid starting point instead of dealing with 32534524 command line parameters.
+
+Also, the metrics I'm focused on (Context Used and Turns) are based on the behaviour of the model - not performance based metrics like tokens/sec, which may benefit from running bare `llama.cpp`, `vLLM`, etc.
+
+
+### Why don't you use a generation seed for more consistent results?
+
+The goal of the eval is to try and collect realistic results - I'm less interested in where a model places on the leaderboard, and more on the characteristics of the model at different quants or reasoning levels.
+
+Using a seed is not how we use the models in the real world, and that invalidates it as a control for this use case.
