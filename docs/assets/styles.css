@@ -45,6 +45,7 @@
   --code-fg: #D8DFEA;
   --panel: #1B2534;    /* raised panel — the tooltip stays dark in both themes */
   --panel-fg: #DCE3EE;
+  --card: var(--code-bg); /* raised card (findings panel) — tracks the code-panel lift off the sheet */
   --shadow: rgba(0, 0, 0, 0.55);
   --shadow-deep: rgba(0, 0, 0, 0.65);
   --font-display: "Bricolage Grotesque", "Arial Black", ui-sans-serif, system-ui, sans-serif;
@@ -71,6 +72,7 @@
   --code-fg: #F4F5F8;
   --panel: #16202E;
   --panel-fg: #F4F5F8;
+  --card: #FFFFFF; /* raised card (findings panel) — a white card on the pale paper */
   --shadow: rgba(22, 32, 46, 0.1);
   --shadow-deep: rgba(22, 32, 46, 0.24);
 }
@@ -475,56 +477,58 @@ a:focus-visible {
 }
 
 /* ============================================================
-   Overall findings — the prominent expandable panel
+   Overall findings — the raised findings panel
    ------------------------------------------------------------
    One markdown file (content/overall-findings.md) renders into
    both data pages (results + chart) inside a native <details>:
-   the summary row is the whole toggle, collapsed on load. The
-   block carries the site's panel language (rule border, carbon
-   left edge, zebra fill — like the specs card and the filter
-   bars) plus a display-font title, so it reads as an important
-   expandable panel rather than a plain section heading. The
-   content itself is styled by the shared rendered-markdown
-   rules above; this section adds the panel chrome, the toggle
-   chrome and the slot tone.
+   the header row is the whole toggle, collapsed on load. The
+   block is a raised card on the page surface — --card is the
+   code-panel lift off the sheet in dark and a white card on
+   the pale paper in light — edged with the site's carbon
+   accent and a soft shadow, so it stands out as a panel while
+   staying in the page's own theme. The header wears the
+   site's control language (the caret sits in a box drawn like
+   the theme toggle). The content below the hairline needs no
+   tone overrides: every shared rendered-markdown colour is an
+   adaptive token that already reads on both card surfaces.
    ============================================================ */
 .findings {
   margin: 2.25rem 0; /* section spacing was padding — the panel owns its edges */
   border: 1px solid var(--rule);
   border-left: 3px solid var(--carbon);
   border-radius: 2px;
-  background: var(--zebra);
+  background: var(--card); /* raised in both themes: sheet-lift in dark, white card in light */
+  box-shadow: 0 8px 24px var(--shadow);
   padding: 0.5rem 1.5rem 1.5rem;
 }
-/* Collapsed: the reading pane is hidden, so drop the content's bottom
-   padding — the card closes tight under the toggle row (no jump on open;
-   the summary row's top edge is untouched). */
+/* Collapsed: the reading pane is hidden, so the card closes tight under the
+   header row (no jump on open — the header's top edge is untouched). */
 .findings:not([open]) { padding-bottom: 0.5rem; }
 .findings__summary {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.8rem 0; /* no side padding — title aligns with the pane text below */
+  padding: 0.9rem 0; /* no side padding — title aligns with the pane text below */
   cursor: pointer;
-  list-style: none; /* custom caret below replaces the default disclosure marker */
+  list-style: none; /* the boxed caret below replaces the default disclosure marker */
 }
 .findings__summary::-webkit-details-marker { display: none; }
-/* --zebra-hover is a no-op over the panel's own zebra fill in the light theme
-   (the two tokens are identical there), so the hover takes a stronger
-   carbon tint that reads in both palettes. */
-.findings__summary:hover { background: color-mix(in srgb, var(--carbon) 15%, transparent); }
+/* The whole header row is the hover target: the row takes the site's standard
+   hover tint (faint by design on the white card in light), while the caret
+   box's border flipping to solid carbon carries the affordance. */
+.findings__summary:hover { background: var(--zebra-hover); }
 .findings__summary:focus-visible {
   outline: 2px solid var(--carbon);
   outline-offset: 2px;
 }
-/* Findings title — display-font voice (the masthead's, without its scale) so
-   the panel announces itself; overrides the shared mono section-label look */
+/* Title — the only display-face element between the masthead and the data:
+   the panel's cover line. */
 .findings__heading {
   font-family: var(--font-display);
-  font-size: 1.25rem;
+  font-size: 1.5rem;
   font-weight: 700;
-  letter-spacing: -0.01em;
-  line-height: 1.2;
+  letter-spacing: -0.015em;
+  line-height: 1.15;
   color: var(--ink);
   text-transform: none;
 }
@@ -539,13 +543,30 @@ a:focus-visible {
 }
 .findings__state::after { content: "show"; }
 .findings[open] .findings__state::after { content: "hide"; }
+/* Caret in a box, drawn like the theme toggle: the header is a control, and
+   the box says so. The box rotates whole when open (a square is symmetric,
+   so only the caret visibly turns). */
 .findings__caret {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex-shrink: 0;
+  border: 1px solid var(--rule-strong);
+  border-radius: 2px;
   color: var(--carbon);
-  transition: transform 0.15s;
+  font-size: 0.8125rem;
+  transition: transform 0.15s, border-color 0.12s, background 0.12s;
+}
+.findings__summary:hover .findings__caret {
+  border-color: var(--carbon);
+  background: var(--zebra);
 }
 .findings[open] .findings__caret { transform: rotate(180deg); }
-/* Findings content — body-ink tone: these are conclusions, not captions. The
-   hairline separates the toggle row from the reading pane. */
+/* Pane — hairline under the header; the content keeps the shared
+   rendered-markdown tone, which is theme-adaptive and reads on both
+   card surfaces. */
 .findings__md {
   margin-top: 1rem;
   padding-top: 1.25rem;
@@ -554,12 +575,10 @@ a:focus-visible {
   line-height: 1.6;
   color: var(--ink);
 }
+/* In dark the card surface IS the code-block surface (--card aliases
+   --code-bg), so a fenced block needs the border to define its edges */
+.findings__md pre { border: 1px solid var(--rule); }
 .findings__md > :last-child { margin-bottom: 0; }
-/* Inline code chips sit on the zebra panel, so they take the paper
-   background (a zebra chip on a zebra panel would vanish) */
-.findings__md code {
-  background: var(--paper);
-}
 
 /* ============================================================
    Page index — the ledger-style list of pages on the index page
@@ -842,6 +861,7 @@ a:focus-visible {
   .findings { padding: 0.4rem 1rem 1.25rem; }
   .findings__summary { flex-wrap: wrap; }
   .findings__heading { font-size: 1.05rem; }
+  .findings__caret { width: 2rem; height: 2rem; }
   .specs { padding: 1.25rem 1.25rem 1.5rem; }
   .specs__md tbody td { padding: 0.7rem 0.75rem; }
   .page-footer { flex-direction: column; }
