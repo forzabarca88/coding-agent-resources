@@ -475,59 +475,91 @@ a:focus-visible {
 }
 
 /* ============================================================
-   Overall findings — collapsible shared conclusions block
+   Overall findings — the prominent expandable panel
    ------------------------------------------------------------
    One markdown file (content/overall-findings.md) renders into
    both data pages (results + chart) inside a native <details>:
    the summary row is the whole toggle, collapsed on load. The
-   content itself is styled by the shared rendered-markdown rules
-   above; this section adds the toggle chrome and slot tone.
+   block carries the site's panel language (rule border, carbon
+   left edge, zebra fill — like the specs card and the filter
+   bars) plus a display-font title, so it reads as an important
+   expandable panel rather than a plain section heading. The
+   content itself is styled by the shared rendered-markdown
+   rules above; this section adds the panel chrome, the toggle
+   chrome and the slot tone.
    ============================================================ */
 .findings {
-  padding: 2.25rem 0;
-  border-bottom: 1px solid var(--rule);
+  margin: 2.25rem 0; /* section spacing was padding — the panel owns its edges */
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--carbon);
+  border-radius: 2px;
+  background: var(--zebra);
+  padding: 0.5rem 1.5rem 1.5rem;
 }
+/* Collapsed: the reading pane is hidden, so drop the content's bottom
+   padding — the card closes tight under the toggle row (no jump on open;
+   the summary row's top edge is untouched). */
+.findings:not([open]) { padding-bottom: 0.5rem; }
 .findings__summary {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.4rem 0.6rem;
-  margin: -0.4rem -0.6rem; /* keep the heading text aligned with the other section headings */
-  border-radius: 2px;
+  padding: 0.8rem 0; /* no side padding — title aligns with the pane text below */
   cursor: pointer;
   list-style: none; /* custom caret below replaces the default disclosure marker */
 }
 .findings__summary::-webkit-details-marker { display: none; }
-.findings__summary:hover { background: var(--zebra); }
+/* --zebra-hover is a no-op over the panel's own zebra fill in the light theme
+   (the two tokens are identical there), so the hover takes a stronger
+   carbon tint that reads in both palettes. */
+.findings__summary:hover { background: color-mix(in srgb, var(--carbon) 15%, transparent); }
 .findings__summary:focus-visible {
   outline: 2px solid var(--carbon);
   outline-offset: 2px;
 }
-/* Findings heading: typography from the shared section-heading rule above; no
-   margin — the summary row owns the spacing */
+/* Findings title — display-font voice (the masthead's, without its scale) so
+   the panel announces itself; overrides the shared mono section-label look */
+.findings__heading {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  color: var(--ink);
+  text-transform: none;
+}
 .findings__state {
   margin-left: auto;
   font-family: var(--font-mono);
-  font-size: 0.625rem;
+  font-size: 0.6875rem;
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  color: var(--carbon-soft);
+  color: var(--carbon);
+  white-space: nowrap;
 }
 .findings__state::after { content: "show"; }
 .findings[open] .findings__state::after { content: "hide"; }
 .findings__caret {
-  color: var(--carbon-soft);
+  color: var(--carbon);
   transition: transform 0.15s;
 }
 .findings[open] .findings__caret { transform: rotate(180deg); }
-/* Findings content — body-ink tone: these are conclusions, not captions */
+/* Findings content — body-ink tone: these are conclusions, not captions. The
+   hairline separates the toggle row from the reading pane. */
 .findings__md {
   margin-top: 1rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--rule);
   font-size: 0.9375rem;
   line-height: 1.6;
   color: var(--ink);
 }
 .findings__md > :last-child { margin-bottom: 0; }
+/* Inline code chips sit on the zebra panel, so they take the paper
+   background (a zebra chip on a zebra panel would vanish) */
+.findings__md code {
+  background: var(--paper);
+}
 
 /* ============================================================
    Page index — the ledger-style list of pages on the index page
@@ -807,6 +839,9 @@ a:focus-visible {
   .page-index__item { grid-template-columns: 1fr; gap: 0.35rem; }
   .page-index__meta { justify-self: start; }
   .md thead th, .md tbody td { padding: 0.4rem 0.5rem; font-size: 0.75rem; }
+  .findings { padding: 0.4rem 1rem 1.25rem; }
+  .findings__summary { flex-wrap: wrap; }
+  .findings__heading { font-size: 1.05rem; }
   .specs { padding: 1.25rem 1.25rem 1.5rem; }
   .specs__md tbody td { padding: 0.7rem 0.75rem; }
   .page-footer { flex-direction: column; }

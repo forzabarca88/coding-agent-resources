@@ -126,7 +126,7 @@
     search: '',           // active wildcard query — while non-empty it derives the model selection
     searchSaved: null,    // the models value before the search began, restored on clear
     top: 25,              // 'all' or a number — scatter only
-    psize: 'l',           // shared point-size setting: 's' | 'm' | 'l' — 'l' is the default
+    psize: 'm',           // shared point-size setting: 's' | 'm' | 'l' — 'm' is the default
     metric: 'tokens'      // breakdown metric: 'tokens' (Context Used) | 'turns'
   };
 
@@ -152,13 +152,12 @@
   var plotH = H - M.top - M.bottom;
 
   // Shared point-size presets: glyph radius in viewBox units, used by BOTH
-  // charts and their legends, so a mark means the same size everywhere. 'l'
-  // (the default) doubles the original 6u circle — that is why marks stray
-  // from Small: Large is the new default at twice the size; 's' restores the
-  // original look, 'm' sits between. The scatter halo ring tracks the glyph
-  // at 1.5x, as it always has (9 at the old 6).
+  // charts and their legends, so a mark means the same size everywhere. 'm'
+  // is the default; 's' restores the original 6u look and 'l' is the big
+  // variant at twice that size. The scatter halo ring tracks the glyph at
+  // 1.5x, as it always has (9 at the old 6).
   var P_SIZE = { s: 6, m: 9, l: 12 };
-  function pointRadius() { return P_SIZE[state.psize] || P_SIZE.l; }
+  function pointRadius() { return P_SIZE[state.psize] || P_SIZE.m; }
 
   // Dashed ring for KV quant "None": dashes scale with the glyph radius
   // (baseline 3.6 / 1.4 at the original 7u), so the None signal keeps its
