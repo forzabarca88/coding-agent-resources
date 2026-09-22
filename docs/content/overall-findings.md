@@ -35,7 +35,9 @@ A large number of tool calls may suggest:
 - Lots of corrections to its created files.
 - Lots of repeated tool calls due to aggressive truncation of output in order to reduce context size.
 
-A large amount of reasoning tokens can be useful for reducing the number of turns spent on a complicated task (i.e. less corrections), but for this eval it may suggest that the model "overthinks".
+A large amount of reasoning tokens can be useful for reducing the number of turns spent on a complicated task (i.e. less corrections), or may even be necessary in order for the model to be able to solve the task.
+
+For this eval, too many tokens compared to other models in the resultset may suggest that the model in question "overthinks".
 
 
 ## Recommendations
