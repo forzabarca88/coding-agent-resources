@@ -1,5 +1,20 @@
 > Last updated on **22 September, 2026**
 
+## Contents
+
+- [Understanding the data](#understanding-the-data)
+  - [Context Used](#context-used)
+  - [Turns](#turns)
+  - [Interpretting Turns + Context](#interpretting-turns-context)
+  - [Recommendations](#recommendations)
+    - [QV cache quantisation](#qv-cache-quantisation)
+    - [Model quantisation](#model-quantisation)
+    - [Sampling parameters](#sampling-parameters)
+    - [Non-determinism](#non-determinism)
+- [FAQ](#faq)
+  - [Why are you using LM Studio instead of X or Y?](#why-are-you-using-lm-studio-instead-of-x-or-y)
+  - [Why don't you use a generation seed for more consistent results?](#why-dont-you-use-a-generation-seed-for-more-consistent-results)
+
 # Understanding the data
 
 Messages sent from a coding harness to the API (using the `/completions` endpoint) are stateless. This means that the size of the messages always grow as the number of turns increases, as the latest message sent is the combination of the previous message's input + output tokens.

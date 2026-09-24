@@ -7,16 +7,53 @@
   // the element (see docs/AGENTS.md).
   //
   // Rendering modes, chosen with data-content-mode:
-  //   - default: the markdown fills the slot as-is (marked.parse);
+  //   - default: the markdown fills the slot as-is (renderMarkdown below);
   //   - "page-index": the markdown is a list of `## [Title](href)` entries,
   //     each followed by one description paragraph, and is rebuilt into the
   //     ledger-style <li> items used by index.html (see content/pages.md).
   // The markdown files are the single source of all written content; the
   // HTML slots must stay free of prose.
+  //
+  // Headings: marked (v12) renders headings without ids, so in-page anchors —
+  // e.g. the table of contents at the top of content/overall-findings.md —
+  // would be dead links. Slots therefore render through a dedicated Marked
+  // instance whose heading renderer assigns every heading a slug id
+  // (lowercased, apostrophes dropped, other non-alphanumerics collapsed to
+  // "-"), deduped within one render pass (a repeated heading gets
+  // "foo", "foo-1", "foo-2").
+  var slugState = null;
+  var slotMarkdown = null;
+
+  function slugify(text) {
+    return text
+      .toLowerCase()
+      .replace(/['\u2019]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  }
+
+  function renderMarkdown(md) {
+    // Built lazily so a failed CDN load of marked still degrades to the
+    // per-slot "Couldn't load…" message instead of a script error.
+    if (!slotMarkdown) {
+      var renderer = new marked.Renderer();
+      renderer.heading = function (text, level, raw) {
+        var base = slugify(raw) || 'section';
+        var id = base;
+        var n = 1;
+        while (slugState.has(id)) id = base + '-' + n++;
+        slugState.add(id);
+        return '<h' + level + ' id="' + id + '">' + text + '</h' + level + '>\n';
+      };
+      slotMarkdown = new marked.Marked({ renderer: renderer });
+    }
+    slugState = new Set();
+    return slotMarkdown.parse(md);
+  }
 
   function renderPageIndex(el, md) {
     var holder = document.createElement('div');
-    holder.innerHTML = marked.parse(md);
+    holder.innerHTML = renderMarkdown(md);
 
     function warn(msg) {
       if (window.console && console.warn) console.warn('[content.js] ' + msg);
@@ -80,7 +117,7 @@
         if (el.getAttribute('data-content-mode') === 'page-index') {
           renderPageIndex(el, md);
         } else {
-          el.innerHTML = marked.parse(md);
+          el.innerHTML = renderMarkdown(md);
         }
       })
       .catch(function () {

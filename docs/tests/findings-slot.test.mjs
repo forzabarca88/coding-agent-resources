@@ -1,7 +1,9 @@
 // Tests for the shared "Overall findings" block: each data page must embed
 // exactly one initially-collapsed <details class="findings"> whose slot points
 // at the single shared markdown file, and that file must exist — so both pages
-// always render the same content from one editable source.
+// always render the same content from one editable source. Also covers the
+// file's top-of-file Contents list: every anchor must resolve to a heading in
+// the same file (assets/content.js gives rendered headings these slug ids).
 //
 // Run with: node --test 'docs/tests/*.test.mjs'
 
@@ -40,4 +42,38 @@ test('the shared findings markdown file exists', () => {
 
   // ASSERT
   assert.equal(exists, true, `${sharedMd} is the single shared source for both pages`);
+});
+
+test('the Contents list sits at the top and its anchors resolve to headings', () => {
+  // ARRANGE — the shared markdown, and the slug algorithm assets/content.js
+  // uses to give rendered headings their ids (lowercase, apostrophes dropped,
+  // other non-alphanumerics collapsed to "-").
+  const md = fs.readFileSync(path.join(docs, sharedMd), 'utf8');
+  const slugify = (text) => text
+    .toLowerCase()
+    .replace(/['\u2019]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+  // ACT — slugs of every heading in the file, and the anchor hrefs used by
+  // the "## Contents" block (which runs to the first top-level heading).
+  const slugs = new Set();
+  for (const line of md.split('\n')) {
+    const heading = line.match(/^#{1,6}\s+(.*)$/);
+    if (heading) slugs.add(slugify(heading[1]));
+  }
+  const contentsAt = md.search(/^## Contents\s*$/m);
+  const firstH1At = md.search(/^# \S/m);
+  const contents = contentsAt === -1 ? '' : md.slice(contentsAt, firstH1At);
+  const anchors = [...contents.matchAll(/\]\(#([^)]+)\)/g)].map((m) => m[1]);
+
+  // ASSERT — Contents sits above the first heading, lists links, and each
+  // link points at a heading that exists in the same file.
+  assert.notEqual(contentsAt, -1, 'expected a "## Contents" section');
+  assert.notEqual(firstH1At, -1, 'expected at least one top-level heading');
+  assert.ok(contentsAt < firstH1At, 'the Contents block must sit at the top of the file');
+  assert.ok(anchors.length > 0, 'the Contents block must list links');
+  for (const anchor of anchors) {
+    assert.ok(slugs.has(anchor), `Contents link #${anchor} has no matching heading`);
+  }
 });
