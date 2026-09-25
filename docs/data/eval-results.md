@@ -137,3 +137,4 @@
 | lmstudio-jdc-ws/unsloth/gemma-4-12b-it-qat | Model quant: Q4_K_XL, KV quant: None, tool call hit output limit | 95m 55s | 32355 | 22 | 262000 | No | 1 | ? | ? | 2026-09-18 20:14 |
 | lmstudio-jdc-ws/unsloth/gemma-4-12b-it-qat | Model quant: Q4_K_XL, KV quant: None, vitest failed, output loop | 37m 23s | 59021 | 34 | 262000 | Yes | 1 | ? | ? | 2026-09-18 21:00 |
 | lmstudio-jdc-ws/ornith-ai/ornith-1.5-35b-a3b@q4_k_m | Model quant: Q4_K_M, KV quant: Q4_0 | 83m 43s | 150455 | 130 | 196000 | No | 0 | 247 | 0 | 2026-09-25 20:36 |
+| lmstudio-jdc-ws/deepreinforce-ai/ornith-1.0-35b | Model quant: Q4_K_M, KV quant: None | 18m 17s | 118496 | 112 | 131000 | No | 0 | 247 | 0 | 2026-09-25 22:22 |
