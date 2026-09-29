@@ -28,3 +28,4 @@
 | openrouter/deepseek/deepseek-v4-pro-0813 | thinking: xhigh, vitest failed, upstream error (Together) | 2m 25s | 49401 | 12 | 131000 | No | 1 | 13 | 10 | 2026-08-26 23:01 |
 | openrouter/deepseek/deepseek-v4-pro-0813 | thinking: xhigh, vitest failed | 19m 53s | 134113 | 20 | 131000 | Yes | 1 | 13 | 10 | 2026-08-26 23:47 |
 | openrouter/xiaomi/mimo-v2.5 | thinking: high, vitest failed, thinking loop | 26m 13s | 166980 | 4 | 131000 | Yes | 1 | ? | ? | 2026-08-26 23:19 |
+| openrouter/openai/gpt-6-luna | thinking: max | 8m 49s | 90747 | 36 | 131000 | No | 0 | 247 | 0 | 2026-09-29 16:14 |
