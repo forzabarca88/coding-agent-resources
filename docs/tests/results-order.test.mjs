@@ -1,9 +1,10 @@
-// Tests for the results page's machine-section ordering: data/eval-results.md
-// is generated with the provider machine first, but the page must show the
-// local results first. Covers both halves of the real behaviour from
-// assets/results.js — the pure ordering policy (localFirstOrder) and its
-// application to the rendered DOM (reorderSections) — against the real data
-// file's headings.
+// Tests for the results page's machine-section ordering: the generated data
+// files (data/eval-results-provider.md, data/eval-results-local.md) list the
+// provider machine first once stitched (the order the page fetches them in),
+// but the page must show the local results first. Covers both halves of the
+// real behaviour from assets/results.js — the pure ordering policy
+// (localFirstOrder) and its application to the rendered DOM
+// (reorderSections) — against the real data files' headings.
 //
 // Run with: node --test 'docs/tests/*.test.mjs'
 
@@ -17,7 +18,6 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const docs = path.join(here, '..');
 const src = fs.readFileSync(path.join(docs, 'assets', 'results.js'), 'utf8');
-const resultsMd = fs.readFileSync(path.join(docs, 'data', 'eval-results.md'), 'utf8');
 
 // Run the real script in a sandbox where the page IIFE stays inert (null
 // elements, a never-resolving fetch), leaving the top-level helpers
@@ -45,13 +45,19 @@ function root(children) {
   };
 }
 
-// The section headings of the generated data file, in file order.
+// The section headings of the combined generated data, in stitched order.
 function dataHeadings(md) {
   return md.split('\n').filter((l) => l.startsWith('# ')).map((l) => l.slice(2).trim());
 }
 
-test('policy: real data headings order local-first, groups keep relative order', () => {
-  // ARRANGE — the real generated file
+// The two generated files, stitched in the page's fetch order (provider
+// first) — the markdown the results page actually renders from.
+const resultsMd = ['eval-results-provider.md', 'eval-results-local.md']
+  .map((f) => fs.readFileSync(path.join(docs, 'data', f), 'utf8'))
+  .join('\n\n');
+
+test('policy: stitched data headings order local-first, groups keep relative order', () => {
+  // ARRANGE — the stitched generated files (provider fetched first)
   const headings = dataHeadings(resultsMd);
   const locals = headings.filter((h) => /\(local\)/i.test(h));
   const others = headings.filter((h) => !/\(local\)/i.test(h));
@@ -80,10 +86,10 @@ test('policy: no local headings, only local headings, or a passing mention means
   );
 });
 
-test('reorderSections: real data renders the local section before the provider one', () => {
-  // ARRANGE — the structure marked produces for the data file: one h1 plus
-  // one table per machine section, in file order (provider first), with a
-  // lead node before the first section (real pages can carry one).
+test('reorderSections: stitched data renders the local section before the provider one', () => {
+  // ARRANGE — the structure marked produces for the stitched data: one h1
+  // plus one table per machine section, in stitched order (provider first),
+  // with a lead node before the first section (real pages can carry one).
   const lead = el('P', 'intro paragraph');
   const children = [lead];
   dataHeadings(resultsMd).forEach((h) => {

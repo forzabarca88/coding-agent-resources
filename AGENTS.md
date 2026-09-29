@@ -22,7 +22,7 @@ coding-agent-resources/
 ├── install_for_pi.sh         # Installation script for symlinking resources to pi
 ├── agent-evaluation/
 │   ├── README.md             # web-agent evaluation harness documentation
-│   └── run-eval.sh           # Eval runner (appends results to docs/data/eval-results.md)
+│   └── run-eval.sh           # Eval runner (appends results to docs/data/eval-results-local.md, or -provider.md with --provider)
 ├── agents/
 │   ├── README.md             # Agent definitions overview
 │   ├── planner.md            # Creates implementation plans from context and requirements
@@ -32,7 +32,7 @@ coding-agent-resources/
 ├── docs/
 │   ├── AGENTS.md             # Content-editing pattern for the docs site (markdown content files)
 │   ├── index.html            # Docs landing page shell (prose loaded from content/)
-│   ├── evaluation-results.html # Eval results page shell (renders data/eval-results.md live)
+│   ├── evaluation-results.html # Eval results page shell (renders data/eval-results-{provider,local}.md live)
 │   ├── visualization.html    # Eval chart page shell (plots successful runs as a scatter chart)
 │   ├── content/              # Human-edited markdown — every block of written content (see AGENTS.md)
 │   │   ├── index.md          # Index page subtitle
@@ -41,13 +41,14 @@ coding-agent-resources/
 │   │   ├── evaluation-results/ # Results page content (masthead, intro, note, machine specs)
 │   │   └── visualization/    # Chart page content (masthead, reading-the-chart note)
 │   ├── data/
-│   │   └── eval-results.md   # Single canonical results file; run-eval.sh appends runs here
+│   │   ├── eval-results-local.md   # Generated local-run results; run-eval.sh appends runs here
+│   │   └── eval-results-provider.md # Generated provider-run results; run-eval.sh --provider appends runs here
 │   ├── assets/
 │   │   ├── styles.css        # Site stylesheet (theme tokens, rendered-markdown rules, slot overrides)
 │   │   ├── content.js        # Fetches content/*.md into [data-content] slots and renders with marked
 │   │   ├── site.js           # Shared site behaviour (active page in nav, theme toggle)
 │   │   ├── theme.js          # Pre-paint theme application (saved choice before first paint)
-│   │   ├── results.js        # Fetches data/eval-results.md, renders local-first with a sticky filter/sort bar
+│   │   ├── results.js        # Fetches data/eval-results-{provider,local}.md, renders local-first with a sticky filter/sort bar
 │   │   └── visualization.js  # Renders eval results as an interactive scatter chart
 │   └── tests/
 │       ├── viz-harness.mjs                 # Shared minimal-DOM/marked harness that boots assets/visualization.js for the viz tests

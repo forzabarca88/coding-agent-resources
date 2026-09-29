@@ -1,7 +1,8 @@
 // Shared harness for tests that boot the real assets/visualization.js in a
 // minimal DOM stub: element factory, a GFM marked stub (headings + tables)
 // for the data-file parser, and bootVizPage(), which runs the page script via
-// its real fetch path against a given results markdown and returns handles.
+// its real fetch path (per-path bodies, defaulting to the real files on
+// disk) and returns handles.
 // Not a test file — the docs/tests/*.test.mjs glob never picks it up.
 
 import fs from 'node:fs';
@@ -140,10 +141,24 @@ export function markedParse(md) {
 
 /* ---------------- boot the page script ---------------- */
 
-// Sets up the stub globals, then runs the real visualization.js. `resultsMd`
-// is what the page's fetch of data/eval-results.md resolves to. Returns
-// handles for the elements the tests drive or read.
-export function bootVizPage(resultsMd) {
+// Reads a data file from the real docs/data directory. Returns null for
+// unknown paths (so they can 404 like the live site would).
+function readDataFile(base) {
+  if (!base.startsWith('data/')) return null;
+  try {
+    return fs.readFileSync(path.join(here, '..', base), 'utf8');
+  } catch {
+    return null;
+  }
+}
+
+// Sets up the stub globals, then runs the real visualization.js. `overrides`
+// maps fetch paths to bodies — a path mapped to '' serves an empty body (the
+// page filters empty parts out), an unmapped path serves the real file from
+// disk (or 404s), mirroring how the pages fetch the results files
+// (data/eval-results-{provider,local}.md). Returns handles for the elements
+// the tests drive or read.
+export function bootVizPage(overrides = {}) {
   const els = new Map();
   const document = {
     getElementById(id) { if (!els.has(id)) els.set(id, makeEl(id)); return els.get(id); },
@@ -153,7 +168,17 @@ export function bootVizPage(resultsMd) {
   };
   globalThis.document = document;
   globalThis.marked = { parse: markedParse };
-  globalThis.fetch = () => Promise.resolve({ ok: true, text: () => Promise.resolve(resultsMd) });
+  globalThis.fetch = (url) => {
+    const base = String(url).split('?')[0].split('#')[0];
+    if (Object.prototype.hasOwnProperty.call(overrides, base)) {
+      const body = overrides[base];
+      return Promise.resolve({ ok: true, text: () => Promise.resolve(body) });
+    }
+    const real = readDataFile(base);
+    return real === null
+      ? Promise.resolve({ ok: false, status: 404 })
+      : Promise.resolve({ ok: true, text: () => Promise.resolve(real) });
+  };
   vm.runInThisContext(vizSrc, { filename: 'visualization.js' });
   return {
     el(id) { return document.getElementById(id); },

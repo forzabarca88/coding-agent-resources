@@ -30,6 +30,8 @@ const ROWS = [
 // Six successful local runs of one model (see ROWS), plus a second fixture
 // whose context spans 20k..200k: a data minimum small relative to the span
 // must still snap down to 0, the documented backward-compatible path.
+// Served as the local results file by the boot harness (see below); the
+// provider fetch resolves to an empty body, which the page must tolerate.
 const SPREAD_MD = [
   '# Evaluation Results (Local)',
   '',
@@ -40,7 +42,10 @@ const SPREAD_MD = [
     ' | 409600 | no | 0 | 10 | 0 | 2025-01-0' + (i + 1) + ' |'),
 ].join('\n');
 
-const RESULTS_MD = [
+// The main fixture (see ROWS). Served as the local results file by the boot
+// harness (see below); the provider fetch resolves to an empty body, which
+// the page must tolerate.
+const FIXTURE_MD = [
   '# Evaluation Results (Local)',
   '',
   '| Model | Notes | Duration | Total Context Used | Turns | Limit | Exceeded | Exit | Passed Tests | Failed Tests | Date |',
@@ -74,7 +79,10 @@ async function search(page, q) {
 }
 
 test('scatter axes start at a step-rounded data minimum, not 0', async () => {
-  const page = bootVizPage(RESULTS_MD);
+  const page = bootVizPage({
+    'data/eval-results-provider.md': '',
+    'data/eval-results-local.md': FIXTURE_MD,
+  });
   await settle(100); // let load() finish
 
   // X: data 110k..160k spans 50k, step 10k -> start snaps to 110k.
@@ -91,7 +99,10 @@ test('scatter axes start at a step-rounded data minimum, not 0', async () => {
 });
 
 test('breakdown metric axis starts at a step-rounded data minimum, not 0', async () => {
-  const page = bootVizPage(RESULTS_MD);
+  const page = bootVizPage({
+    'data/eval-results-provider.md': '',
+    'data/eval-results-local.md': FIXTURE_MD,
+  });
   await settle(100);
 
   // Data 110k..160k spans 50k, step 20k (4 target ticks) -> the start snaps
@@ -104,7 +115,10 @@ test('breakdown metric axis starts at a step-rounded data minimum, not 0', async
 });
 
 test('axes re-fit when the visible set changes', async () => {
-  const page = bootVizPage(RESULTS_MD);
+  const page = bootVizPage({
+    'data/eval-results-provider.md': '',
+    'data/eval-results-local.md': FIXTURE_MD,
+  });
   await settle(100);
   await search(page, 'Q8_0'); // narrows the chart to the two Q8_0 runs
 
@@ -121,7 +135,10 @@ test('axes re-fit when the visible set changes', async () => {
 });
 
 test('a single shown run centres both axes on the shared value (degenerate span)', async () => {
-  const page = bootVizPage(RESULTS_MD);
+  const page = bootVizPage({
+    'data/eval-results-provider.md': '',
+    'data/eval-results-local.md': FIXTURE_MD,
+  });
   await settle(100);
   await search(page, 'retry pass'); // matches exactly one run: 140000 tokens, 70 turns
 
@@ -135,7 +152,10 @@ test('a single shown run centres both axes on the shared value (degenerate span)
 });
 
 test('a data minimum close to 0 relative to the span still snaps the axis start to 0', async () => {
-  const page = bootVizPage(SPREAD_MD);
+  const page = bootVizPage({
+    'data/eval-results-provider.md': '',
+    'data/eval-results-local.md': SPREAD_MD,
+  });
   await settle(100);
 
   // X: data 20k..200k spans 180k, step 50k (6 target ticks) -> the start

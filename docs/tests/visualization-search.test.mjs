@@ -1,12 +1,14 @@
 // End-to-end tests for the visualization's wildcard model search, exercising
-// the real assets/visualization.js against the real data/eval-results.md in a
-// minimal DOM stub (shared with the other visualization tests in
-// viz-harness.mjs). The page script is loaded via vm, the search input is
-// driven through its real event + debounce path, and assertions are made on
-// the rendered summary text, search count, and chip strip — against counts
-// computed independently from the raw markdown. The page boots with the
-// Local source selected by default (state.source = 'Local'), so all
-// expectations are scoped to the local rows exactly as the page sees them.
+// the real assets/visualization.js against the real generated data files
+// (data/eval-results-provider.md + data/eval-results-local.md, served from
+// disk by the shared minimal-DOM harness, viz-harness.mjs, in the page's
+// fetch order). The page script is loaded via vm,
+// the search input is driven through its real event + debounce path, and
+// assertions are made on the rendered summary text, search count, and chip
+// strip — against counts computed independently from the raw markdown. The
+// page boots with the Local source selected by default (state.source =
+// 'Local'), so all expectations are scoped to the local rows exactly as the
+// page sees them.
 //
 // Run with: node --test 'docs/tests/*.test.mjs'
 
@@ -18,7 +20,11 @@ import { fileURLToPath } from 'node:url';
 import { bootVizPage as boot, settle } from './viz-harness.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const resultsMd = fs.readFileSync(path.join(here, '..', 'data', 'eval-results.md'), 'utf8');
+// The stitched raw markdown (provider + local, in the page's fetch order),
+// used only to compute the independent expectations below.
+const resultsMd = ['eval-results-provider.md', 'eval-results-local.md']
+  .map((f) => fs.readFileSync(path.join(here, '..', 'data', f), 'utf8'))
+  .join('\n\n');
 
 /* ---------------- independent expectations from the raw markdown ---------------- */
 
@@ -90,9 +96,9 @@ function parseSearchSummary(text) {
 /* ---------------- tests ---------------- */
 
 test('loads the data and shows the top-25 slice before any search', async () => {
-  const page = boot(resultsMd);
+  const page = boot();
   await settle(100); // let load() finish
-  assert.match(page.status.textContent, /Loaded \d+ successful runs? from data\/eval-results\.md\./);
+  assert.match(page.status.textContent, /Loaded \d+ successful runs? from data\/eval-results-\{provider,local\}\.md\./);
   const m = /^Showing (\d+) of (\d+) successful runs \(local runs; all (\d+) models\)\.( Least context first\.)?$/
     .exec(page.summary.textContent);
   assert(m, 'summary format, got: ' + page.summary.textContent);
@@ -102,7 +108,7 @@ test('loads the data and shows the top-25 slice before any search', async () => 
 });
 
 test('wildcard spans model name and notes: qwen3.8-27b*Q4', async () => {
-  const page = boot(resultsMd);
+  const page = boot();
   await settle(100);
   await search(page, 'qwen3.8-27b*Q4');
 
@@ -124,7 +130,7 @@ test('wildcard spans model name and notes: qwen3.8-27b*Q4', async () => {
 });
 
 test('field-local literal still matches only runs with the note: Q2_K_XL', async () => {
-  const page = boot(resultsMd);
+  const page = boot();
   await settle(100);
   await search(page, 'Q2_K_XL');
 
@@ -142,7 +148,7 @@ test('field-local literal still matches only runs with the note: Q2_K_XL', async
 });
 
 test('model-name literal still works: lmstudio-jdc-ws/unsloth/', async () => {
-  const page = boot(resultsMd);
+  const page = boot();
   await settle(100);
   await search(page, 'lmstudio-jdc-ws/unsloth/');
 
@@ -157,7 +163,7 @@ test('model-name literal still works: lmstudio-jdc-ws/unsloth/', async () => {
 });
 
 test('literal text cannot bridge name and notes without a wildcard', async () => {
-  const page = boot(resultsMd);
+  const page = boot();
   await settle(100);
   await search(page, 'qwen3.8-27b Q4'); // literal space, no '*'
 
@@ -166,7 +172,7 @@ test('literal text cannot bridge name and notes without a wildcard', async () =>
 });
 
 test('clearing the search restores the previous selection', async () => {
-  const page = boot(resultsMd);
+  const page = boot();
   await settle(100);
   await search(page, 'qwen3.8-27b*Q4');
   await search(page, '');

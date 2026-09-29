@@ -5,7 +5,7 @@
 # streams the model's text output to the terminal, prints the running
 # total token count after every completed turn, and terminates the
 # session if the context limit is exceeded.
-# Usage: ./run-eval.sh [--model <model>] [--think <level>] [--max-context <tokens>] [--notes <text>] [--clear] [--commit]
+# Usage: ./run-eval.sh [--model <model>] [--think <level>] [--max-context <tokens>] [--notes <text>] [--provider] [--clear] [--commit]
 # =============================================================================
 set -uo pipefail
 
@@ -14,16 +14,21 @@ set -uo pipefail
 # ---------------------------------------------------------------------------
 CLEAR=0
 COMMIT=0
+PROVIDER=0
 USER_NOTES=""
 THINK=""
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-# The results file lives in the docs site (docs/data/eval-results.md) — the
-# single canonical copy, read directly by the site at runtime (e.g. on GitHub
-# Pages, which serves only files inside the published docs/ folder).
-RESULTS_FILE="$SCRIPT_DIR/../docs/data/eval-results.md"
+# The results files live in the docs site (docs/data/) — the single canonical
+# copies, read directly by the site at runtime (e.g. on GitHub Pages, which
+# serves only files inside the published docs/ folder). One file per machine
+# class: runs default to the local file; --provider sends them to the
+# provider one instead.
+RESULTS_LOCAL="$SCRIPT_DIR/../docs/data/eval-results-local.md"
+RESULTS_PROVIDER="$SCRIPT_DIR/../docs/data/eval-results-provider.md"
+RESULTS_FILE="$RESULTS_LOCAL"
 
 # ---------------------------------------------------------------------------
 # Parse CLI arguments
@@ -61,6 +66,10 @@ while [ $# -gt 0 ]; do
             MAX_CONTEXT="$2"
             shift 2
             ;;
+        --provider)
+            PROVIDER=1
+            shift
+            ;;
         --clear)
             CLEAR=1
             shift
@@ -78,7 +87,7 @@ while [ $# -gt 0 ]; do
             shift 2
             ;;
         --help|-h)
-            echo "Usage: $0 [--model <model>] [--think <level>] [--max-context <tokens>] [--notes <text>] [--clear] [--commit]"
+            echo "Usage: $0 [--model <model>] [--think <level>] [--max-context <tokens>] [--notes <text>] [--provider] [--clear] [--commit]"
             echo ""
             echo "Options:"
             echo "  -m, --model <model>        Model identifier (e.g. anthropic/claude-sonnet-4-20250514)"
@@ -87,10 +96,13 @@ while [ $# -gt 0 ]; do
             echo "                              (passed through to pi's --thinking flag)"
             echo "  -c, --max-context <tokens>  Max context window in tokens."
             echo "                               Defaults to unlimited (no context-size restriction) when not set."
-            echo "  -n, --notes <text>          Notes to include in the eval-results.md row"
+            echo "  -n, --notes <text>          Notes to include in the results row"
+            echo "      --provider              Write the result to the provider results file"
+            echo "                              (docs/data/eval-results-provider.md) instead of the"
+            echo "                              default local one (docs/data/eval-results-local.md)."
             echo "      --clear                 Reset working directory (git clean -fd; git checkout -f) before run."
-            echo "                              Reverts all tracked files (including eval-results.md) and removes untracked files."
-            echo "      --commit                Commit eval-results.md after the run (regardless of exit status)"
+            echo "                              Reverts all tracked files (including the results files) and removes untracked files."
+            echo "      --commit                Commit the results file after the run (regardless of exit status)"
             echo "  -h, --help                  Show this help"
             exit 0
             ;;
@@ -104,6 +116,11 @@ done
 if ! [[ "$MAX_CONTEXT" =~ ^[0-9]+$ ]]; then
     echo "Error: --max-context must be a positive integer." >&2
     exit 1
+fi
+
+# Route the result to the provider file when --provider is given.
+if [ "$PROVIDER" -eq 1 ]; then
+    RESULTS_FILE="$RESULTS_PROVIDER"
 fi
 
 # Validate thinking level if provided
@@ -153,26 +170,30 @@ if [ "$CLEAR" -eq 1 ]; then
     cd "$SCRIPT_DIR"
     git clean -fd . || { echo -e "${RED}Error: git clean failed.${NC}" >&2; exit 1; }
     git checkout -f . || { echo -e "${RED}Error: git checkout failed.${NC}" >&2; exit 1; }
-    # The results file lives in the docs site now; it must not reappear in
-    # this directory from HEAD.
-    rm -f "$SCRIPT_DIR/eval-results.md"
     # Revert the results file too — or drop it if it is not tracked at HEAD.
     git checkout -f -- "$RESULTS_FILE" 2>/dev/null || rm -f "$RESULTS_FILE"
     echo ""
 fi
 
 # ---------------------------------------------------------------------------
-# Helper: append a row to eval-results.md (create header if missing)
+# Helper: append a row to the results file (create header if missing)
 # ---------------------------------------------------------------------------
 append_eval_results() {
     local date="$1" model="$2" duration="$3" context="$4"
     local turns="$5" limit="$6" exceeded="$7" exit_code="$8"
     local passed_tests="$9" failed_tests="${10}" notes="${11}"
 
+    # Section heading the site's parsers key on: /(local)/i vs /(provider)/i
+    # decides which file a rendered section came from.
+    local heading="Evaluation Results (Local)"
+    if [ "$RESULTS_FILE" = "$RESULTS_PROVIDER" ]; then
+        heading="Evaluation Results (Provider)"
+    fi
+
     mkdir -p "$(dirname "$RESULTS_FILE")"
     if [ ! -f "$RESULTS_FILE" ]; then
         printf '%s\n\n%s\n%s\n' \
-            '# Evaluation Results' \
+            "# $heading" \
             '| Model | Notes | Duration | Total Context Used | Turns | Limit | Exceeded | Exit | Passed Tests | Failed Tests | Date |' \
             '|---|---|---|---|---|---|---|---|---|---|---|' > "$RESULTS_FILE"
     fi
@@ -186,7 +207,7 @@ append_eval_results() {
 }
 
 # ---------------------------------------------------------------------------
-# Helper: parse basic stats from a session file and append to eval-results.md
+# Helper: parse basic stats from a session file and append to the results file
 # Used by the cleanup trap when the script is interrupted.
 # ---------------------------------------------------------------------------
 append_eval_results_from_session() {
@@ -836,7 +857,7 @@ echo ""
 echo -e "${GREEN}Session file:${NC} $SESSION_FILE"
 
 # ---------------------------------------------------------------------------
-# Update eval-results.md
+# Update the results file
 # ---------------------------------------------------------------------------
 
 # Format date from start epoch (GNU date first, then BSD, then fallback)
@@ -885,7 +906,7 @@ FAILED_TESTS="?"
 # ---------------------------------------------------------------------------
 # Post-checks: run tests and validate test files were not modified.
 # These run unconditionally (even if context limit was exceeded) so that the
-# eval-results.md row always contains real test counts.
+# eval results row always contains real test counts.
 # ---------------------------------------------------------------------------
 echo ""
 echo -e "${BOLD}${CYAN}Running post-checks...${NC}"
@@ -947,18 +968,18 @@ else
     echo -e "${RED}${BOLD}Post-checks failed.${NC}"
 fi
 
-# Append row to eval-results.md
+# Append row to the results file
 append_eval_results "$RUN_DATE" "$MODEL" "$DURATION" "$TOTAL_CONTEXT" \
     "$TURNS" "$LIMIT_STR" "$EXCEEDED_STR" "$EXIT_CODE" \
     "$PASSED_TESTS" "$FAILED_TESTS" "$NOTES"
 RESULTS_WRITTEN=1
 
 # ---------------------------------------------------------------------------
-# --commit: commit eval-results.md after the run
+# --commit: commit the results file after the run
 # ---------------------------------------------------------------------------
 if [ "$COMMIT" -eq 1 ]; then
     echo ""
-    echo -e "${BOLD}Committing eval-results.md...${NC}"
+    echo -e "${BOLD}Committing the results file...${NC}"
 
     if ! git rev-parse --git-dir >/dev/null 2>&1; then
         echo -e "  ${YELLOW}⚠ Not a git repository, skipping commit.${NC}"

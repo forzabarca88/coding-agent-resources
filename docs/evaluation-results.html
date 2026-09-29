@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="color-scheme" content="dark light">
-  <meta name="description" content="Evaluation results for the coding agent harness, rendered live from data/eval-results.md.">
+  <meta name="description" content="Evaluation results for the coding agent harness, rendered live from data/eval-results-{provider,local}.md.">
   <!-- Apply the saved theme choice before first paint (dark is the CSS default). -->
   <script src="assets/theme.js"></script>
   <title>Evaluation Results — Coding Agent Resources</title>
@@ -91,12 +91,14 @@
         <div class="findings__md" data-content="content/overall-findings.md"></div>
       </details>
 
-      <!-- Results, rendered live from data/eval-results.md. results.js reorders the
-           machine sections local-first and pins the filter bar to the viewport while
-           the tables scroll (styles.css, mirroring the chart page's .viz-controls). -->
+      <!-- Results, rendered live from the generated data files
+           (data/eval-results-{provider,local}.md). results.js reorders the
+           machine sections local-first and pins the filter bar to the viewport
+           while the tables scroll (styles.css, mirroring the chart page's
+           .viz-controls). -->
       <section class="results">
         <p id="results-status" class="results-status" role="status" aria-live="polite">
-          Loading data/eval-results.md…
+          Loading data/eval-results-{provider,local}.md…
         </p>
         <button id="results-retry" type="button" class="retry" hidden>Reload results</button>
         <div id="results-controls" class="results-controls" hidden></div>
