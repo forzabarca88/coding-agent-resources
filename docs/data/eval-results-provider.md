@@ -30,3 +30,4 @@
 | openrouter/xiaomi/mimo-v2.5 | thinking: high, vitest failed, thinking loop | 26m 13s | 166980 | 4 | 131000 | Yes | 1 | ? | ? | 2026-08-26 23:19 |
 | openrouter/openai/gpt-6-luna | thinking: max | 8m 49s | 90747 | 36 | 131000 | No | 0 | 247 | 0 | 2026-09-29 16:14 |
 | openrouter/openai/gpt-6-luna | thinking: max | 6m 58s | 78175 | 23 | 131000 | No | 0 | 247 | 0 | 2026-09-29 16:23 |
+| openrouter/openai/gpt-6-luna | thinking: low | 1m 44s | 52344 | 27 | 131000 | No | 0 | 247 | 0 | 2026-09-29 16:31 |
