@@ -4,6 +4,7 @@
 
 - **DESIGN AND BUILD PRODUCTION GRADE CODE FROM THE START** - i.e. no monolithic files if they should be modularised, no unnecessary duplication of code, no hardcoded values if they can be placed in a centralised config file, etc.
 - Keep AGENTS.md minimal - **only** keep information which will be required every time you look at this codebase. `Repository Structure` should **always** be kept up to date, and include a CONCISE single sentence description of each file in the project.  Do not modify `Core Principles`, but review and remove anything else from the document which is not required.
+- `agent-evaluation` directory functions as an ephemeral testing location - you should never update the `Project Structure` to include any files in this directory which are not staged or committed in git.
 - After completing any task, always review/amend any related README.md file(s) to ensure that they remain correct. 
 - Do **not** make assumptions without testing and validating first. Follow the scientific method.
 - Write the bare minimum of tests - follow **ARRANGE, ACT, ASSERT**. You must test the end result, NOT the implmentation details.
