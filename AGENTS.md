@@ -63,12 +63,15 @@ coding-agent-resources/
 │   ├── hold.ts               # Registers /hold command: deferred ESC stopping the session at the end of the current agent turn
 │   ├── provider-health-check.ts # Monitors LLM provider health
 │   ├── success-tone.ts       # Adjusts model tone for successful completions
-│   └── subagent/
-│       ├── README.md         # Subagent extension documentation
-│       ├── index.ts          # Subagent extension entry point
-│       ├── agents.ts         # Subagent management utilities
-│       └── tests/
-│           └── resilience.test.mjs # End-to-end resilience tests; file doubles as a fake `pi` executable (needs node_modules linked to the global pi install)
+│   ├── subagent/
+│   │   ├── README.md         # Subagent extension documentation
+│   │   ├── index.ts          # Subagent extension entry point
+│   │   ├── agents.ts         # Subagent management utilities
+│   │   └── tests/
+│   │       ├── render.test.mjs # Result-view rendering tests (node --test extensions/subagent/tests/render.test.mjs)
+│   │       └── resilience.test.mjs # End-to-end resilience tests; file doubles as a fake `pi` executable (needs node_modules linked to the global pi install)
+│   └── tests/
+│       └── hold.test.mjs     # Hold contract tests: abort at turn end, reject continuation runs, disarm at settlement (node --test extensions/tests/hold.test.mjs)
 ├── prompts/
 │   ├── README.md             # Prompts overview
 │   └── ralph-loop.md         # Iterative development loop prompt template

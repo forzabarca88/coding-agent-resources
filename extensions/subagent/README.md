@@ -27,6 +27,7 @@ This extension provides enhanced subagent capabilities, allowing for more sophis
   - Per-invocation model overrides via the `model` (single mode) / `models` ({agentName: `provider/id`}) / per-item `model` parameters, so different agents can run on different models without editing agent markdown
   - Live thinking tail in the expanded panel: streams the last 15 lines of a reasoning model's thinking in realtime (throttled), cleared at each turn end so finalized reasoning is never retained or surfaced to the parent context
   - Live response tail in the expanded panel: streams the last 15 lines of the assistant's response text in realtime (throttled, same mechanism as the thinking tail); cleared at each turn end, after which the finalized text renders as Markdown in the Output section
+  - Result view rendering: the expanded panel (Ctrl+O) shows every step in full — complete commands and tool arguments, never truncated — while the collapsed view keeps compact one-line previews (commands capped at 60 chars, generic arguments at 50)
   - Compaction count in the result panel: the number of times the subagent session was compacted (successful `compaction_end` events) is shown next to the session duration in the completed result summary line
   - Network resilience: survives transient provider/network failures (timeouts, connection drops, 5xx/429 responses, DNS errors) by resuming the invocation's private session after exponential backoff — see [Network Resilience](#network-resilience); the number of resumptions is reported in the completed result summary line (e.g. `2 network resumes`)
 
@@ -217,9 +218,9 @@ above always win, so the frontmatter value acts as a fallback.
 
 ## Tests
 
-`node --test extensions/subagent/tests/resilience.test.mjs`
+`node --test extensions/subagent/tests/*.test.mjs`
 
-End-to-end resilience tests: the test file doubles as a fake `pi` executable
+- `resilience.test.mjs` — end-to-end resilience tests: the test file doubles as a fake `pi` executable
 (the extension spawns child pi processes by re-running `process.argv[1]`, so
 when launched with `--mode` the file emulates pi's JSON-mode behaviour,
 including session persistence). Covers: normal completion; recovery from
@@ -229,6 +230,9 @@ no re-resume when a resumed run crashes without frames (stale cross-run error
 frames must not trigger further resumes, and the surfaced error must be the
 crash, not the stale frame); rerun of the original task when the session file
 was never persisted; and abort during a backoff wait.
+- `render.test.mjs` — result-view rendering: the expanded view shows each step
+  without truncation (full commands and tool arguments) and the collapsed view
+  keeps one-line previews.
 
 ## See Also
 

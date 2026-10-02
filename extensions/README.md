@@ -34,14 +34,14 @@ Extensions are TypeScript modules that hook into pi's event system to provide ad
 ### [hold.ts](./hold.ts)
 - **Purpose**: Registers `/hold` command — the automated, deferred equivalent of pressing ESC: stops the session's processing at the END of the current agent turn
 - **Behavior**:
-  - If agent is busy: arms the hold; the current turn completes normally, then the session stops; pi stays open for the next prompt
+  - If agent is busy: arms the hold; the current turn (its LLM call plus every tool call in it) completes normally, then the session stops; pi stays open for the next prompt
   - If agent is idle: no turn in progress — notifies that the session is already stopped
 - **Command**: `/hold`
-- **Implementation**: Arms a latch that rejects mid-run submissions at the same `input` gate steering uses — any message offered with `streamingBehavior` `steer`/`followUp` while armed is dropped with a notification — and reports the stop at `turn_end`; shows a persistent footer status while armed. Covers the TUI's mid-stream Enter (steer) and Alt+Enter (follow-up) submissions and extension `sendUserMessage(..., { deliverAs })`; note pi's raw RPC `steer`/`follow_up` commands bypass the input gate entirely
+- **Implementation**: pi fires `turn_end` after EVERY assistant message and the agent loop keeps going while tool calls are pending, so merely reporting the stop at `turn_end` would not stop the session (the loop starts the next LLM call right after). The hold therefore: (1) rejects mid-run submissions at the same `input` gate steering uses — any message offered with `streamingBehavior` `steer`/`followUp` while armed is dropped with a notification; (2) on the first `turn_end` after arming, calls `ctx.abort()` (the same operation ESC performs) so the loop's next LLM call fails instantly with stopReason `"aborted"` and the run ends — pi never auto-retries an `"aborted"` stop and auto-recover ignores it; (3) stays armed until `agent_settled`, aborting any continuation run (pi auto-retry, compaction, or queued-message continuation) that starts meanwhile at its `agent_start` before it does work; shows a persistent footer status while armed. Covers the TUI's mid-stream Enter (steer) and Alt+Enter (follow-up) submissions and extension `sendUserMessage(..., { deliverAs })`; note pi's raw RPC `steer`/`follow_up` commands bypass the input gate entirely
 - **Features**:
   - Never cuts a turn short (unlike ESC/abort) and never exits pi (unlike shutdown)
-  - Nothing queued after `/hold` continues the session; messages already queued before it (e.g. an earlier `/followup`) still complete, as the extension API cannot clear the agent's internal queues
-  - Repeat `/hold` while armed is a no-op; the armed state survives until the turn ends (cleared on `/reload`/`/new`, which recreate the extension)
+  - Nothing queued after `/hold` continues the session; messages already queued before it are restored to the editor by the abort in the TUI (like ESC), and in other modes are either recorded at the stop point without being processed or left queued for the next prompt
+  - Repeat `/hold` while armed is a no-op; the armed state survives until the session settles (cleared on `/reload`/`/new`, which recreate the extension)
 
 ### [provider-health-check.ts](./provider-health-check.ts)
 - **Purpose**: Monitors LLM provider health and availability
@@ -64,11 +64,13 @@ Extensions are TypeScript modules that hook into pi's event system to provide ad
   - [agents.ts](./subagent/agents.ts) - Subagent definitions
   - [index.ts](./subagent/index.ts) - Main subagent extension
   - [tests/resilience.test.mjs](./subagent/tests/resilience.test.mjs) - End-to-end network-resilience tests (doubles as a fake `pi` executable)
+  - [tests/render.test.mjs](./subagent/tests/render.test.mjs) - Result-view rendering tests (expanded shows full steps, collapsed keeps previews)
 - **Features**:
   - Manages subagent lifecycle
   - Handles context passing between agents
   - Provides subagent coordination utilities
   - Shows the compaction count of each completed subagent session next to its duration in the result panel
+  - Expanded result view (Ctrl+O) shows every step in full — complete commands and tool arguments, never truncated — while the collapsed view keeps one-line previews
   - Network resilience: transient provider/network failures are survived by resuming the invocation's private session after exponential backoff (default up to 5 resumptions, raise `PI_SUBAGENT_RETRY_MAX_RESUMES` for longer outages); permanent errors fail immediately
 
 ## Installation

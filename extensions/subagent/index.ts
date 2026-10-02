@@ -41,6 +41,8 @@ import { type AgentConfig, type AgentScope, discoverAgents } from "./agents.ts";
 const MAX_PARALLEL_TASKS = 8;
 const MAX_CONCURRENCY = 4;
 const COLLAPSED_ITEM_COUNT = 10;
+const COMMAND_PREVIEW_CHARS = 60;
+const ARGS_PREVIEW_CHARS = 50;
 const PER_TASK_OUTPUT_CAP = 50 * 1024;
 const LIVE_TAIL_LINES = 15;
 const LIVE_THROTTLE_MS = 80;
@@ -161,21 +163,28 @@ function formatUsageStats(
         return parts.join(" ");
 }
 
+/**
+ * Formats a tool call as a single display line. Collapsed views shorten long
+ * values to a one-line preview; the expanded view renders the full command /
+ * arguments so every step is inspectable when debugging.
+ */
 function formatToolCall(
         toolName: string,
         args: Record<string, unknown>,
         themeFg: (color: any, text: string) => string,
+        opts: { expanded?: boolean } = {},
 ): string {
         const shortenPath = (p: string) => {
                 const home = os.homedir();
                 return p.startsWith(home) ? `~${p.slice(home.length)}` : p;
         };
+        const preview = (value: string, max: number) =>
+                opts.expanded || value.length <= max ? value : `${value.slice(0, max)}...`;
 
         switch (toolName) {
                 case "bash": {
                         const command = (args.command as string) || "...";
-                        const preview = command.length > 60 ? `${command.slice(0, 60)}...` : command;
-                        return themeFg("muted", "$ ") + themeFg("toolOutput", preview);
+                        return themeFg("muted", "$ ") + themeFg("toolOutput", preview(command, COMMAND_PREVIEW_CHARS));
                 }
                 case "read": {
                         const rawPath = (args.file_path || args.path || "...") as string;
@@ -223,8 +232,7 @@ function formatToolCall(
                 }
                 default: {
                         const argsStr = JSON.stringify(args);
-                        const preview = argsStr.length > 50 ? `${argsStr.slice(0, 50)}...` : argsStr;
-                        return themeFg("accent", toolName) + themeFg("dim", ` ${preview}`);
+                        return themeFg("accent", toolName) + themeFg("dim", ` ${preview(argsStr, ARGS_PREVIEW_CHARS)}`);
                 }
         }
 }
@@ -1205,7 +1213,7 @@ export default function (pi: ExtensionAPI) {
                                                 const preview = expanded ? item.text : item.text.split("\n").slice(0, 3).join("\n");
                                                 text += `${theme.fg("toolOutput", preview)}\n`;
                                         } else {
-                                                text += `${theme.fg("muted", "→ ") + formatToolCall(item.name, item.args, theme.fg.bind(theme))}\n`;
+                                                text += `${theme.fg("muted", "→ ") + formatToolCall(item.name, item.args, theme.fg.bind(theme), { expanded })}\n`;
                                         }
                                 }
                                 return text.trimEnd();
@@ -1237,7 +1245,7 @@ export default function (pi: ExtensionAPI) {
                                                         if (item.type === "toolCall")
                                                                 container.addChild(
                                                                         new Text(
-                                                                                theme.fg("muted", "→ ") + formatToolCall(item.name, item.args, theme.fg.bind(theme)),
+                                                                                theme.fg("muted", "→ ") + formatToolCall(item.name, item.args, theme.fg.bind(theme), { expanded }),
                                                                                 0,
                                                                                 0,
                                                                         ),
@@ -1327,7 +1335,7 @@ export default function (pi: ExtensionAPI) {
                                                         if (item.type === "toolCall") {
                                                                 container.addChild(
                                                                         new Text(
-                                                                                theme.fg("muted", "→ ") + formatToolCall(item.name, item.args, theme.fg.bind(theme)),
+                                                                                theme.fg("muted", "→ ") + formatToolCall(item.name, item.args, theme.fg.bind(theme), { expanded }),
                                                                                 0,
                                                                                 0,
                                                                         ),
@@ -1424,7 +1432,7 @@ export default function (pi: ExtensionAPI) {
                                                         if (item.type === "toolCall") {
                                                                 container.addChild(
                                                                         new Text(
-                                                                                theme.fg("muted", "→ ") + formatToolCall(item.name, item.args, theme.fg.bind(theme)),
+                                                                                theme.fg("muted", "→ ") + formatToolCall(item.name, item.args, theme.fg.bind(theme), { expanded }),
                                                                                 0,
                                                                                 0,
                                                                         ),
