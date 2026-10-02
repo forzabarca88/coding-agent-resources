@@ -71,7 +71,8 @@ coding-agent-resources/
 │   │       ├── render.test.mjs # Result-view rendering tests (node --test extensions/subagent/tests/render.test.mjs)
 │   │       └── resilience.test.mjs # End-to-end resilience tests; file doubles as a fake `pi` executable (needs node_modules linked to the global pi install)
 │   └── tests/
-│       └── hold.test.mjs     # Hold contract tests: abort at turn end, reject continuation runs, disarm at settlement (node --test extensions/tests/hold.test.mjs)
+│       ├── auto-recover.test.mjs # Auto-recover contract tests: ignore explicit aborts, recover real blank completions (node --test extensions/tests/*.test.mjs)
+│       └── hold.test.mjs     # Hold contract tests: abort at turn end, reject continuation runs, gate across settlement (node --test extensions/tests/*.test.mjs)
 ├── prompts/
 │   ├── README.md             # Prompts overview
 │   └── ralph-loop.md         # Iterative development loop prompt template

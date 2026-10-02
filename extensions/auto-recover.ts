@@ -43,7 +43,12 @@
  *
  *      stopReason semantics:
  *      - `"aborted"` (user interrupted — do not re-run against the user's
- *        will): never a trigger, never resets the guard.
+ *        will): never a trigger, never resets the guard. Abort-shaped
+ *        errorMessages count as explicit aborts as well, even with an
+ *        `"error"` stop reason: pi-ai's provider setup phase classifies an
+ *        already-aborted run (ESC, /hold) as stopReason `"error"` with the
+ *        abort reason (e.g. `"This operation was aborted"`) as errorMessage,
+ *        and recovering from that would re-run against the user's will.
  *      - `"error"` (provider/retry failure): if the message really ends
  *        with an interrupted attempt, queueing at `agent_end` is deferred
  *        so pi's own auto-retry can resolve the turn first; the
@@ -116,6 +121,7 @@ type BranchEntryLike = {
 		role?: string;
 		content?: unknown;
 		stopReason?: string;
+		errorMessage?: string;
 		toolCallId?: string;
 		tool_use_id?: string;
 	};
@@ -131,8 +137,8 @@ type Detection =
 	// The run ended with a normal, completed turn.
 	| { kind: "normal" }
 	// The run ended in a way that must neither trigger nor reset recovery:
-	// stopReason "aborted", or an "error" run whose content is not an
-	// interrupted attempt.
+	// an explicit abort (stopReason "aborted" or an abort-shaped errorMessage),
+	// or an "error" run whose content is not an interrupted attempt.
 	| { kind: "ignore" };
 
 /** Extract the toolCall id recorded on a toolResult branch entry, if any. */
@@ -158,6 +164,7 @@ function normalizeRunMessages(messages: unknown): BranchEntryLike[] | null {
 			role?: string;
 			content?: unknown;
 			stopReason?: string;
+			errorMessage?: string;
 			toolCallId?: string;
 			tool_use_id?: string;
 		};
@@ -167,6 +174,7 @@ function normalizeRunMessages(messages: unknown): BranchEntryLike[] | null {
 				role: message.role,
 				content: message.content,
 				stopReason: message.stopReason,
+				errorMessage: message.errorMessage,
 				toolCallId: message.toolCallId ?? message.tool_use_id,
 			},
 		});
@@ -204,6 +212,30 @@ function hasMatchingToolCall(
 	return false;
 }
 
+// Abort phrases pi surfaces in errorMessage ("This operation was aborted",
+// "The operation was aborted", "Request aborted", "Request aborted by user",
+// "Request was aborted", "Operation aborted", "Command aborted").
+// stopReason "aborted" is the structured form, but an already-aborted run can
+// fail inside the provider's setup phase, which pi-ai classifies as
+// stopReason "error" with the abort reason (signal.reason) as errorMessage.
+// Phrase matching (rather than an exact-string allowlist) keeps new pi abort
+// wording on the ignore side: misclassifying a real provider failure as an
+// abort only skips a recovery, while misclassifying an abort as a failure
+// re-runs the session against the user's will.
+const ABORT_ERROR_PATTERN =
+	/\b(?:this |the )?operation was aborted\b|\brequest (?:was )?aborted\b|\boperation aborted\b|\bcommand aborted\b/i;
+// Timeouts abort too — AbortSignal.timeout's reason is literally
+// "The operation was aborted due to timeout" — but they are real failures
+// worth recovering, never explicit user aborts. This check must win over the
+// abort phrases above.
+const TIMEOUT_ERROR_PATTERN = /\btimed? ?out\b|due to timeout/i;
+
+function isAbortErrorMessage(errorMessage: unknown): boolean {
+	if (typeof errorMessage !== "string") return false;
+	if (TIMEOUT_ERROR_PATTERN.test(errorMessage)) return false;
+	return ABORT_ERROR_PATTERN.test(errorMessage);
+}
+
 /**
  * Inspect the last assistant message of the branch and decide how the run
  * ended. Returns the tool name (or the EMPTY_TURN_NAME sentinel) for an
@@ -228,8 +260,11 @@ function detectInterruptedAttempt(branch: BranchEntryLike[]): Detection {
 	if (!lastAssistantEntry) return { kind: "normal" };
 
 	const stopReason = lastAssistantEntry.message?.stopReason;
-	if (stopReason === "aborted") {
-		// User interrupted — do not re-run against the user's will.
+	if (stopReason === "aborted" || isAbortErrorMessage(lastAssistantEntry.message?.errorMessage)) {
+		// Explicit abort (ESC, /hold, shutdown) — do not re-run against the
+		// user's will. Aborts do not always carry stopReason "aborted": pi-ai's
+		// provider setup phase classifies an already-aborted run as
+		// stopReason "error" with the abort reason as errorMessage.
 		return { kind: "ignore" };
 	}
 	const errorStop = stopReason === "error";
