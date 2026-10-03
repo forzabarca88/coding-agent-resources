@@ -59,11 +59,16 @@ coding-agent-resources/
 │       └── findings-slot.test.mjs         # Shared Overall-findings block tests (node --test 'docs/tests/*.test.mjs')
 ├── extensions/
 │   ├── README.md             # Extensions overview
-│   ├── auto-recover.ts       # Detects interrupted turns (unexecuted tool call or blank completion) and prompts model to continue
+│   ├── auto-recover.ts       # Detects interrupted turns (unexecuted tool call, blank completion, or thinking-only EOS/max-token cut) and prompts model to continue
 │   ├── followup.ts           # Registers /followup command for queuing messages after current turn
 │   ├── hold.ts               # Registers /hold command: deferred ESC stopping the session at the end of the current agent turn
 │   ├── provider-health-check.ts # Monitors LLM provider health
 │   ├── success-tone.ts       # Adjusts model tone for successful completions
+│   ├── eos-guard/
+│   │   ├── index.ts          # Extension entry: /eos-guard opt-in toggle (subagents inherit parent state), context sanitization, system-prompt rule
+│   │   ├── sanitize.ts       # Pure defusing logic: pattern-based token lookalike rewriting over context messages
+│   │   └── tests/
+│   │       └── sanitize.test.mjs # End-result tests: context defusing, idempotency, extension contract (node --test extensions/eos-guard/tests/sanitize.test.mjs)
 │   ├── subagent/
 │   │   ├── README.md         # Subagent extension documentation
 │   │   ├── index.ts          # Subagent extension entry point

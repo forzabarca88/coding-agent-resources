@@ -36,10 +36,20 @@
  *      last content part is a structured `toolCall` that was never
  *      executed, the final text/thinking literally ENDS with a leaked
  *      tool-call tag (e.g. Gemma's `...}<tool_call|>`, or an XML leak
- *      ending in `</tool_call>`), or the message is EMPTY and directly
+ *      ending in `</tool_call>`), the message is EMPTY and directly
  *      follows a tool result (a provider blank completion — output tokens
- *      billed but no content emitted). Messages that merely quote
+ *      billed but no content emitted), or the message contains ONLY
+ *      thinking (no text, no tool call) and ended with stopReason
+ *      "stop"/"length" — the signature of a server-side EOS cut (a
+ *      llama.cpp/LM Studio server consumed a chat-template special token
+ *      that the model emitted as literal text) or of a max-token cut of a
+ *      long thinking block. Messages that merely quote
  *      tool-call syntax and end in normal prose never trigger.
+ *
+ *      Known limitation: an EOS cut that lands mid-TEXT (after visible
+ *      prose was already emitted) is indistinguishable from a legitimate
+ *      final sentence and is not recovered; the eos-guard extension
+ *      sanitizes context to prevent that case upstream.
  *
  *      stopReason semantics:
  *      - `"aborted"` (user interrupted — do not re-run against the user's
@@ -98,6 +108,19 @@ const EMPTY_TURN_NAME = "empty-turn";
 // directly followed a tool result (provider blank completion).
 const EMPTY_TURN_MESSAGE =
 	"Your previous turn was empty. Continue with the pending work.";
+
+// Sentinel used to select the EOS-cut recovery message.
+const EOS_CUT_NAME = "eos-cut";
+
+// Message sent when the previous turn contained thinking only (no text, no
+// tool call) and ended with a normal or length stop — the signature of a
+// server-side EOS cut: the model emitted a chat-template special token as
+// literal text (e.g. while quoting a GGUF vocab entry), the llama.cpp/LM
+// Studio server consumed it as EOS, stripped it, and returned
+// finish_reason "stop". The same shape results from a max-token cut of a
+// long thinking block.
+const EOS_CUT_MESSAGE =
+	"Your previous turn ended after thinking only, with no visible output or tool call — it was most likely cut off by a special-token stop sequence. Continue exactly where you left off. Refer to special tokens by name or id only; never write them verbatim.";
 
 // Prefix of the error pi throws when a captured pi/ctx is used after the
 // extension runtime was invalidated (session replacement or shutdown).
@@ -296,6 +319,16 @@ function detectInterruptedAttempt(branch: BranchEntryLike[]): Detection {
 		return errorStop ? { kind: "ignore" } : { kind: "normal" };
 	}
 
+	// Degenerate thinking-only turn: thinking present, but no text and no
+	// tool call, ending in a normal or length stop. Always worth one
+	// recovery — a healthy turn never ends as bare thinking.
+	if (stopReason === "stop" || stopReason === "length") {
+		const parts = content as { type?: string }[];
+		if (parts.length > 0 && parts.every((p) => p?.type === "thinking")) {
+			return { kind: "interrupted", toolName: EOS_CUT_NAME, errorStop };
+		}
+	}
+
 	const lastPart = content[content.length - 1] as
 		| {
 				type?: string;
@@ -440,7 +473,11 @@ export default function (pi: ExtensionAPI) {
 		}
 
 		const recoveryMessage =
-			toolName === EMPTY_TURN_NAME ? EMPTY_TURN_MESSAGE : RECOVERY_MESSAGE;
+			toolName === EMPTY_TURN_NAME
+				? EMPTY_TURN_MESSAGE
+				: toolName === EOS_CUT_NAME
+					? EOS_CUT_MESSAGE
+					: RECOVERY_MESSAGE;
 
 		// Queued as a follow-up. At agent_end the agent is still "streaming",
 		// so this enqueues synchronously (deterministic unless an extension

@@ -19,6 +19,7 @@ import { test } from "node:test";
 import autoRecoverExtension from "../auto-recover.ts";
 
 const EMPTY_TURN_MESSAGE = "Your previous turn was empty. Continue with the pending work.";
+const EOS_CUT_MESSAGE = "Your previous turn ended after thinking only, with no visible output or tool call — it was most likely cut off by a special-token stop sequence. Continue exactly where you left off. Refer to special tokens by name or id only; never write them verbatim.";
 
 /** Build a fake pi runtime around the extension; returns a handle to drive it. */
 function bootAutoRecover(branch) {
@@ -143,4 +144,73 @@ test("a timeout abort is a real failure and is still recovered", async () => {
 
 	await pi.emitAgentSettled();
 	assert.equal(pi.sent.length, 1, "timeouts are real failures and must be recovered");
+});
+
+test("a thinking-only turn cut by an EOS stop is recovered with the eos-cut message", async () => {
+	// Server-side EOS cut signature (observed against LM Studio/qwen GGUF
+	// work): the model emitted a chat-template special token as literal text
+	// mid-thinking, the server consumed it as EOS and stripped it, and pi
+	// recorded a "stop" turn whose content is thinking only.
+	const messages = runEndingWith({
+		role: "assistant",
+		content: [{ type: "thinking", thinking: "Also note: token[248046] = '" }],
+		stopReason: "stop",
+	});
+	const pi = bootAutoRecover(branchFor(messages));
+
+	await pi.emitAgentStart();
+	await pi.emitAgentEnd(messages);
+
+	assert.equal(pi.sent.length, 1, "thinking-only stop turn must be recovered at agent_end");
+	assert.equal(pi.sent[0].message, EOS_CUT_MESSAGE);
+	assert.equal(pi.sent[0].options.deliverAs, "followUp");
+});
+
+test("a thinking-only turn cut by max tokens is recovered", async () => {
+	const messages = runEndingWith({
+		role: "assistant",
+		content: [{ type: "thinking", thinking: "Let me verify the merge order..." }],
+		stopReason: "length",
+	});
+	const pi = bootAutoRecover(branchFor(messages));
+
+	await pi.emitAgentStart();
+	await pi.emitAgentEnd(messages);
+
+	assert.equal(pi.sent.length, 1, "thinking-only length stop is the same degenerate shape");
+	assert.equal(pi.sent[0].message, EOS_CUT_MESSAGE);
+});
+
+test("a turn with thinking AND text ending in a normal stop is never recovered", async () => {
+	// A healthy final answer must not be mistaken for a cut turn.
+	const messages = runEndingWith({
+		role: "assistant",
+		content: [
+			{ type: "thinking", thinking: "Done, wrapping up." },
+			{ type: "text", text: "Task 6 complete." },
+		],
+		stopReason: "stop",
+	});
+	const pi = bootAutoRecover(branchFor(messages));
+
+	await pi.emitAgentStart();
+	await pi.emitAgentEnd(messages);
+	await pi.emitAgentSettled();
+
+	assert.deepEqual(pi.sent, []);
+});
+
+test("an aborted thinking-only turn is never recovered", async () => {
+	const messages = runEndingWith({
+		role: "assistant",
+		content: [{ type: "thinking", thinking: "working..." }],
+		stopReason: "aborted",
+	});
+	const pi = bootAutoRecover(branchFor(messages));
+
+	await pi.emitAgentStart();
+	await pi.emitAgentEnd(messages);
+	await pi.emitAgentSettled();
+
+	assert.deepEqual(pi.sent, []);
 });
