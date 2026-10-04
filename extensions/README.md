@@ -41,16 +41,16 @@ Extensions are TypeScript modules that hook into pi's event system to provide ad
   - Provides feedback via UI notifications
 
 ### [hold.ts](./hold.ts)
-- **Purpose**: Registers `/hold` command — the automated, deferred equivalent of pressing ESC: stops the session's processing at the END of the current agent turn
+- **Purpose**: Registers `/hold` command (a toggle — repeat `/hold` while armed to disarm it) — the automated, deferred equivalent of pressing ESC: stops the session's processing at the END of the current agent turn
 - **Behavior**:
-  - If agent is busy: arms the hold; the current turn (its LLM call plus every tool call in it) completes normally, then the session stops; pi stays open for the next prompt
+  - If agent is busy: arms the hold; the current turn (its LLM call plus every tool call in it) completes normally, then the session stops; pi stays open for the next prompt. A second `/hold` while armed disarms it: submissions flow again, no aborts happen, and (if before the current turn's `turn_end`) the stop is cancelled entirely
   - If agent is idle: no turn in progress — notifies that the session is already stopped
 - **Command**: `/hold`
 - **Implementation**: pi fires `turn_end` after EVERY assistant message and the agent loop keeps going while tool calls are pending, so merely reporting the stop at `turn_end` would not stop the session (the loop starts the next LLM call right after). The hold therefore: (1) rejects EVERY submission while armed at the `input` gate — mid-run `steer`/`followUp` offers AND idle submissions, which is the shape recovery messages from extensions (e.g. auto-recover) arrive in while the session settles — interactive submissions are put back into the editor (like ESC), extension/RPC submissions are dropped with a notification; (2) on the first `turn_end` after arming, calls `ctx.abort()` (the same operation ESC performs) so the loop's next LLM call fails before any provider work and the run ends — pi never auto-retries an abort, and auto-recover ignores abort-shaped stops (including the one pi classifies as `"error"` with the abort reason as errorMessage); (3) stays armed until `agent_settled`, aborting any continuation run (pi auto-retry, compaction, or queued-message continuation) that starts meanwhile at its `agent_start` before it does work, and disarms one macrotask after `agent_settled` so messages other extensions queue from their own `agent_settled` handlers are dropped regardless of extension load order; shows a persistent footer status while armed. Covers the TUI's mid-stream Enter (steer) and Alt+Enter (follow-up) submissions and extension `sendUserMessage(..., { deliverAs })`; note pi's raw RPC `steer`/`follow_up` commands bypass the input gate entirely
 - **Features**:
   - Never cuts a turn short (unlike ESC/abort) and never exits pi (unlike shutdown)
   - Nothing queued after `/hold` continues the session (raw RPC `steer`/`follow_up` commands and custom messages bypass the input gate and are not covered); messages already queued before it are restored to the editor by the abort in the TUI (like ESC), and in other modes are either recorded at the stop point without being processed or left queued for the next prompt
-  - Repeat `/hold` while armed is a no-op; the armed state survives until just after the session settles (cleared on `/reload`/`/new`, which recreate the extension)
+  - Repeat `/hold` while armed is a toggle: it disarms the hold (clearing the status and cancelling an unfired stop); the armed state otherwise survives until just after the session settles (cleared on `/reload`/`/new`, which recreate the extension)
 
 ### [provider-health-check.ts](./provider-health-check.ts)
 - **Purpose**: Monitors LLM provider health and availability

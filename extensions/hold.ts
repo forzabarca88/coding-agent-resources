@@ -1,8 +1,8 @@
 /**
  * Hold Command Extension
  *
- * Registers the /hold command — the automated, deferred equivalent of
- * pressing ESC: the session stops at the END of the current agent turn
+ * Registers the /hold command — a toggle (typing /hold again while armed
+ * disarms it) and the automated, deferred equivalent of pressing ESC: the session stops at the END of the current agent turn
  * instead of cutting it short, and pi itself stays open.
  *
  * Terminology (pi internals, verified against the installed bundle): a
@@ -19,6 +19,11 @@
  *   status indicator. The current turn always completes normally (the LLM
  *   call and every tool call in it — the abort only takes effect from the
  *   next LLM call onward).
+ * - `/hold` again while armed disarms the hold (toggle): submissions flow
+ *   again, the status indicator is cleared and no further aborts happen.
+ *   Disarming before the current turn's `turn_end` cancels the stop
+ *   entirely; after it the abort has already fired and the run is ending
+ *   regardless.
  * - While armed, EVERY message submitted is rejected at the `input` gate —
  *   mid-run `steer`/`followUp` submissions (TUI Enter / Alt+Enter,
  *   /followup, extension sendUserMessage) AND idle submissions, which
@@ -78,12 +83,22 @@ export default function (pi: ExtensionAPI) {
 	// Reports the stop at most once per hold (two settles are reachable only
 	// if something bypasses the gate, but the notification must not double).
 	let stopReported = false;
+	// Pending post-settle disarm (see agent_settled); cleared if /hold toggles
+	// the hold off or re-arms it before the timer fires.
+	let disarmTimer: ReturnType<typeof setTimeout> | undefined;
 
 	pi.registerCommand("hold", {
-		description: "Stop the session at the end of the current agent turn",
+		description: "Toggle: stop the session at the end of the current agent turn",
 		handler: async (_args, ctx) => {
 			if (holdArmed) {
-				ctx.ui.notify("Hold already armed: stopping when the current turn finishes", "info");
+				holdArmed = false;
+				stopReported = false;
+				if (disarmTimer !== undefined) {
+					clearTimeout(disarmTimer);
+					disarmTimer = undefined;
+				}
+				ctx.ui.setStatus(STATUS_KEY, undefined);
+				ctx.ui.notify("Hold disarmed: the session continues", "info");
 				return;
 			}
 			if (ctx.isIdle()) {
@@ -154,8 +169,9 @@ export default function (pi: ExtensionAPI) {
 		// handlers (auto-recover queues its recovery from there, and that
 		// sendUserMessage reaches the input gate synchronously) are still
 		// gated regardless of extension load order.
-		setTimeout(() => {
+		disarmTimer = setTimeout(() => {
 			holdArmed = false;
+			disarmTimer = undefined;
 		}, 0);
 		if (stopReported) return;
 		stopReported = true;

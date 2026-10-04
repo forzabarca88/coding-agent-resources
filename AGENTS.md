@@ -61,7 +61,7 @@ coding-agent-resources/
 │   ├── README.md             # Extensions overview
 │   ├── auto-recover.ts       # Detects interrupted turns (unexecuted tool call, blank completion, or thinking-only EOS/max-token cut) and prompts model to continue
 │   ├── followup.ts           # Registers /followup command for queuing messages after current turn
-│   ├── hold.ts               # Registers /hold command: deferred ESC stopping the session at the end of the current agent turn
+│   ├── hold.ts               # Registers /hold toggle command: deferred ESC stopping the session at the end of the current agent turn; repeat to disarm
 │   ├── provider-health-check.ts # Monitors LLM provider health
 │   ├── success-tone.ts       # Adjusts model tone for successful completions
 │   ├── eos-guard/
@@ -78,7 +78,7 @@ coding-agent-resources/
 │   │       └── resilience.test.mjs # End-to-end resilience tests; file doubles as a fake `pi` executable (needs node_modules linked to the global pi install)
 │   └── tests/
 │       ├── auto-recover.test.mjs # Auto-recover contract tests: ignore explicit aborts, recover real blank completions (node --test extensions/tests/*.test.mjs)
-│       └── hold.test.mjs     # Hold contract tests: abort at turn end, reject continuation runs, gate across settlement (node --test extensions/tests/*.test.mjs)
+│       └── hold.test.mjs     # Hold contract tests: abort at turn end, reject continuation runs, gate across settlement, toggle disarm (node --test extensions/tests/*.test.mjs)
 ├── prompts/
 │   ├── README.md             # Prompts overview
 │   └── ralph-loop.md         # Iterative development loop prompt template

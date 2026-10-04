@@ -59,7 +59,7 @@ Pi extensions that add new functionality:
 
 - **auto-recover.ts** - Detects interrupted turns (unexecuted tool calls or blank completions) and prompts the model to continue
 - **followup.ts** - Registers `/followup` command for queuing messages after current turn
-- **hold.ts** - Registers `/hold` command: deferred ESC that stops the session at the end of the current agent turn, rejecting mid-run submissions while armed (pi stays open)
+- **hold.ts** - Registers `/hold` toggle command: deferred ESC that stops the session at the end of the current agent turn, rejecting mid-run submissions while armed (repeat `/hold` to disarm; pi stays open)
 - **provider-health-check.ts** - Monitors LLM provider health
 - **success-tone.ts** - Adjusts model tone for successful completions
 - **subagent/** - Subagent management extension

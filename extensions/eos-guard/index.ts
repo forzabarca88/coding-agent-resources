@@ -116,7 +116,7 @@ export default function (pi: ExtensionAPI) {
 	const reflectState = (ctx: ExtensionContext) => {
 		// Footer indicator so the active guard is never invisible. Clearing
 		// with undefined removes the status entirely.
-		if (ctx.hasUI) ctx.ui.setStatus("eos-guard", enabled ? "on" : undefined);
+		if (ctx.hasUI) ctx.ui.setStatus("eos-guard", enabled ? "eos-guard: on" : undefined);
 	};
 
 	pi.on("session_start", async (_event, ctx) => {

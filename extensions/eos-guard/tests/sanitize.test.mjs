@@ -151,7 +151,7 @@ test("/eos-guard enables defusing, the system rule, and the subagent directive",
 	const contextResult = await pi.emitContext(tokenBearingContext());
 	await pi.emitContext(tokenBearingContext()); // same run: no duplicate notify
 
-	assert.ok(pi.statusCalls.some((s) => s.key === "eos-guard" && s.value === "on"));
+	assert.ok(pi.statusCalls.some((s) => s.key === "eos-guard" && s.value === "eos-guard: on"));
 	assert.ok(pi.notifications.some((n) => n.message.includes("ON")));
 	assert.ok(promptResult.systemPrompt.startsWith("base prompt"));
 	assert.ok(promptResult.systemPrompt.includes("Special-token output guard"));

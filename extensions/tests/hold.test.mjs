@@ -166,11 +166,18 @@ test("/hold while idle reports the session already stopped and arms nothing", as
 	assert.ok(!pi.notifications.some((n) => n.message.includes("session stopped")));
 });
 
-test("repeat /hold while armed is a no-op", async () => {
+test("repeat /hold while armed toggles the hold off and the session continues", async () => {
 	const pi = bootHold({ idle: false });
 
 	await pi.command();
 	await pi.command();
-	assert.ok(pi.notifications.some((n) => n.message.includes("already armed")));
-	assert.equal(pi.notifications.filter((n) => n.message.includes("Hold armed")).length, 1);
+	assert.ok(pi.notifications.some((n) => n.message.includes("Hold disarmed")));
+	assert.equal(pi.statuses.at(-1), undefined, "status indicator must be cleared");
+
+	// Nothing is held any more: submissions flow and no event aborts the run.
+	const abortsBefore = pi.aborts;
+	assert.equal((await pi.emitInput("carry on", "steer")).action, "continue");
+	await pi.emitTurnEnd();
+	await pi.emitAgentStart();
+	assert.equal(pi.aborts, abortsBefore, "a disarmed hold must not abort anything");
 });
