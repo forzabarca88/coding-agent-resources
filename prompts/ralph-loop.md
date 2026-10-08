@@ -80,12 +80,13 @@ Scout context:
 Full plan:
 {plan}
 
-Work autonomously to complete only this task. Return: Completed, Files Changed, Notes.")
+Work autonomously to complete only this task. If you get stuck (e.g. a step of the plan does not work, or you hit an error you cannot resolve within a couple of attempts), do **not** spend time debugging or working around it — stop and report the blocker. Return: Completed, Files Changed, Blockers (None if no blockers), Notes.")
 ```
 
 - Each worker receives the specific task description, relevant scout context, and the full plan.
 - **Verify** each worker's completion (files changed, key functions touched) before dispatching the next.
-- If a worker reported any challenges or issues within its notes, you **must** ensure that subsequent workers are provided with the solution for any challenges encountered. This is critical so that independent workers don't waste time repeatly dealing with the same issues as previous workers.
+- If a worker reported any challenges or issues within its notes, you **must** ensure that subsequent workers are provided with the solution for any challenges encountered. This is critical so that independent workers don't waste time repeatedly dealing with the same issues as previous workers.
+- If a worker reports a **blocker** in its Blockers field, do **not** dispatch another worker to work around it — re-run the `planner` with the blocker context to trace the issue to its root cause (e.g. an incorrect planning assumption), revise the plan, and re-dispatch the affected task.
 - Unless the user explicitly allows parallel worker execution, assume that you are only allowed to run them sequentially.
 - After all tasks are done, compile a summary of all changes (files changed, key functions touched) to feed the reviewer.
 

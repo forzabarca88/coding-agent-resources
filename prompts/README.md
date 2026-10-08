@@ -37,6 +37,7 @@ The RALPH loop is designed for complex development tasks that require multiple i
 - Each worker receives: task description, scout context, full plan
 - Each worker operates independently on one specific task
 - Verifies completion before dispatching next worker
+- Workers fail fast and report blockers instead of working around them; a blocker triggers re-planning to trace the root cause
 
 ### Phase 4: Review
 - Uses the **reviewer** agent to validate changes
