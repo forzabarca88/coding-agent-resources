@@ -17,9 +17,9 @@
 
 # Understanding the data
 
-Messages sent from a coding harness to the API (using the `/completions` endpoint) are stateless. This means that the size of the messages always grow as the number of turns increases, as the latest message sent is the combination of the previous message's input + output tokens.
+Messages sent from a coding harness to the API (using the `/completions` endpoint) are stateless. This means that the size of the messages always grows as the number of turns increases, as the latest message sent is the combination of the previous message's input + output tokens.
 
-This leads into the metrics which are tracked by this eval - `Context Used` and `Turns`.
+This introduces the metrics which are tracked by this eval - `Context Used` and `Turns`.
 
 
 ## Context Used
@@ -29,8 +29,8 @@ This refers to the total number of tokens contained in the **last** message befo
 There are multiple reasons why a lower value for this metric can be considered better:
 
 1. More tokens used = higher cost
-1. More tokens will result in more noise and more "pollution" in the context window
-1. More tokens will require more memory (usually VRAM due to performance reasons) for storage of past tokens in the KV cache
+2. More tokens will result in more noise and more "pollution" in the context window
+3. More tokens will require more memory (usually VRAM due to performance reasons) for storage of past tokens in the KV cache
 
 
 ## Turns
@@ -40,7 +40,7 @@ This refers to the **total number of input + output token cycles** required by t
 This metric has a bit more nuance, but generally it is more efficient in terms of cost and duration to complete tasks in as few agent turns as possible.
 
 
-## Interpretting Turns + Context 
+## Interpreting Turns + Context 
 
 **High turns + Low context:** Large number of tool calls, but limited reasoning tokens.
 
@@ -50,9 +50,9 @@ A large number of tool calls may suggest:
 - Lots of corrections to its created files.
 - Lots of repeated tool calls due to aggressive truncation of output in order to reduce context size.
 
-A large amount of reasoning tokens can be useful for reducing the number of turns spent on a complicated task (i.e. less corrections), or may even be necessary in order for the model to be able to solve the task.
+A large amount of reasoning tokens can be useful for reducing the number of turns spent on a complicated task (i.e. fewer corrections), or may even be necessary in order for the model to be able to solve the task.
 
-For this eval, too many tokens compared to other models in the resultset may suggest that the model in question "overthinks".
+For this eval, too many tokens compared to other models in the result set may suggest that the model in question "overthinks".
 
 
 ## Recommendations
@@ -63,7 +63,7 @@ For this eval, too many tokens compared to other models in the resultset may sug
 
 **Claim:** For many models, KV quantization at Q4_0 appears to have minimal impact on the outcome - while providing a substantial increase in the potential size of the context window.
 
-**Evidence:** The best `Qwen 3.6 27B` and `Qwen 3.8 27B` runs recorded were infact at Q4_0.
+**Evidence:** The best `Qwen 3.6 27B` and `Qwen 3.8 27B` runs recorded were in fact at Q4_0.
 
 ### Model quantisation
 
@@ -71,9 +71,9 @@ For this eval, too many tokens compared to other models in the resultset may sug
 
 **Evidence:** `Qwen 3.8 27B` at `Q2_K_XL` and especially at `Q3_K_XL` outperforms all 9B at Q8 models tested.
 
-**Claim:** For smaller models, quantisation may have a more noticable negative impact compared to larger models.
+**Claim:** For smaller models, quantisation may have a more noticeable negative impact compared to larger models.
 
-**Evidence:** `Ornith 1.5 35B A3B` did not show any significant improvement in results at BF16 compared to Q8_0. However, `Ornith 1.5 9B` shows a noticable improvement when left at full precision (both weights and KV) compared to the results at Q8_0.
+**Evidence:** `Ornith 1.5 35B A3B` did not show any significant improvement in results at BF16 compared to Q8_0. However, `Ornith 1.5 9B` shows a noticeable improvement when left at full precision (both weights and KV) compared to the results at Q8_0.
 
 
 ### Sampling parameters
@@ -84,9 +84,9 @@ For this eval, too many tokens compared to other models in the resultset may sug
 
 ### Non-determinism
 
-**Claim:** The biggest impact is non-determinism. This is a "feature" for LLMs, and results show significant variance across multiple runs for both Provider and Local models. This is worth keeping in mind during day to day use and when making judgements about the output of your model, as consistency ultimately require deterministic guardrails for any of these models.
+**Claim:** The biggest impact is non-determinism. This is a "feature" for LLMs, and results show significant variance across multiple runs for both Provider and Local models. This is worth keeping in mind during day-to-day use and when making judgements about the output of your model, as consistency ultimately requires deterministic guardrails for any of these models.
 
-**Evidence:** Seen across many results, but a specific example is the best and worst `Deepseek V4 Flash 0731` runs at the same `xhigh` reasoning (up to 30k token variance). A local example is `Qwen 3.6 27B MTP`, where runs with the same settings show similar variations of around 35k tokens.
+**Evidence:** This variance is evident across many results, but a specific example is the best and worst `Deepseek V4 Flash 0731` runs at the same `xhigh` reasoning (up to 30k token variance). A local example is `Qwen 3.6 27B MTP`, where runs with the same settings show similar variations of around 35k tokens.
 
 
 # FAQ
@@ -97,7 +97,7 @@ Because it's a solid user experience - it's as simple as that.
 
 The goal of this data is to help newcomers understand the **practical** impacts of quantisation in local LLMs, and from that standpoint I believe LM Studio (and other GUI based options) are a solid starting point instead of dealing with 32534524 command line parameters.
 
-Also, the metrics I'm focused on (Context Used and Turns) are based on the behaviour of the model - not performance based metrics like tokens/sec, which may benefit from running bare `llama.cpp`, `vLLM`, etc.
+Also, the metrics I'm focused on (Context Used and Turns) are based on the behaviour of the model - not performance-based metrics like tokens/sec, which may benefit from running bare `llama.cpp`, `vLLM`, etc.
 
 
 ### Why don't you use a generation seed for more consistent results?

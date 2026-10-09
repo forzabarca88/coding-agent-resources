@@ -1,4 +1,4 @@
-Each mark represents its run visually in three ways.
+Each mark represents a run visually in three ways.
 
 - **Status** (fill)
   - solid carbon = success

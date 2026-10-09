@@ -1,6 +1,6 @@
-This page contains the results of an evaluation harness which sends the coding agent a task within [https://github.com/forzabarca88/coding-agent-resources/tree/main/agent-evaluation](https://github.com/forzabarca88/coding-agent-resources/tree/main/agent-evaluation).
+This page contains the results of an evaluation harness which assigns tasks to the coding agent using the evaluation harness located at [https://github.com/forzabarca88/coding-agent-resources/tree/main/agent-evaluation](https://github.com/forzabarca88/coding-agent-resources/tree/main/agent-evaluation).
 
-It logs how it performed in terms of:
+The harness logs the agent's performance in terms of:
 
 - whether the model generated code which passed the tasks
 - how long it took in terms of turns and time
