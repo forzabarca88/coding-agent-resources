@@ -9,8 +9,11 @@
  * when the current turn ends — aborting, not just reporting, is what
  * actually stops the agent loop — (3) also abort any continuation run
  * (retry / compaction / queued-message) that starts before the session
- * settles, and (4) keep the gate closed across the whole settle dispatch
- * (regardless of extension handler order) and disarm only afterwards.
+ * settles, (4) keep the gate closed across the whole settle dispatch
+ * (regardless of extension handler order) and disarm only afterwards, and
+ * (5) register its turn_end listener only while armed — pi >= 1.1.0
+ * dispatches turn_end as an actionable boundary, so a load-time listener
+ * would tax every turn of every session.
  *
  * Run: node --test extensions/tests/hold.test.mjs
  * (Node >= 23.6 runs the .ts extension natively via type stripping)
@@ -31,7 +34,15 @@ function bootHold({ idle }) {
 	const statuses = [];
 
 	holdExtension({
-		on: (type, handler) => handlers.set(type, handler),
+		// pi >= 1.1.0: pi.on() returns an unsubscribe function. The fake
+		// mirrors that so the extension's dynamic registration is exercised;
+		// emitting to a type with no handler is a no-op, as in real pi.
+		on: (type, handler) => {
+			handlers.set(type, handler);
+			return () => {
+				if (handlers.get(type) === handler) handlers.delete(type);
+			};
+		},
 		registerCommand: (name, options) => {
 			assert.equal(name, "hold");
 			commandHandler = options.handler;
@@ -51,7 +62,11 @@ function bootHold({ idle }) {
 		},
 	};
 
-	const emit = (type, event) => handlers.get(type)(event ?? { type }, ctx);
+	const emit = (type, event) => {
+		const handler = handlers.get(type);
+		if (!handler) return; // no listener registered for this event
+		return handler(event ?? { type }, ctx);
+	};
 
 	return {
 		command: () => commandHandler("", ctx),
@@ -60,6 +75,7 @@ function bootHold({ idle }) {
 		emitTurnEnd: () => emit("turn_end", { type: "turn_end", turnIndex: 0, message: { role: "assistant" }, toolResults: [] }),
 		emitAgentStart: () => emit("agent_start", { type: "agent_start" }),
 		emitAgentSettled: () => emit("agent_settled", { type: "agent_settled" }),
+			hasHandler: (type) => handlers.has(type),
 		notifications,
 		statuses,
 		get editorText() {
@@ -108,6 +124,9 @@ test("/hold mid-run stops the session at the end of the current turn and survive
 	await pi.emitAgentStart();
 	assert.equal(pi.aborts, abortsBeforeTurnEnd + 2, "continuation runs must be aborted while armed");
 
+	// Armed: the hold registered its turn_end listener.
+	assert.ok(pi.hasHandler("turn_end"), "armed hold must register its turn_end listener");
+
 	// Settlement: the hold reports the stop and clears the status.
 	await pi.emitAgentSettled();
 	assert.ok(pi.notifications.some((n) => n.message.includes("session stopped")));
@@ -120,6 +139,7 @@ test("/hold mid-run stops the session at the end of the current turn and survive
 	// left alone.
 	const abortsAfterSettle = pi.aborts;
 	await nextMacrotask();
+	assert.ok(!pi.hasHandler("turn_end"), "disarmed hold must release its turn_end listener");
 	assert.equal((await pi.emitInput("new prompt", undefined)).action, "continue");
 	await pi.emitAgentStart();
 	await pi.emitTurnEnd();
@@ -134,10 +154,11 @@ test("recovery messages sent during the settle dispatch are held back in either 
 
 		// Another extension queues a recovery message from its own
 		// agent_settled handler (the shape that re-ran the session after the
-		// hold in the field). pi routes it through the input gate
-		// synchronously, source "extension". Whichever handler order the
-		// settle dispatch runs in, the hold must still be armed when it
-		// arrives — the dispatch has not yielded to a macrotask in between.
+		// hold in the field). pi consults the input gate for it before
+		// yielding to the next macrotask — synchronously inside the handler
+		// on 0.85.x, in the microtask chain right after the dispatch on
+		// >= 1.1.0 — source "extension". Whichever handler order the settle
+		// dispatch runs in, the hold must still be armed when it arrives.
 		const send = () => pi.emitInput("recovery message", undefined, "extension");
 		let sendResult;
 		if (order === "send-first") {
@@ -157,7 +178,8 @@ test("/hold while idle reports the session already stopped and arms nothing", as
 	await pi.command();
 	assert.ok(pi.notifications.some((n) => n.message.includes("already stopped")));
 
-	// Nothing armed: events pass through untouched.
+	// Nothing armed: no turn_end listener, events pass through untouched.
+	assert.ok(!pi.hasHandler("turn_end"), "idle /hold must arm nothing");
 	assert.equal((await pi.emitInput("any message", "steer")).action, "continue");
 	await pi.emitTurnEnd();
 	await pi.emitAgentStart();
@@ -174,7 +196,10 @@ test("repeat /hold while armed toggles the hold off and the session continues", 
 	assert.ok(pi.notifications.some((n) => n.message.includes("Hold disarmed")));
 	assert.equal(pi.statuses.at(-1), undefined, "status indicator must be cleared");
 
-	// Nothing is held any more: submissions flow and no event aborts the run.
+	// The toggle released the turn_end listener with the hold ...
+	assert.ok(!pi.hasHandler("turn_end"), "toggled-off hold must release its turn_end listener");
+
+	// ... and nothing is held any more: submissions flow and no event aborts the run.
 	const abortsBefore = pi.aborts;
 	assert.equal((await pi.emitInput("carry on", "steer")).action, "continue");
 	await pi.emitTurnEnd();

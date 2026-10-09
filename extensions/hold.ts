@@ -43,15 +43,25 @@
  *   and auto-recover ignores abort-shaped stops (including the one pi-ai
  *   classifies as stopReason "error" with the abort reason as errorMessage),
  *   so nothing revives the run from that message.
+ * - The `turn_end` listener is registered only while the hold is armed and
+ *   unregistered when it disarms. Since pi 1.1.0, `turn_end` is dispatched
+ *   as an actionable boundary (a per-turn session projection), so a
+ *   load-time listener would tax every turn of every session even though
+ *   the hold needs the event only for its short armed window. pi 1.1.0's
+ *   `pi.on()` returns an unsubscribe function; on older pi it returns
+ *   nothing, and the listener then simply stays registered once armed
+ *   (the pre-1.1.0 behavior).
  * - The hold stays armed until `agent_settled`. Any continuation run that
  *   starts while armed (retry backoff finishing, compaction continuation,
  *   queued-message continuation) is aborted at its `agent_start`, before it
  *   does any work. At `agent_settled` the hold reports the stop — the
  *   deferred-ESC moment — and disarms on the next macrotask, so messages
- *   other extensions queue from their own `agent_settled` handlers (whose
- *   input events fire synchronously inside those handlers) are still
- *   dropped regardless of extension load order. pi remains open for the
- *   next prompt.
+ *   other extensions queue from their own `agent_settled` handlers are
+ *   still dropped regardless of extension load order: pi consults the
+ *   input gate for them before yielding to that macrotask (synchronously
+ *   inside the handlers on 0.85.x, in the microtask chain right after the
+ *   settle dispatch on >= 1.1.0, where prompt() calls made during the
+ *   dispatch are deferred). pi remains open for the next prompt.
  * - `/hold` while idle: nothing to stop; notifies that the session is
  *   already stopped.
  *
@@ -86,6 +96,33 @@ export default function (pi: ExtensionAPI) {
 	// Pending post-settle disarm (see agent_settled); cleared if /hold toggles
 	// the hold off or re-arms it before the timer fires.
 	let disarmTimer: ReturnType<typeof setTimeout> | undefined;
+	// The turn_end listener is armed and released with the hold itself (see
+	// header). `turnEndRegistered` dedupes registration across arm cycles
+	// even on pi versions whose pi.on() returns no unsubscribe (0.85.x),
+	// where the listener lingers after the first arm — harmless, since it
+	// is a no-op while disarmed.
+	let turnEndRegistered = false;
+	let turnEndUnsubscribe: (() => void) | undefined;
+
+	const armTurnEndListener = (): void => {
+		if (turnEndRegistered) return;
+		turnEndRegistered = true;
+		// pi >= 1.1.0 returns an unsubscribe function; older pi returns
+		// void — the `as` cast keeps the extension typechecking against
+		// both, and releaseTurnEndListener() tolerates the absent one.
+		turnEndUnsubscribe = pi.on("turn_end", async (_event, ctx) => {
+			if (!holdArmed) return;
+			ctx.abort();
+		}) as unknown as (() => void) | undefined;
+	};
+
+	const releaseTurnEndListener = (): void => {
+		if (!turnEndRegistered) return;
+		if (!turnEndUnsubscribe) return; // 0.85.x: nothing to release
+		turnEndUnsubscribe();
+		turnEndUnsubscribe = undefined;
+		turnEndRegistered = false;
+	};
 
 	pi.registerCommand("hold", {
 		description: "Toggle: stop the session at the end of the current agent turn",
@@ -97,6 +134,7 @@ export default function (pi: ExtensionAPI) {
 					clearTimeout(disarmTimer);
 					disarmTimer = undefined;
 				}
+				releaseTurnEndListener();
 				ctx.ui.setStatus(STATUS_KEY, undefined);
 				ctx.ui.notify("Hold disarmed: the session continues", "info");
 				return;
@@ -108,6 +146,7 @@ export default function (pi: ExtensionAPI) {
 			}
 			holdArmed = true;
 			stopReported = false;
+			armTurnEndListener();
 			ctx.ui.setStatus(STATUS_KEY, "hold: stopping after this turn");
 			ctx.ui.notify("Hold armed: stopping when the current turn finishes", "info");
 		},
@@ -133,18 +172,15 @@ export default function (pi: ExtensionAPI) {
 		return { action: "handled" };
 	});
 
-	// End of a turn: the turn's work (assistant message + every tool result)
-	// is fully recorded, so this is the moment to stop the run. Aborting
-	// (not merely reporting) is essential: while the turn had tool calls,
-	// the agent loop starts the next LLM call right after this event —
-	// reporting alone left the session running (the original bug). The
-	// already-aborted signal makes that next call fail before any provider
-	// work, ending the run. Idempotent: aborting an already-aborting run is
-	// a no-op.
-	pi.on("turn_end", async (_event, ctx) => {
-		if (!holdArmed) return;
-		ctx.abort();
-	});
+	// End-of-turn handling (registered via armTurnEndListener() while armed,
+	// not at load time — see header): the turn's work (assistant message +
+	// every tool result) is fully recorded, so this is the moment to stop
+	// the run. Aborting (not merely reporting) is essential: while the turn
+	// had tool calls, the agent loop starts the next LLM call right after
+	// this event — reporting alone left the session running (the original
+	// bug). The already-aborted signal makes that next call fail before any
+	// provider work, ending the run. Idempotent: aborting an
+	// already-aborting run is a no-op.
 
 	// A new run starting while armed is a continuation of the held one —
 	// pi's auto-retry, a compaction continuation, or a queued-message
@@ -158,20 +194,23 @@ export default function (pi: ExtensionAPI) {
 	// The session has fully settled: no retry, compaction or queued
 	// continuation will run anymore. Report the stop, but disarm only on the
 	// next macrotask: other extensions queue recovery messages from their
-	// own agent_settled handlers (auto-recover does), and that
+	// own agent_settled handlers (auto-recover does). On pi 0.85.x that
 	// sendUserMessage reaches the input gate synchronously inside their
-	// handler — holding the gate open across the whole dispatch drops those
-	// messages regardless of extension load order.
+	// handler; on pi >= 1.1.0 it is deferred until the settle dispatch
+	// completes, but still inside the microtask chain that precedes this
+	// macrotask. Either way the gate stays open across the whole dispatch
+	// and drops those messages regardless of extension load order.
 	pi.on("agent_settled", async (_event, ctx) => {
 		if (!holdArmed) return;
 		// Disarm first so a stale-ctx failure below can never leave the hold
 		// armed, and on the next macrotask so other extensions' agent_settled
-		// handlers (auto-recover queues its recovery from there, and that
-		// sendUserMessage reaches the input gate synchronously) are still
-		// gated regardless of extension load order.
+		// handlers (auto-recover queues its recovery from there) are still
+		// gated regardless of extension load order. The turn_end listener is
+		// released in the same tick: nothing further can fire for this hold.
 		disarmTimer = setTimeout(() => {
 			holdArmed = false;
 			disarmTimer = undefined;
+			releaseTurnEndListener();
 		}, 0);
 		if (stopReported) return;
 		stopReported = true;
