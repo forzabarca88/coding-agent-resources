@@ -33,3 +33,4 @@
 | openrouter/openai/gpt-6-luna | thinking: low | 1m 44s | 52344 | 27 | 131000 | No | 0 | 247 | 0 | 2026-09-29 16:31 |
 | openrouter/openai/gpt-6-luna | thinking: medium | 2m 59s | 51419 | 30 | 131000 | No | 0 | 247 | 0 | 2026-09-29 16:33 |
 | openrouter/openai/gpt-6.1-sol | thinking: low | 1m 45s | 39785 | 17 | 131000 | No | 0 | 247 | 0 | 2026-10-14 21:21 |
+| openrouter/openai/gpt-6.1-sol | thinking: medium | 1m 37s | 39708 | 9 | 131000 | No | 0 | 247 | 0 | 2026-10-14 21:22 |
