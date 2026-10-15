@@ -63,6 +63,7 @@ coding-agent-resources/
 │   ├── followup.ts           # Registers /followup command for queuing messages after current turn
 │   ├── hold.ts               # Registers /hold toggle command: deferred ESC stopping the session at the end of the current agent turn; repeat to disarm
 │   ├── provider-health-check.ts # Monitors LLM provider health
+│   ├── ralph-loop-prompt.ts  # Pins prompts/ralph-loop.md into the system prompt while a ralph loop is active, so it survives compaction verbatim
 │   ├── success-tone.ts       # Adjusts model tone for successful completions
 │   ├── eos-guard/
 │   │   ├── index.ts          # Extension entry: /eos-guard opt-in toggle (subagents inherit parent state), context sanitization, system-prompt rule
@@ -78,7 +79,8 @@ coding-agent-resources/
 │   │       └── resilience.test.mjs # End-to-end resilience tests; file doubles as a fake `pi` executable (needs node_modules linked to the global pi install)
 │   └── tests/
 │       ├── auto-recover.test.mjs # Auto-recover contract tests: ignore explicit aborts, recover real blank completions (node --test extensions/tests/*.test.mjs)
-│       └── hold.test.mjs     # Hold contract tests: abort at turn end, reject continuation runs, gate across settlement, toggle disarm (node --test extensions/tests/*.test.mjs)
+│       ├── hold.test.mjs     # Hold contract tests: abort at turn end, reject continuation runs, gate across settlement, toggle disarm (node --test extensions/tests/*.test.mjs)
+│       └── ralph-loop-prompt.test.mjs # Pin contract tests: invocation arms the pin verbatim and append-only, toggle/missing-template behavior, per-run re-read (node --test extensions/tests/*.test.mjs)
 ├── prompts/
 │   ├── README.md             # Prompts overview
 │   └── ralph-loop.md         # Iterative development loop prompt template

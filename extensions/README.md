@@ -60,6 +60,15 @@ Extensions are TypeScript modules that hook into pi's event system to provide ad
   - Provides health status notifications
   - Can trigger fallback providers
 
+### [ralph-loop-prompt.ts](./ralph-loop-prompt.ts)
+- **Purpose**: Keeps the ralph-loop orchestrator protocol alive across compaction — verbatim, not as a summary
+- **Problem**: A prompt template expands into a user message, and compaction summarizes user messages away. A mid-loop compaction would leave only a lossy summary of the ralph loop's phases, delegation rules, and model-assignment contract
+- **Behavior while active**: Appends the contents of `prompts/ralph-loop.md` (minus YAML frontmatter) as a dedicated system-prompt section (`<ralph_loop_prompt>`). pi rebuilds the system prompt fresh for every request and never compacts it, so the protocol survives any number of compactions verbatim. Append-only by construction: the section is added via `event.systemPromptOptions.sections` — never a returned `systemPrompt`, which pi implements as `forceSystemPrompt` (a whole-prompt replacement)
+- **Activation**: Arms automatically when `/ralph-loop <REQ>` is invoked (the `input` event sees the raw text before template expansion, so the loop's first run is already protected); `/ralph-loop-prompt` toggles it, `on`/`off` set it explicitly
+- **Scope**: Session-scoped — resets on `/new` and `/reload` (fresh extension instance); after `/resume`, re-arm with `/ralph-loop-prompt on`. Subagent sessions don't need it: the protocol governs the orchestrator, which frames each subagent's task itself
+- **Template source**: `PI_RALPH_LOOP_PROMPT` overrides the path; otherwise `~/.pi/agent/prompts/ralph-loop.md` (the install_for_pi.sh symlink layout) and then the repository-relative path are tried. The file is re-read on every pinned run, so template edits apply on the next turn; a missing template warns instead of arming
+- **Test**: `node --test extensions/tests/ralph-loop-prompt.test.mjs`
+
 ### [success-tone.ts](./success-tone.ts)
 - **Purpose**: Adjusts model tone for successful task completions
 - **Features**:

@@ -54,6 +54,9 @@ The RALPH loop is designed for complex development tasks that require multiple i
 - Compiles final summary of all work
 - Includes: what was built, files changed, review status, remaining notes
 
+### Compaction Survival
+A prompt template expands into a user message, which compaction summarizes away. The companion [ralph-loop-prompt](../extensions/ralph-loop-prompt.ts) extension pins the template's contents into the system prompt (which is never compacted) for the whole session, so the protocol survives mid-loop compactions verbatim. It arms automatically when `/ralph-loop` is invoked; `/ralph-loop-prompt off` releases it.
+
 ## Usage
 
 To use a prompt, reference it in your pi configuration or invoke it directly:
