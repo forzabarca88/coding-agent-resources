@@ -53,12 +53,15 @@ Extensions are TypeScript modules that hook into pi's event system to provide ad
   - Repeat `/hold` while armed is a toggle: it disarms the hold (clearing the status and cancelling an unfired stop); the armed state otherwise survives until just after the session settles (cleared on `/reload`/`/new`, which recreate the extension)
 
 ### [provider-health-check.ts](./provider-health-check.ts)
-- **Purpose**: Monitors LLM provider health and availability
-- **Features**:
-  - Tracks provider response times
-  - Detects provider failures
-  - Provides health status notifications
-  - Can trigger fallback providers
+- **Purpose**: Monitors the health/availability of all configured LLM providers
+- **Behavior**:
+  - Fetches the models endpoint of every provider with a configured `baseUrl` and renders a `✅/❌` status widget; unconfigured providers are listed without a network check
+  - Widget refreshes on `session_start`, after every agent turn (`agent_end`), and every 30s while the session is idle (timer stops while the agent is working, via `before_agent_start`); a `Providers: X/Y up` notification is shown on session start
+  - `/check-providers` command runs the same check on demand
+  - A provider whose models endpoint answers HTTP 401/403 is still reported Ready — connectability is what's checked, and some providers (e.g. Google Gemini) restrict that endpoint while chat works normally
+  - Health checks use a dedicated AbortController (a user abort of the agent turn doesn't cancel them) and failures are swallowed silently rather than disrupting the session
+  - The models URL is built version-aware from the provider's base URL: if the base already ends in a version segment (Google `.../v1beta`, LM Studio `.../v1`) it appends `/models`; otherwise it appends `/v1/models` (Mistral `https://api.mistral.ai`, OpenRouter `https://openrouter.ai/api` — their version segment belongs to the API layer, not the base URL). Both overwriting the path (`/v1/models`) and naive appending (`/models`) left one provider or the other reporting HTTP 404 despite chat working
+- **Test**: `node --test extensions/tests/provider-health-check.test.mjs`
 
 ### [ralph-loop-prompt.ts](./ralph-loop-prompt.ts)
 - **Purpose**: Keeps the ralph-loop orchestrator protocol alive across compaction — verbatim, not as a summary

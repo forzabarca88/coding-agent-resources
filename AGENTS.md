@@ -80,6 +80,7 @@ coding-agent-resources/
 │   └── tests/
 │       ├── auto-recover.test.mjs # Auto-recover contract tests: ignore explicit aborts, recover real blank completions (node --test extensions/tests/*.test.mjs)
 │       ├── hold.test.mjs     # Hold contract tests: abort at turn end, reject continuation runs, gate across settlement, toggle disarm (node --test extensions/tests/*.test.mjs)
+│       ├── provider-health-check.test.mjs # buildModelsUrl URL-construction tests: /models appended to the base path, preserving provider path prefixes (node --test extensions/tests/*.test.mjs)
 │       └── ralph-loop-prompt.test.mjs # Pin contract tests: invocation arms the pin verbatim and append-only, toggle/missing-template behavior, per-run re-read (node --test extensions/tests/*.test.mjs)
 ├── prompts/
 │   ├── README.md             # Prompts overview

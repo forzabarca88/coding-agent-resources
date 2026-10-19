@@ -1,5 +1,21 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 
+export function buildModelsUrl(baseUrl: string): URL {
+  const url = new URL(baseUrl);
+  const path = url.pathname.replace(/\/+$/, "");
+  const lastSegment = path.split("/").pop() ?? "";
+
+  // pi's provider baseUrls are NOT uniform: some include the version segment
+  // (Google .../v1beta, LM Studio .../v1), while for others the version is
+  // added by the API layer (Mistral https://api.mistral.ai, OpenRouter
+  // https://openrouter.ai/api). If the base already ends in a version
+  // segment, the models endpoint is that path + /models; otherwise the
+  // /v1 version segment must be added.
+  const versioned = /^v\d+[a-z]*$/i.test(lastSegment);
+  url.pathname = versioned ? `${path}/models` : `${path}/v1/models`;
+  return url;
+}
+
 async function checkProviderHealth(
   providerId: string,
   ctx: ExtensionContext,
@@ -23,8 +39,7 @@ async function checkProviderHealth(
   }
 
   try {
-    const url = new URL(modelWithUrl.baseUrl);
-    url.pathname = "/v1/models";
+    const url = buildModelsUrl(modelWithUrl.baseUrl);
 
     const res = await fetch(url.toString(), {
       method: "GET",
