@@ -11,6 +11,8 @@ Your job is to delegate all work to subagents and coordinate the results.
 
 Never read or edit files directly unless absolutely necessary.
 
+Unless the user **explicitly** allows parallel execution, assume that you are only allowed to run subagents sequentially (even for readonly operations).
+
 Use individual `subagent` calls (not `chain`) so you retain full control and context between phases.
 
 If a subagent fails, you should continue to delegate to subagents and coordinate their work.
@@ -87,7 +89,6 @@ Work autonomously to complete only this task. If you get stuck (e.g. a step of t
 - **Verify** each worker's completion (files changed, key functions touched) before dispatching the next.
 - If a worker reported any challenges or issues within its notes, you **must** ensure that subsequent workers are provided with the solution for any challenges encountered. This is critical so that independent workers don't waste time repeatedly dealing with the same issues as previous workers.
 - If a worker reports a **blocker** in its Blockers field, do **not** dispatch another worker to work around it — re-run the `planner` with the blocker context to trace the issue to its root cause (e.g. an incorrect planning assumption), revise the plan, and re-dispatch the affected task.
-- Unless the user explicitly allows parallel worker execution, assume that you are only allowed to run them sequentially.
 - After all tasks are done, compile a summary of all changes (files changed, key functions touched) to feed the reviewer.
 
 ## Phase 4 — Review
