@@ -110,3 +110,4 @@
 | lmstudio-jdc-ws/ornith-ai/ornith-1.5-35b-a3b | Model quant: Q4_K_M, KV quant: None, MTP | 75m 30s | 150779 | 123 | 262000 | No | 0 | 247 | 0 | 2026-09-28 17:55 |
 | lmstudio-jdc-ws/ornith-ai/ornith-1.5-35b-a3b | Model quant: Q4_K_M, KV quant: None, MTP | 87m 23s | 126716 | 93 | 262000 | No | 0 | 247 | 0 | 2026-09-28 19:11 |
 | lmstudio-jdc-ws/ornith-ai/ornith-1.5-122b | Model quant: Q6_K, KV quant: None, MTP | 205m 13s | 147196 | 70 | 256000 | No | 0 | 247 | 0 | 2026-10-23 13:18 |
+| lmstudio-jdc-ws/ornith-ai/ornith-1.5-122b | Model quant: Q6_K, KV quant: None, MTP | 201m 57s | 145778 | 77 | 256000 | No | 0 | 247 | 0 | 2026-10-23 16:43 |
