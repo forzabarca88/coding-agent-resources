@@ -115,3 +115,5 @@
 | lmstudio-jdc-ws/ISTA-DASLab/qwen3.8-27b-gsq-rco | Model quant: IQ3_S, KV quant: Q4_0, thinking: medium, MTP | 37m 19s | 75390 | 46 | 262000 | No | 0 | 247 | 0 | 2026-11-02 11:34 |
 | lmstudio-jdc-ws/ISTA-DASLab/qwen3.8-27b-gsq-rco | Model quan
 t: IQ3_S, KV quant: None, thinking: medium, MTP | 61m 51s | 97537 | 53 | 131000 | No | 0 | 247 | 0 | 2026-11-02 12:16 |
+| lmstudio-jdc-ws/ISTA-DASLab/qwen3.8-27b-gsq-rco | Model quant: IQ3_S, K
+V quant: None, thinking: medium, MTP | 44m 56s | 80496 | 26 | 131000 | No | 0 | 247 | 0 | 2026-11-02 13:18 |
