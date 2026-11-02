@@ -120,3 +120,6 @@ V quant: None, thinking: medium, MTP | 44m 56s | 80496 | 26 | 131000 | No | 0 | 
 | lmstudio-jdc-ws/ISTA-DASLab/qwen3.8-27b-gsq-rco | Model quan
 
 t: IQ3_S, KV quant: Q4_0, thinking: xhigh, MTP | 119m 49s | 156174 | 61 | 262000 | No | 0 | 247 | 0 | 2026-11-02 14:09 |
+| lmstudio-jdc-ws/ISTA-DASLab/qwen3.8-27b-gsq-rco | Model quant: IQ3_S, K
+
+V quant: Q4_0, thinking: xhigh, MTP | 103m 59s | 119945 | 55 | 262000 | No | 0 | 247 | 0 | 2026-11-02 16:09 |
