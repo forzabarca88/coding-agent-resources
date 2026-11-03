@@ -156,11 +156,13 @@ function readDataFile(base) {
 // maps fetch paths to bodies — a path mapped to '' serves an empty body (the
 // page filters empty parts out), an unmapped path serves the real file from
 // disk (or 404s), mirroring how the pages fetch the results files
-// (data/eval-results-{provider,local}.md). Returns handles for the elements
-// the tests drive or read.
-export function bootVizPage(overrides = {}) {
+// (data/eval-results-{provider,local}.md). `opts.theme` picks the chart's
+// data-ink palette ('dark' by default). Returns handles for the elements the
+// tests drive or read.
+export function bootVizPage(overrides = {}, opts = {}) {
   const els = new Map();
   const document = {
+    documentElement: { getAttribute: (k) => (k === 'data-theme' ? (opts.theme || 'dark') : null) },
     getElementById(id) { if (!els.has(id)) els.set(id, makeEl(id)); return els.get(id); },
     createElement(tag) { return tag === 'div' ? makeContentEl() : makeEl(); },
     querySelectorAll() { return []; },

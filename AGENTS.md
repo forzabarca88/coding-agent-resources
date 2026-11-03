@@ -55,6 +55,7 @@ coding-agent-resources/
 │       ├── viz-harness.mjs                 # Shared minimal-DOM/marked harness that boots assets/visualization.js for the viz tests
 │       ├── visualization-search.test.mjs  # End-to-end wildcard-search tests (node --test 'docs/tests/*.test.mjs')
 │       ├── visualization-axis.test.mjs    # Chart axis min-based scaling tests (node --test 'docs/tests/*.test.mjs')
+│       ├── visualization-colors.test.mjs  # End-to-end model-colour uniqueness tests past the curated palette (node --test 'docs/tests/*.test.mjs')
 │       ├── results-order.test.mjs         # Local-before-provider section-order tests (node --test 'docs/tests/*.test.mjs')
 │       └── findings-slot.test.mjs         # Shared Overall-findings block tests (node --test 'docs/tests/*.test.mjs')
 ├── extensions/

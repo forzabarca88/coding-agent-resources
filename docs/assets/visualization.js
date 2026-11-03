@@ -72,6 +72,18 @@
         '#7748A8', // violet
         '#A35D14', // bronze
         '#C2563E'  // vermilion
+      ],
+      // Extended model inks [saturation, lightness] for models past the
+      // curated palette (see modelColors): one golden-angle hue per model,
+      // stepping to a new band every 24 models so later colours don't read
+      // as twins of earlier ones.
+      extBands: [
+        [0.62, 0.42], // vivid, mid-dark
+        [0.48, 0.52], // soft, mid
+        [0.72, 0.36], // vivid, deep
+        [0.42, 0.60], // muted, light
+        [0.58, 0.46], // mid
+        [0.68, 0.30]  // deep vivid
       ]
     },
     dark: {
@@ -94,12 +106,25 @@
         '#A87FD4', // violet
         '#D89A3E', // bronze
         '#E88B6F'  // vermilion
+      ],
+      // Extended model inks [saturation, lightness] for models past the
+      // curated palette (see modelColors): one golden-angle hue per model,
+      // stepping to a new band every 24 models so later colours don't read
+      // as twins of earlier ones.
+      extBands: [
+        [0.62, 0.68], // lifted
+        [0.48, 0.78], // soft, light
+        [0.72, 0.60], // vivid
+        [0.42, 0.84], // pastel
+        [0.58, 0.72], // mid-lifted
+        [0.68, 0.64]  // deep lifted
       ]
     }
   };
-  // Theme-synced data colours (see THEMES) — models receive palette colours
-  // in order of first successful appearance, so colours stay stable.
-  var BRK_OK, BRK_FAIL, BRK_INK, BRK_KVCOL, BRK_KV_OTHER, QUAD_TINT, PALETTE;
+  // Theme-synced data colours (see THEMES) — status/KV/quad inks are copied
+  // from the active theme; model inks are derived on demand from PALETTE +
+  // EXT_BANDS (see modelColors) so every model gets a distinct colour.
+  var BRK_OK, BRK_FAIL, BRK_INK, BRK_KVCOL, BRK_KV_OTHER, QUAD_TINT, PALETTE, EXT_BANDS;
   function themeName() {
     // The attribute is set before first paint by each page's inline head
     // script and by the header toggle (site.js); absent = the dark default.
@@ -118,6 +143,7 @@
     BRK_KV_OTHER = t.kvOther;
     QUAD_TINT = t.quad;
     PALETTE = t.palette;
+    EXT_BANDS = t.extBands;
   }
   syncThemeColors();
 
@@ -133,7 +159,10 @@
 
   // Every parsed row from the markdown tables, in file order.
   var allRows = [];
-  // Distinct successful model names, in order of first appearance.
+  // Distinct model names in colour-assignment order: models with successful
+  // runs in order of first appearance, then failed-only models in file order
+  // (the breakdown shows every run, so failed-only models appear in tooltips
+  // and must not fall back onto another model's ink).
   var modelOrder = [];
   // The row object currently pinned (clicked), or null. Stored as a row
   // reference (not an index) so it survives re-draws and is re-validated by
@@ -452,10 +481,125 @@
     return rows;
   }
 
+  /* ------------------------------------------------------------------ *
+   * Model colours — a strictly injective model -> ink map.
+   *
+   * The curated palette inks the first PALETTE.length models in order of
+   * first successful appearance. Beyond it, every model takes the next
+   * golden-angle hue on a theme-specific lightness/saturation band: hues
+   * stay far apart within a band, and the bands keep hues from different
+   * turns of the wheel apart in lightness. A final uniqueness guard
+   * (modelColors) perturbs any residual collision, so two models can never
+   * share an ink no matter how many models the data contains.
+   * ------------------------------------------------------------------ */
+
+  var HUE_STEP = 137.508;   // golden angle: consecutive hues stay far apart
+  var HUE_PER_BAND = 24;    // hues sampled on one band before stepping
+
+  // Hex -> HSL and back for the generated inks (h in degrees, s/l in 0..1).
+  function hexToHsl(hex) {
+    var n = parseInt(String(hex).slice(1), 16);
+    var r = ((n >> 16) & 255) / 255;
+    var g = ((n >> 8) & 255) / 255;
+    var b = (n & 255) / 255;
+    var max = Math.max(r, g, b), min = Math.min(r, g, b);
+    var l = (max + min) / 2;
+    var d = max - min;
+    var h = 0, s = 0;
+    if (d) {
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+      else if (max === g) h = (b - r) / d + 2;
+      else h = (r - g) / d + 4;
+      h *= 60;
+    }
+    return { h: h, s: s, l: l };
+  }
+  function hslToHex(h, s, l) {
+    h = (((h % 360) + 360) % 360) / 360;
+    var q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    var p = 2 * l - q;
+    function ch(t) {
+      if (t < 0) t += 1;
+      if (t > 1) t -= 1;
+      if (t < 1 / 6) return p + (q - p) * 6 * t;
+      if (t < 1 / 2) return q;
+      if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+      return p;
+    }
+    function byte(v) {
+      var x = Math.max(0, Math.min(255, Math.round(v * 255))).toString(16);
+      return x.length === 1 ? '0' + x : x;
+    }
+    return '#' + byte(ch(h + 1 / 3)) + byte(ch(h)) + byte(ch(h - 1 / 3));
+  }
+
+  // Ink for model index i past the curated palette: walk the golden-angle
+  // hue wheel, stepping a band every HUE_PER_BAND models.
+  function extendedColor(i) {
+    var j = i - PALETTE.length;
+    var band = EXT_BANDS[Math.floor(j / HUE_PER_BAND) % EXT_BANDS.length];
+    return hslToHex((j * HUE_STEP) % 360, band[0], band[1]);
+  }
+
+  // Deterministic near-miss variant of a duplicate ink: rotate the hue and
+  // shift lightness/saturation in fixed steps, always derived from the
+  // original ink, so a given (base, attempt) yields one fixed colour. The
+  // first few fallbacks stay in the model's hue family.
+  var SHIFT_TRIES = 24;
+  function shiftColor(hex, n) {
+    var c = hexToHsl(hex);
+    var l = Math.max(0.16, Math.min(0.9, c.l + (n % 2 ? 1 : -1) * 0.05 * Math.ceil(n / 2)));
+    var s = Math.max(0.2, Math.min(0.95, c.s + ((n % 3) - 1) * 0.05));
+    return hslToHex(c.h + n * 47, s, l);
+  }
+
+  // Last-resort ink for an exact duplicate, after the hue-family shifts. The
+  // odd multiplier is a permutation of the 24-bit RGB cube, so the walk
+  // visits every colour before repeating: it can never cycle back onto the
+  // already-used inks, and a search is therefore guaranteed to terminate at
+  // any model count.
+  function fallbackColor(n) {
+    var v = (n * 1000003) & 0xFFFFFF;
+    return '#' + ('000000' + v.toString(16)).slice(-6);
+  }
+
+  // Index -> ink map, rebuilt when the theme or the loaded model list
+  // changes (and memoised otherwise — modelColor is called for every point,
+  // label and chip on every redraw). Sampling runs sequentially from index 0
+  // so the uniqueness guard sees every ink already handed out.
+  var colorAssign = { theme: null, sig: null, list: [] };
+  function modelColors() {
+    // Keep the synced PALETTE/EXT_BANDS in step with the theme we key on,
+    // even if a caller reaches this before the next draw re-syncs them.
+    syncThemeColors();
+    var th = themeName();
+    var sig = modelOrder.join('\u0000');
+    if (colorAssign.theme === th && colorAssign.sig === sig) return colorAssign.list;
+    var used = Object.create(null);
+    var list = [];
+    modelOrder.forEach(function (model, i) {
+      var base = i < PALETTE.length ? PALETTE[i] : extendedColor(i);
+      var color = base;
+      var attempt = 0;
+      // Compare case-insensitively: curated palette hexes are uppercase, the
+      // generated ones lowercase, and the same ink in either case is a
+      // duplicate on the page.
+      while (used[color.toLowerCase()]) {
+        attempt++;
+        color = attempt <= SHIFT_TRIES ? shiftColor(base, attempt) : fallbackColor(attempt - SHIFT_TRIES);
+      }
+      used[color.toLowerCase()] = true;
+      list.push(color);
+    });
+    colorAssign = { theme: th, sig: sig, list: list };
+    return list;
+  }
+
   function modelColor(model) {
     var i = modelOrder.indexOf(model);
     if (i === -1) return PALETTE[0];
-    return PALETTE[i % PALETTE.length];
+    return modelColors()[i];
   }
 
   /* ------------------------------------------------------------------ *
@@ -1563,9 +1707,15 @@
         // previous file.
         searchMemoKey = null;
         searchMemoVal = null;
-        // Model list: distinct names, in order of first successful appearance.
+        // Model list: distinct names, in order of first successful appearance
+        // — then any failed-only model, so every model that can appear in a
+        // tooltip gets its own ink too. Successful models keep their indices
+        // (and therefore their colours).
         allRows.forEach(function (r) {
           if (isSuccessful(r) && modelOrder.indexOf(r.model) === -1) modelOrder.push(r.model);
+        });
+        allRows.forEach(function (r) {
+          if (modelOrder.indexOf(r.model) === -1) modelOrder.push(r.model);
         });
         var successful = allRows.filter(isSuccessful).length;
         if (!successful) {
