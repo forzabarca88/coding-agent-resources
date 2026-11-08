@@ -124,3 +124,4 @@
 | lmstudio-jdc-ws/ISTA-DASLab/qwen3.8-flash-next-gsq-rco | Model quant: IQ3_S, KV quant: Q4_0, thinking: medium | 35m 30s | 66685 | 37 | 163000 | No | 0 | 247 | 0 | 2026-11-03 16:30 |
 | lmstudio-jdc-ws/ISTA-DASLab/qwen3.8-flash-next-gsq-rco | Model quant: IQ3_S, KV quant: Q4_0, thinking: medium | 52m 2s | 80227 | 51 | 163000 | No | 0 | 247 | 0 | 2026-11-03 17:06 |
 | lmstudio-jdc-ws/ISTA-DASLab/qwen3.8-27b-gsq-rco | Model quant: IQ3_S, KV quant: Q8_0, thinking: xhigh, MTP | 99m 29s | 133459 | 61 | 196000 | No | 0 | 247 | 0 | 2026-11-08 12:56 |
+| lmstudio-jdc-ws/ISTA-DASLab/qwen3.8-27b-gsq-rco | Model quant: IQ3_S, KV quant: Q8_0, thinking: xhigh, MTP | 112m 15s | 139472 | 77 | 196000 | No | 0 | 247 | 0 | 2026-11-08 14:35 |
