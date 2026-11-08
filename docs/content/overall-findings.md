@@ -5,9 +5,9 @@
 - [Understanding the data](#understanding-the-data)
   - [Context Used](#context-used)
   - [Turns](#turns)
-  - [Interpretting Turns + Context](#interpretting-turns-context)
+  - [Interpreting Turns + Context](#interpreting-turns-context)
   - [Recommendations](#recommendations)
-    - [QV cache quantisation](#qv-cache-quantisation)
+    - [KV cache quantisation](#kv-cache-quantisation)
     - [Model quantisation](#model-quantisation)
     - [Sampling parameters](#sampling-parameters)
     - [Non-determinism](#non-determinism)
@@ -50,7 +50,7 @@ A large number of tool calls may suggest:
 - Lots of corrections to its created files.
 - Lots of repeated tool calls due to aggressive truncation of output in order to reduce context size.
 
-A large amount of reasoning tokens can be useful for reducing the number of turns spent on a complicated task (i.e. fewer corrections), or may even be necessary in order for the model to be able to solve the task.
+A large number of reasoning tokens can be useful for reducing the number of turns spent on a complicated task (i.e. fewer corrections), or may even be necessary in order for the model to be able to solve the task.
 
 For this eval, too many tokens compared to other models in the result set may suggest that the model in question "overthinks".
 
@@ -59,9 +59,9 @@ For this eval, too many tokens compared to other models in the result set may su
 
 **The following recommendations are only based on the data collected for this eval - please keep in mind that this eval does not represent the wide spectrum of software engineering tasks, only a tiny subset.**
 
-### QV cache quantisation
+### KV cache quantisation
 
-**Claim:** For many models, KV quantization at Q4_0 appears to have minimal impact on the outcome - while providing a substantial increase in the potential size of the context window.
+**Claim:** For many models, KV quantisation at Q4_0 appears to have minimal impact on the outcome - while providing a substantial increase in the potential size of the context window.
 
 **Evidence:** The best `Qwen 3.6 27B` and `Qwen 3.8 27B` runs recorded were in fact at Q4_0.
 
@@ -95,7 +95,7 @@ For this eval, too many tokens compared to other models in the result set may su
 
 Because it's a solid user experience - it's as simple as that.
 
-The goal of this data is to help newcomers understand the **practical** impacts of quantisation in local LLMs, and from that standpoint I believe LM Studio (and other GUI based options) are a solid starting point instead of dealing with 32534524 command line parameters.
+The goal of this data is to help newcomers understand the **practical** impacts of quantisation in local LLMs, and from that standpoint I believe LM Studio (and other GUI-based options) are a solid starting point instead of dealing with 32534524 command line parameters.
 
 Also, the metrics I'm focused on (Context Used and Turns) are based on the behaviour of the model - not performance-based metrics like tokens/sec, which may benefit from running bare `llama.cpp`, `vLLM`, etc.
 
