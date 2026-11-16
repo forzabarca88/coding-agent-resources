@@ -32,9 +32,8 @@
  *   the agent is idle at `agent_settled`). Interactive input is restored to
  *   the editor (the same restore ESC performs) so no typed prompt is lost;
  *   extension/RPC input is dropped with a notification. Nothing new enters
- *   the session between /hold and the settle. (Raw RPC `steer`/`follow_up`
- *   commands and custom messages bypass pi's input gate and are not
- *   covered.)
+ *   the session between /hold and the settle. (Only custom messages via
+ *   `pi.sendMessage()` bypass pi's input gate and are not covered.)
  * - At the `turn_end` of the current turn the hold aborts the run — the same
  *   operation ESC performs (`ctx.abort()`). `turn_end` alone cannot stop the
  *   loop: the next LLM call starts right after it. With the run's abort
