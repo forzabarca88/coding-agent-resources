@@ -26,7 +26,10 @@ Numbered steps, each small and actionable:
 2. Step two - what to add/change
 3. ...
 
-Steps MUST be listed in the logical order required for implementation.
+All step MUST:
+- Be optimised to reduce the amount of work across the entire implementation - e.g. if every worker agent has significant `pre` or `post` step overhead, look for opportunities for structuring the steps in the best way to reduce it.
+- Attempt to break down complex or time consuming tasks into smaller units.
+- Be listed in the logical order required for implementation.
 
 ## Files to Modify
 - `path/to/file.ts` - what changes
